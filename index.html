@@ -3,9 +3,10 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<title>Thư Viện - Đăng Phạm</title>
+<title>Thư Viện Sách</title>
 <meta name="description" content="Danh mục sách cá nhân — kỹ thuật, trí tuệ cảm xúc, và nhiều chủ đề khác." />
 <meta name="theme-color" content="#f4f1ea" />
+<link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/2784/2784539.png" />
 
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -52,13 +53,39 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
 
 .visually-hidden{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
 
+/* spine palette — muted bookbinding tones, cycled per category */
+:root{
+  --spine-1:#a9805a; /* leather / accent gốc */
+  --spine-2:#7d8a6a; /* xanh ô liu */
+  --spine-3:#6c7f8f; /* xanh khói */
+  --spine-4:#a8546b; /* đỏ mận */
+  --spine-5:#b39456; /* vàng đồng */
+  --spine-6:#7a6f9c; /* tím khói */
+}
+
+/* reading-progress rail — hidden by default; only appears once the
+   catalog is genuinely long enough to need it (see updateProgress in JS) */
+.progress-rail{
+  position:fixed;top:0;left:0;right:0;height:2px;z-index:90;pointer-events:none;
+  background:transparent;opacity:0;transition:opacity .4s ease;
+}
+.progress-rail.visible{opacity:1}
+.progress-fill{
+  height:100%;width:0%;
+  background:var(--accent);
+  transition:width .08s linear;
+}
+
 /* ambient + grain */
 .amb{position:fixed;inset:0;z-index:-2;pointer-events:none;
   background:
     radial-gradient(60% 45% at 100% -5%,rgba(169,128,90,.13),transparent 60%),
     radial-gradient(55% 45% at 20% 105%,rgba(169,128,90,.08),transparent 62%);}
 .grain{position:fixed;inset:0;z-index:80;pointer-events:none;opacity:.35;mix-blend-mode:multiply;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.45 0 0 0 0 0.36 0 0 0 .022 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.45 0 0 0 0 0.36 0 0 0 .022 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  transform:translateZ(0);
+  will-change:opacity;
+}
 
 /* ── shell: 2-pane layout ───────────── */
 .shell{display:grid;grid-template-columns:var(--sidebar-w) 1fr;min-height:100dvh}
@@ -133,15 +160,23 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
   content:"";position:absolute;left:0;top:8px;bottom:8px;width:2px;
   border-radius:2px;background:transparent;transition:background .18s;
 }
+.nav-item{--cat:var(--accent-deep)}
 .nav-item:hover{background:var(--paper);color:var(--ink)}
-.nav-item.active{background:var(--accent-wash);color:var(--accent-deep)}
-.nav-item.active::before{background:var(--accent-deep)}
+.nav-item.active{background:color-mix(in srgb,var(--cat) 12%,transparent);color:var(--cat)}
+.nav-item.active::before{background:var(--cat)}
+.nav-item::after{
+  content:"";position:absolute;left:44px;right:10px;bottom:2px;height:1px;
+  background:var(--cat);opacity:0;transform:scaleX(0);transform-origin:left;
+  transition:transform .22s cubic-bezier(.2,.7,.2,1),opacity .22s;
+}
+.nav-item:hover::after{opacity:.4;transform:scaleX(1)}
+.nav-item.active::after{opacity:0}
 .nav-code{
   font-family:var(--mono);font-size:9.5px;font-weight:600;
   letter-spacing:.05em;color:var(--faint);
   width:34px;flex:none;text-align:right;
 }
-.nav-item.active .nav-code{color:var(--accent-deep)}
+.nav-item.active .nav-code{color:var(--cat)}
 .nav-name{
   font-size:.9rem;flex:1;letter-spacing:-.005em;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
@@ -152,7 +187,7 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
   padding:2px 6px;border-radius:4px;background:var(--bg);
   min-width:22px;text-align:center;
 }
-.nav-item.active .nav-count{background:var(--card);color:var(--accent-deep)}
+.nav-item.active .nav-count{background:var(--card);color:var(--cat)}
 
 /* meta at bottom */
 .sidebar-meta{
@@ -181,11 +216,17 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
   display:flex;flex-direction:column;gap:32px;
 }
 
+#catalog{
+  display:flex;flex-direction:column;
+  gap:44px;
+}
+
 /* section per category */
 .section{
   scroll-margin-top:24px;
   opacity:0;transform:translateY(12px);
   animation:rise .55s cubic-bezier(.2,.7,.2,1) both;
+  isolation:isolate;
 }
 .section:nth-of-type(2){animation-delay:.06s}
 .section:nth-of-type(3){animation-delay:.12s}
@@ -202,11 +243,17 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
   content:"";position:absolute;left:0;right:0;bottom:-3px;height:1px;
   background:var(--line);opacity:.5;
 }
+.section{--cat:var(--accent-deep)}
 .section-code{
-  display:inline-flex;align-items:baseline;gap:5px;
+  display:inline-flex;align-items:center;gap:6px;
   font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.05em;
-  color:var(--accent-deep);background:var(--accent-wash);
-  padding:5px 10px;border-radius:4px;white-space:nowrap;
+  color:var(--cat);background:color-mix(in srgb,var(--cat) 11%,transparent);
+  padding:5px 10px 5px 8px;border-radius:4px;white-space:nowrap;
+  position:relative;
+}
+.section-code::before{
+  content:"";width:5px;height:5px;border-radius:50%;background:var(--cat);
+  opacity:.7;flex:none;
 }
 .section-code .code-label{font-size:8.5px;font-weight:600;letter-spacing:.1em;color:var(--faint);text-transform:uppercase}
 .section-title{
@@ -219,26 +266,40 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
 .section-intro{color:var(--soft);font-size:.92rem;line-height:1.7;margin:-8px 0 22px;max-width:640px}
 
 /* ── card grid ─────────────────────── */
-.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:18px}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:18px;padding-bottom:4px}
 @media(max-width:520px){.cards{grid-template-columns:1fr}}
 
 .card{
   display:flex;flex-direction:column;position:relative;
   background:var(--paper);border:1px solid var(--line);border-radius:4px;
   padding:14px 14px 16px;text-decoration:none;color:inherit;
-  transition:transform .28s cubic-bezier(.2,.7,.2,1),box-shadow .28s,border-color .28s;
+  transition:transform .2s cubic-bezier(.2,.7,.2,1),box-shadow .2s,border-color .2s,opacity .45s ease,filter .45s ease;
 }
+.card.reveal-pending{opacity:0;filter:blur(2px)}
+.card.revealed{opacity:1;filter:blur(0)}
+@media(prefers-reduced-motion:reduce){.card.reveal-pending{opacity:1;filter:none}}
 .card:nth-child(odd){transform:rotate(-.35deg)}
 .card:nth-child(even){transform:rotate(.35deg)}
-.card:hover{transform:rotate(0) translateY(-4px);box-shadow:var(--shadow-sm);border-color:var(--accent);z-index:2}
-.card:active{transform:rotate(0) translateY(-1px) scale(.99);box-shadow:var(--shadow-sm);border-color:var(--accent)}
+.card:hover{transform:rotate(0) translateY(-4px);box-shadow:var(--shadow-sm);border-color:var(--cat,var(--accent));z-index:2}
+.card:active{transform:rotate(0) translateY(-1px) scale(.99);box-shadow:var(--shadow-sm);border-color:var(--cat,var(--accent))}
 
 .card-tab{
   display:flex;justify-content:space-between;align-items:baseline;
   font-family:var(--mono);font-size:10px;letter-spacing:.06em;color:var(--faint);
   padding-bottom:9px;margin-bottom:12px;border-bottom:1px dashed var(--line-2);
 }
-.card-tab .call{color:var(--accent-deep);font-weight:600}
+.card-tab .call{color:var(--cat,var(--accent-deep));font-weight:600}
+
+/* dog-ear page fold, appears on hover */
+.card{overflow:hidden}
+.card::after{
+  content:"";position:absolute;top:0;right:0;width:0;height:0;
+  border-style:solid;border-width:0 0 0 0;
+  border-color:transparent var(--bg) transparent transparent;
+  filter:drop-shadow(-2px 2px 3px rgba(80,62,42,.28));
+  transition:border-width .22s cubic-bezier(.2,.7,.2,1);
+}
+.card:hover::after{border-width:0 18px 18px 0}
 
 .card-body{flex:1 1 auto;display:flow-root}
 .card-photo{
@@ -268,7 +329,19 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
   color:var(--ink);line-height:1.32;letter-spacing:-.005em;
   transition:color .2s;font-variation-settings:"opsz" 20;
 }
-.card:hover .card-title{color:var(--accent-deep)}
+.card:hover .card-title{color:var(--cat,var(--accent-deep))}
+
+/* "NEW" ribbon for recently added books — diagonal corner banner, top-left
+   so it never collides with the dog-ear fold on the top-right */
+.card-new-ribbon{
+  position:absolute;top:15px;left:-34px;z-index:2;
+  width:120px;text-align:center;
+  font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--paper);background:var(--stamp);
+  padding:3px 0;
+  transform:rotate(-45deg);
+  box-shadow:0 2px 5px -1px rgba(80,62,42,.4);
+}
 .card-author{color:var(--soft);font-size:.84rem;margin-top:4px;font-family:var(--serif);letter-spacing:.01em}
 .card-blurb{color:var(--soft);font-size:.79rem;line-height:1.6;margin-top:10px;font-family:var(--mono);letter-spacing:.005em}
 
@@ -381,6 +454,7 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
 </head>
 
 <body>
+<div class="progress-rail" aria-hidden="true"><div class="progress-fill" id="progressFill"></div></div>
 <div class="amb"></div>
 <div class="grain"></div>
 
@@ -469,6 +543,8 @@ function normalize(s){
     .replace(/[\u0300-\u036f]/g,"").replace(/đ/g,"d");
 }
 
+const SPINE_COLORS = ["var(--spine-1)","var(--spine-2)","var(--spine-3)","var(--spine-4)","var(--spine-5)","var(--spine-6)"];
+
 const catalogEl = document.getElementById("catalog");
 const sidebarNavEl = document.getElementById("sidebarNav");
 const sidebarEl = document.getElementById("sidebar");
@@ -492,8 +568,10 @@ function cardHTML(b, cat){
          <div class="no-photo" aria-hidden="true"><span>${escapeHTML(letter)}</span></div>
        </div>`;
   const searchKey = normalize([b.title, b.author, b.blurb, ...(b.tags||[])].filter(Boolean).join(" "));
+  const newRibbon = b.isNew ? `<span class="card-new-ribbon">Mới</span>` : "";
   return `
-    <a class="card" href="${href}" target="_blank" rel="noopener" data-search="${escapeHTML(searchKey)}" aria-label="${escapeHTML(b.title)}${b.author ? ", tác giả "+escapeHTML(b.author) : ""} (mở trong tab mới)">
+    <a class="card" href="${href}" target="_blank" rel="noopener" data-search="${escapeHTML(searchKey)}" aria-label="${escapeHTML(b.title)}${b.author ? ", tác giả "+escapeHTML(b.author) : ""}${b.isNew ? ", sách mới thêm" : ""} (mở trong tab mới)">
+      ${newRibbon}
       <div class="card-tab">
         <span class="call">${escapeHTML(cat.dewey||"")}.${escapeHTML(b.num||"")}</span>
         <span>${escapeHTML(String(b.year||""))}</span>
@@ -525,13 +603,15 @@ function render(data){
   allBtn.innerHTML = `<span class="nav-code">All</span><span class="nav-name">Tất cả</span><span class="nav-count" id="navCountAll">—</span>`;
   sidebarNavEl.appendChild(allBtn);
 
-  categories.forEach((cat) => {
+  categories.forEach((cat, idx) => {
     volumes += (cat.books||[]).length;
+    const spine = SPINE_COLORS[idx % SPINE_COLORS.length];
 
     // sidebar nav item
     const navBtn = document.createElement("button");
     navBtn.className = "nav-item";
     navBtn.dataset.target = `c-${cat.id}`;
+    navBtn.style.setProperty("--cat", spine);
     navBtn.innerHTML = `
       <span class="nav-code">${escapeHTML(cat.dewey||"—")}</span>
       <span class="nav-name">${escapeHTML(cat.title)}</span>
@@ -543,6 +623,7 @@ function render(data){
     const section = document.createElement("section");
     section.className = "section";
     section.id = `c-${cat.id}`;
+    section.style.setProperty("--cat", spine);
     section.innerHTML = `
       <div class="section-head">
         <span class="section-code" title="Mã Dewey"><span class="code-label">DDC</span>${escapeHTML(cat.dewey||"—")}</span>
@@ -573,6 +654,8 @@ function render(data){
     if(!btn) return;
     closeSidebar();
     const target = btn.dataset.target;
+    setActive(target);
+    suppressSpyUntilScroll();
     if(target === "top"){
       window.scrollTo({top:0, behavior:"smooth"});
     } else {
@@ -587,19 +670,79 @@ function render(data){
       b.classList.toggle("active", b.dataset.target === target);
     });
   }
+
+  // when user clicks a nav item, ignore observer callbacks until the
+  // smooth-scroll animation has actually settled near the target
+  let spySuppressed = false;
+  let suppressTimer = null;
+  function suppressSpyUntilScroll(){
+    spySuppressed = true;
+    clearTimeout(suppressTimer);
+    suppressTimer = setTimeout(() => { spySuppressed = false; }, 700);
+  }
+
+  // ── stagger-reveal cards as they enter the viewport ──
+  const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if(!prefersReducedMotion){
+    document.querySelectorAll(".cards .card").forEach(c => c.classList.add("reveal-pending"));
+    const cardObserver = new IntersectionObserver((entries) => {
+      entries.forEach(en => {
+        if(!en.isIntersecting) return;
+        const card = en.target;
+        const siblings = Array.from(card.parentElement.children).filter(el => el.classList.contains("card"));
+        const i = siblings.indexOf(card);
+        setTimeout(() => card.classList.add("revealed"), Math.min(i, 6) * 45);
+        cardObserver.unobserve(card);
+      });
+    }, { rootMargin: "0px 0px -8% 0px", threshold: 0.08 });
+    document.querySelectorAll(".cards .card").forEach(c => cardObserver.observe(c));
+  }
+
   const sections = Array.from(document.querySelectorAll(".section"));
   const observer = new IntersectionObserver((entries) => {
+    if(spySuppressed) return;
+    // if we're essentially at the top of the page, "Tất cả" wins
+    if(window.scrollY < 80){
+      setActive("top");
+      return;
+    }
     // pick topmost visible section
     const visible = entries
       .filter(en => en.isIntersecting)
       .sort((a,b) => a.boundingClientRect.top - b.boundingClientRect.top);
     if(visible.length > 0){
       setActive(visible[0].target.id);
-    } else if(window.scrollY < 100){
-      setActive("top");
     }
   }, { rootMargin: "-20% 0px -60% 0px", threshold: 0 });
   sections.forEach(s => observer.observe(s));
+
+  // lightweight fallback so "Tất cả" also lights back up on manual scroll
+  // all the way to the top (rAF-throttled, cheap check only)
+  const progressFillEl = document.getElementById("progressFill");
+  const progressRailEl = document.querySelector(".progress-rail");
+  let scrollTicking = false;
+  function updateProgress(){
+    const doc = document.documentElement;
+    const max = doc.scrollHeight - doc.clientHeight;
+    const pct = max > 0 ? Math.min(100, (window.scrollY / max) * 100) : 0;
+    if(progressFillEl) progressFillEl.style.width = pct + "%";
+    // only show the rail once the catalog is long enough that a
+    // reading-progress cue is actually useful (small libraries don't need it)
+    if(progressRailEl){
+      const worthShowing = doc.scrollHeight > doc.clientHeight * 2.2;
+      progressRailEl.classList.toggle("visible", worthShowing);
+    }
+  }
+  window.addEventListener("scroll", () => {
+    if(scrollTicking) return;
+    scrollTicking = true;
+    requestAnimationFrame(() => {
+      if(!spySuppressed && window.scrollY < 80) setActive("top");
+      updateProgress();
+      scrollTicking = false;
+    });
+  }, { passive:true });
+  updateProgress();
 
   // ── search: filter cards across all sections ──
   function applyFilter(){
@@ -644,8 +787,20 @@ function render(data){
   // ── meta ──
   const volStr = String(volumes).padStart(2,"0");
   const catStr = String(categories.length).padStart(2,"0");
-  document.getElementById("statVolumes").textContent = volStr;
-  document.getElementById("statCategories").textContent = catStr;
+  const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function countUp(el, target, pad){
+    if(prefersReduced || target === 0){ el.textContent = String(target).padStart(pad,"0"); return; }
+    const dur = 650, start = performance.now();
+    function tick(now){
+      const p = Math.min(1, (now - start) / dur);
+      const eased = 1 - Math.pow(1 - p, 3);
+      el.textContent = String(Math.round(eased * target)).padStart(pad,"0");
+      if(p < 1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  }
+  countUp(document.getElementById("statVolumes"), volumes, 2);
+  countUp(document.getElementById("statCategories"), categories.length, 2);
   document.getElementById("statUpdated").textContent = data.updated || new Date().getFullYear();
   document.getElementById("navCountAll").textContent = volStr;
 
@@ -669,7 +824,7 @@ function openSidebar(){
 }
 function closeSidebar(){
   sidebarEl.classList.remove("open");
-  backdropEl.classList.remove("open");
+  backdropEl.classList.remove("open"); 
   hamburgerEl.setAttribute("aria-expanded","false");
   document.body.style.overflow = "";
 }

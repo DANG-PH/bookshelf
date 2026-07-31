@@ -6,26 +6,7 @@
     "photo": "https://dangpham.id.vn/avatar1.jpg"
   },
   "categories": [
-    {
-      "id": "tech",
-      "folder": "tech",
-      "title": "Công nghệ",
-      "dewey": "005",
-      "range": "000–099",
-      "intro": "Phần mềm. hệ thống phân tán, và những ý tưởng hay.",
-      "books": [
-        {
-          "num": "01",
-          "year": 2017,
-          "title": "Designing Data-Intensive Applications",
-          "author": "Martin Kleppmann",
-          "blurb": "Những ý tưởng cốt lõi đằng sau các hệ thống đáng tin cậy, có khả năng mở rộng và dễ bảo trì. Storage engine, replication, partitioning, transaction, consistency — được giải thích với độ rõ ràng hiếm có.",
-          "tags": ["BE", "DE", "SA"],
-          "file": "DDIA.pdf",
-          "cover": "https://dataintensive.net/images/book-cover.png"
-        }
-      ]
-    },
+
     {
       "id": "eq",
       "folder": "eq",
@@ -73,6 +54,27 @@
           "tags": ["COG", "PSY"],
           "file": "tu-duy-nhanh-va-cham.pdf",
           "cover": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSsy9HzK-whg8tVUZvZa3ltvEx1Xr6WgzjgPyY00wqvr9YuTnN_8ttGOVf-&s=10"
+        }
+      ]
+    },
+    {
+      "id": "tech",
+      "folder": "tech",
+      "title": "Công nghệ",
+      "dewey": "005",
+      "range": "000–099",
+      "intro": "Phần mềm. hệ thống phân tán, và những ý tưởng hay.",
+      "books": [
+        {
+          "num": "01",
+          "year": 2017,
+          "title": "Designing Data-Intensive Applications",
+          "author": "Martin Kleppmann",
+          "blurb": "Những ý tưởng cốt lõi đằng sau các hệ thống đáng tin cậy, có khả năng mở rộng và dễ bảo trì. Storage engine, replication, partitioning, transaction, consistency — được giải thích với độ rõ ràng hiếm có.",
+          "tags": ["BE", "DE", "SA"],
+          "file": "DDIA.pdf",
+          "cover": "https://dataintensive.net/images/book-cover.png",
+          "isNew": true
         }
       ]
     }
