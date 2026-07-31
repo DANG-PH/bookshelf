@@ -1,0 +1,113 @@
+// ============================================================================
+// data.example.jsonc — ANNOTATED REFERENCE, NOT LOADED BY THE SITE
+// ============================================================================
+// index.html only ever fetches "data.json" (plain JSON, no comments allowed —
+// real JSON doesn't support them, and the fetch will crash if you add any).
+//
+// This file is a copy of the same structure WITH comments, so you always have
+// something to check field-by-field when editing data.json. Workflow:
+//   1. Edit data.json directly for real changes (books, categories, curator).
+//   2. Come back here if you forget what a field does or how it's used.
+// A JSON linter will flag this file as "invalid" — that's expected, it's not
+// meant to be parsed, only read by you.
+// ============================================================================
+{
+  // Shown in the hero's "Ledger, as of ___" line. Free text — usually a year,
+  // but could be "July 2026" or anything else you like.
+  "updated": "2026",
+
+  // ---------------------------------------------------------------------
+  // CURATOR — optional. Powers the small photo + name "byline" under the
+  // hero title (the "who filed these cards" credit). Delete this whole
+  // "curator" key if you don't want that row to show at all — the code
+  // checks for curator.name and hides the byline automatically if missing.
+  // ---------------------------------------------------------------------
+  "curator": {
+    "name": "Phạm Hải Đăng",                 // shown in serif, bold-ish
+    "role": "Backend & Server Game Developer", // small monospace line under the name
+    "photo": "https://dangpham.id.vn/avatar1.jpg"
+    // ^ any image URL, OR a bare filename that sits next to index.html
+    //   (e.g. "avatar.jpg" if you upload one into this same folder).
+  },
+
+  // ---------------------------------------------------------------------
+  // CATEGORIES — one entry per "drawer" (shelf) in the tab bar / catalog.
+  // Order here = order of the tabs and the order drawers render in.
+  // ---------------------------------------------------------------------
+  "categories": [
+    {
+      "id": "tech",
+      // ^ REQUIRED, must be unique. Used to build the section's #anchor
+      //   (id="c-tech") and to match it against the tab bar filter.
+      //   Lowercase, no spaces — think of it as a URL slug.
+
+      "folder": "tech",
+      // ^ The subfolder (relative to index.html) that holds this
+      //   category's PDF/cover files, e.g.  tech-books/tech/DDIA.pdf
+      //   A book's "file"/"cover" filename gets prefixed with this
+      //   automatically — see the note under "file" below.
+
+      "title": "Technology",     // shown as the drawer's big heading + tab label
+      "dewey": "005",            // shown as the shelf's call-number badge (any short code you like — doesn't have to be real Dewey Decimal)
+      "range": "000–099",        // small text under the call-number badge
+      "intro": "Backend engineering, distributed systems, and the ideas that show up on my whiteboard.",
+      // ^ one short sentence shown under the drawer heading. Optional —
+      //   omit the key entirely to skip it.
+
+      "books": [
+        // Can be an empty array [] — the drawer will show a friendly
+        // "still being filled" placeholder card instead of breaking.
+        {
+          "num": "01",
+          // ^ Shown as the second half of the card's call number, e.g.
+          //   "005.01". Doesn't have to be sequential or zero-padded,
+          //   but keeping it tidy looks nicer.
+
+          "year": 2017,          // shown top-right of the card's tab strip
+
+          "title": "Designing Data-Intensive Applications",
+          "author": "Martin Kleppmann",
+
+          "blurb": "The big ideas behind reliable, scalable, and maintainable systems...",
+          // ^ Optional. Keep it to 1–2 sentences — the card is small.
+
+          "tags": ["BE", "DE", "SA"],
+          // ^ Optional array of short subject codes, shown as
+          //   "Subjects: BE · DE · SA". Free-form, any short strings.
+
+          "file": "DDIA.pdf",
+          // ^ REQUIRED — what the whole card links to (opens in a new tab).
+          //   Resolution rule (see resolvePath() in index.html):
+          //     - bare filename like "DDIA.pdf"
+          //         → becomes "<folder>/DDIA.pdf" (folder = this category's "folder")
+          //     - starts with "/", contains "://", or already has a "/" in it
+          //         → used exactly as written (absolute path or full URL),
+          //           the category folder is NOT prepended.
+          //   So you can either drop files into tech/DDIA.pdf and just
+          //   write "DDIA.pdf", OR link straight to an external URL.
+
+          "cover": "https://dataintensive.net/images/book-cover.png"
+          // ^ Optional. Same resolution rule as "file". If omitted, or if
+          //   the image URL 404s, the card falls back to a plain card
+          //   showing the title's first letter — never breaks the layout.
+        }
+      ]
+    },
+
+    {
+      "id": "eq",
+      "folder": "eq",
+      "title": "Emotional Intelligence",
+      "dewey": "158.2",
+      "range": "100–199",
+      "intro": "The other half of engineering — communicating, listening, and understanding the person on the other side of the screen.",
+      "books": [
+        // ... same shape as above, one object per book.
+      ]
+    }
+
+    // To add a whole new shelf: copy one of the category objects above,
+    // give it a new unique "id" + "folder", create that folder in the repo,
+    // and it will automatically get its own tab + drawer — no HTML/CSS edits needed.
+  ]
+}
