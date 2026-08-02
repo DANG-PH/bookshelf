@@ -445,6 +445,57 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
 }
 @media(min-width:901px){.mobile-top,.backdrop{display:none!important}}
 
+/* ── PIN gate — blocks the whole site until the right code is entered ── */
+.pin-gate{
+  position:fixed;inset:0;z-index:200;
+  display:flex;align-items:center;justify-content:center;
+  padding:20px;
+  background:var(--bg);
+}
+.pin-gate[hidden]{display:none}
+.pin-card{
+  width:100%;max-width:340px;
+  background:var(--card);border:1px solid var(--line);border-radius:8px;
+  box-shadow:var(--shadow);
+  padding:32px 28px 28px;
+  text-align:center;
+  animation:rise .5s cubic-bezier(.2,.7,.2,1) both;
+}
+@media(prefers-reduced-motion:reduce){.pin-card{animation:none}}
+.pin-icon{
+  width:44px;height:44px;margin:0 auto 16px;border-radius:50%;
+  display:grid;place-items:center;
+  background:var(--accent-wash);color:var(--accent-deep);
+}
+.pin-icon svg{width:20px;height:20px}
+.pin-title{
+  font-family:var(--serif);font-weight:500;font-size:1.3rem;color:var(--ink);
+  letter-spacing:-.01em;font-variation-settings:"opsz" 30;
+}
+.pin-sub{font-family:var(--serif);font-style:italic;font-size:.88rem;color:var(--soft);margin-top:6px}
+.pin-form{margin-top:22px;display:flex;flex-direction:column;gap:12px}
+.pin-input{
+  width:100%;text-align:center;
+  font-family:var(--mono);font-size:1.4rem;letter-spacing:.5em;
+  padding:12px 10px 12px 16px;
+  border:1px solid var(--line-2);border-radius:6px;background:var(--paper);color:var(--ink);
+  transition:border-color .2s,box-shadow .2s;
+}
+.pin-input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-wash)}
+.pin-submit{
+  width:100%;padding:11px;border-radius:6px;
+  background:var(--accent-deep);color:var(--card);
+  font-family:var(--sans);font-weight:600;font-size:.9rem;letter-spacing:.02em;
+  transition:background .2s,transform .15s;
+}
+.pin-submit:hover{background:var(--stamp)}
+.pin-submit:active{transform:scale(.98)}
+.pin-submit:disabled{opacity:.6;cursor:default}
+.pin-error{
+  font-family:var(--mono);font-size:11px;color:var(--stamp);min-height:14px;
+}
+.pin-foot{margin-top:18px;font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+
 ::selection{background:var(--accent-wash-2);color:var(--ink)}
 ::-webkit-scrollbar{width:11px}
 ::-webkit-scrollbar-track{background:var(--bg)}
@@ -454,6 +505,26 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
 </head>
 
 <body>
+
+<div class="pin-gate" id="pinGate" role="dialog" aria-modal="true" aria-labelledby="pinTitle">
+  <div class="pin-card">
+    <div class="pin-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    </div>
+    <h1 class="pin-title" id="pinTitle">Thư Viện Riêng</h1>
+    <p class="pin-sub">Nhập mã để mở ngăn sách</p>
+    <form class="pin-form" id="pinForm" autocomplete="off">
+      <input
+        class="pin-input" id="pinInput" name="pin" type="password" inputmode="numeric"
+        pattern="[0-9]*" maxlength="12" placeholder="••••••" aria-label="Mã PIN" required autofocus
+      />
+      <p class="pin-error" id="pinError" role="alert"></p>
+      <button class="pin-submit" id="pinSubmit" type="submit">Mở khoá</button>
+    </form>
+    <p class="pin-foot">Chỉ dành cho hai đứa mình</p>
+  </div>
+</div>
+
 <div class="progress-rail" aria-hidden="true"><div class="progress-fill" id="progressFill"></div></div>
 <div class="amb"></div>
 <div class="grain"></div>
@@ -518,7 +589,7 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
       <div id="catalog"></div>
       <footer class="foot">
         <div class="sig">© <span id="year"></span> · DANG-PH · THƯ VIỆN</div>
-        <div class="cred">Ghi thẻ thủ công, sống nhờ GitHub Pages.</div>
+        <div class="cred">Ghi thẻ thủ công, sống nhờ GitHub Pages. <a href="admin.html">Quản lý</a></div>
       </footer>
     </div>
 
@@ -527,6 +598,34 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
 </div>
 
 <script>
+// ── backend API base — change this once the API is deployed ──
+// local dev default; e.g. "https://api.book.dangpham.id.vn/api" in production
+const API_BASE = "http://localhost:3000/api";
+const AUTH_TOKEN_KEY = "tb_token";
+const AUTH_EXP_KEY = "tb_token_exp";
+
+function getStoredToken(){
+  const token = localStorage.getItem(AUTH_TOKEN_KEY);
+  const exp = Number(localStorage.getItem(AUTH_EXP_KEY) || 0);
+  if(!token || !exp || Date.now() >= exp) return null;
+  return token;
+}
+function storeToken(token){
+  localStorage.setItem(AUTH_TOKEN_KEY, token);
+  // decode the JWT's exp claim (seconds since epoch) so we know when to
+  // ask for the PIN again, without needing a round-trip to the server
+  try{
+    const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g,"+").replace(/_/g,"/")));
+    localStorage.setItem(AUTH_EXP_KEY, String((payload.exp || 0) * 1000));
+  }catch{
+    localStorage.setItem(AUTH_EXP_KEY, String(Date.now() + 24*60*60*1000));
+  }
+}
+function clearToken(){
+  localStorage.removeItem(AUTH_TOKEN_KEY);
+  localStorage.removeItem(AUTH_EXP_KEY);
+}
+
 function resolvePath(cat, name){
   if(!name) return "";
   if(name.includes("://") || name.startsWith("/") || name.includes("/")) return name;
@@ -838,27 +937,91 @@ document.addEventListener("keydown", (e) => {
 
 document.getElementById("year").textContent = new Date().getFullYear();
 
-catalogEl.innerHTML = `
-  <section class="section">
-    <div class="load-note">Đang mở ngăn kéo…</div>
-  </section>`;
+// ── PIN gate ──
+const pinGateEl = document.getElementById("pinGate");
+const pinFormEl = document.getElementById("pinForm");
+const pinInputEl = document.getElementById("pinInput");
+const pinErrorEl = document.getElementById("pinError");
+const pinSubmitEl = document.getElementById("pinSubmit");
 
-fetch("data.json")
-  .then((r) => {
-    if(!r.ok) throw new Error("HTTP " + r.status);
-    return r.json();
+function showGate(message){
+  pinGateEl.hidden = false;
+  document.body.style.overflow = "hidden";
+  pinErrorEl.textContent = message || "";
+  pinInputEl.value = "";
+  setTimeout(() => pinInputEl.focus(), 50);
+}
+function hideGate(){
+  pinGateEl.hidden = true;
+  document.body.style.overflow = "";
+}
+
+pinFormEl.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const pin = pinInputEl.value.trim();
+  if(!pin) return;
+  pinSubmitEl.disabled = true;
+  pinErrorEl.textContent = "";
+  try{
+    const res = await fetch(`${API_BASE}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pin }),
+    });
+    if(!res.ok){
+      throw new Error(res.status === 401 ? "Sai mã PIN, thử lại nhé." : "Không kết nối được máy chủ.");
+    }
+    const { accessToken } = await res.json();
+    storeToken(accessToken);
+    hideGate();
+    loadCatalog();
+  }catch(err){
+    pinErrorEl.textContent = err.message;
+  }finally{
+    pinSubmitEl.disabled = false;
+  }
+});
+
+// ── catalog loading, now from the backend API instead of a static data.json ──
+function loadCatalog(){
+  const token = getStoredToken();
+  if(!token){
+    showGate();
+    return;
+  }
+  hideGate();
+
+  catalogEl.innerHTML = `
+    <section class="section">
+      <div class="load-note">Đang mở ngăn kéo…</div>
+    </section>`;
+
+  fetch(`${API_BASE}/catalog`, {
+    headers: { Authorization: `Bearer ${token}` },
   })
-  .then(render)
-  .catch((err) => {
-    catalogEl.innerHTML = `
-      <section class="section">
-        <div class="error-note">
-          Không tải được <code>data.json</code> (${escapeHTML(err.message)}).<br>
-          Nếu bạn đang mở file trực tiếp, hãy chạy qua http thay vì file:// —
-          <code>python3 -m http.server</code> — hoặc đẩy lên GitHub Pages.
-        </div>
-      </section>`;
-  });
+    .then((r) => {
+      if(r.status === 401){
+        clearToken();
+        showGate("Phiên đã hết hạn, nhập lại mã PIN nhé.");
+        throw new Error("unauthorized");
+      }
+      if(!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    })
+    .then(render)
+    .catch((err) => {
+      if(err.message === "unauthorized") return;
+      catalogEl.innerHTML = `
+        <section class="section">
+          <div class="error-note">
+            Không tải được thư viện (${escapeHTML(err.message)}).<br>
+            Kiểm tra backend đã chạy chưa, hoặc <code>API_BASE</code> trong index.html đã đúng chưa.
+          </div>
+        </section>`;
+    });
+}
+
+loadCatalog();
 </script>
 </body>
 </html>
