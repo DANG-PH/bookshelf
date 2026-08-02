@@ -3,10 +3,26 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<title>Thư Viện Sách</title>
-<meta name="description" content="Danh mục sách cá nhân — kỹ thuật, trí tuệ cảm xúc, và nhiều chủ đề khác." />
+<title>Thư Viện Sách — Góc đọc riêng</title>
+<meta name="description" content="Một góc thư viện nhỏ được chọn lọc và ghi thẻ thủ công — từ trí tuệ cảm xúc đến công nghệ. Mỗi cuốn sách là một câu chuyện đáng đọc, mời bạn ghé qua." />
 <meta name="theme-color" content="#f4f1ea" />
+<link rel="canonical" href="https://book.dangpham.id.vn/" />
 <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/2784/2784539.png" />
+
+<!-- Open Graph / Twitter — dùng khi link được chia sẻ qua Messenger, Zalo, Facebook… -->
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://book.dangpham.id.vn/" />
+<meta property="og:site_name" content="Thư Viện Sách" />
+<meta property="og:title" content="Thư Viện Sách — Góc đọc riêng" />
+<meta property="og:description" content="Một góc thư viện nhỏ được chọn lọc và ghi thẻ thủ công — từ trí tuệ cảm xúc đến công nghệ. Mỗi cuốn sách là một câu chuyện đáng đọc, mời bạn ghé qua." />
+<meta property="og:image" content="https://book.dangpham.id.vn/image/wp7713574.jpg" />
+<meta property="og:image:width" content="1024" />
+<meta property="og:image:height" content="768" />
+<meta property="og:locale" content="vi_VN" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Thư Viện Sách — Góc đọc riêng" />
+<meta name="twitter:description" content="Một góc thư viện nhỏ được chọn lọc và ghi thẻ thủ công — từ trí tuệ cảm xúc đến công nghệ." />
+<meta name="twitter:image" content="https://book.dangpham.id.vn/image/wp7713574.jpg" />
 
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -445,47 +461,54 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
 }
 @media(min-width:901px){.mobile-top,.backdrop{display:none!important}}
 
-/* ── PIN gate — blocks the whole site until the right code is entered ── */
+/* ── PIN gate — blocks the whole site until the right code is entered ──
+   the library photo doubles as the first thing she sees, so it gets a
+   proper hero treatment instead of a flat color */
 .pin-gate{
   position:fixed;inset:0;z-index:200;
   display:flex;align-items:center;justify-content:center;
   padding:20px;
-  background:var(--bg);
+  background:
+    linear-gradient(180deg,rgba(35,24,16,.32) 0%,rgba(28,19,13,.62) 65%,rgba(20,14,10,.8) 100%),
+    url("image/wp7713574.jpg") center 40%/cover no-repeat;
 }
 .pin-gate[hidden]{display:none}
 .pin-card{
-  width:100%;max-width:340px;
-  background:var(--card);border:1px solid var(--line);border-radius:8px;
-  box-shadow:var(--shadow);
-  padding:32px 28px 28px;
+  width:100%;max-width:360px;
+  background:rgba(255,253,248,.86);
+  -webkit-backdrop-filter:blur(18px) saturate(1.1);backdrop-filter:blur(18px) saturate(1.1);
+  border:1px solid rgba(255,255,255,.5);border-radius:14px;
+  box-shadow:0 30px 70px -20px rgba(20,14,10,.55);
+  padding:36px 30px 30px;
   text-align:center;
   animation:rise .5s cubic-bezier(.2,.7,.2,1) both;
 }
 @media(prefers-reduced-motion:reduce){.pin-card{animation:none}}
 .pin-icon{
-  width:44px;height:44px;margin:0 auto 16px;border-radius:50%;
+  width:46px;height:46px;margin:0 auto 16px;border-radius:50%;
   display:grid;place-items:center;
   background:var(--accent-wash);color:var(--accent-deep);
 }
 .pin-icon svg{width:20px;height:20px}
 .pin-title{
-  font-family:var(--serif);font-weight:500;font-size:1.3rem;color:var(--ink);
+  font-family:var(--serif);font-weight:500;font-size:1.4rem;color:var(--ink);
   letter-spacing:-.01em;font-variation-settings:"opsz" 30;
 }
-.pin-sub{font-family:var(--serif);font-style:italic;font-size:.88rem;color:var(--soft);margin-top:6px}
-.pin-form{margin-top:22px;display:flex;flex-direction:column;gap:12px}
+.pin-sub{font-family:var(--serif);font-style:italic;font-size:.9rem;color:var(--soft);margin-top:6px}
+.pin-form{margin-top:24px;display:flex;flex-direction:column;gap:12px}
 .pin-input{
   width:100%;text-align:center;
   font-family:var(--mono);font-size:1.4rem;letter-spacing:.5em;
   padding:12px 10px 12px 16px;
-  border:1px solid var(--line-2);border-radius:6px;background:var(--paper);color:var(--ink);
+  border:1px solid var(--line-2);border-radius:8px;background:var(--paper);color:var(--ink);
   transition:border-color .2s,box-shadow .2s;
 }
 .pin-input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-wash)}
 .pin-submit{
-  width:100%;padding:11px;border-radius:6px;
-  background:var(--accent-deep);color:var(--card);
-  font-family:var(--sans);font-weight:600;font-size:.9rem;letter-spacing:.02em;
+  width:100%;padding:12px;border-radius:8px;
+  background:var(--accent-deep);color:#fff;
+  font-family:var(--sans);font-weight:600;font-size:.92rem;letter-spacing:.02em;
+  box-shadow:0 10px 22px -10px rgba(138,100,66,.6);
   transition:background .2s,transform .15s;
 }
 .pin-submit:hover{background:var(--stamp)}
@@ -495,6 +518,24 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
   font-family:var(--mono);font-size:11px;color:var(--stamp);min-height:14px;
 }
 .pin-foot{margin-top:18px;font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+
+/* ── floating "add a book" button — the obvious, discoverable way in,
+   no need to know a URL or hunt through the footer ── */
+.fab-add{
+  position:fixed;right:22px;bottom:22px;z-index:50;
+  display:flex;align-items:center;gap:8px;
+  height:52px;padding:0 18px 0 16px;border-radius:99px;
+  background:var(--accent-deep);color:#fff;
+  box-shadow:0 14px 30px -10px rgba(138,100,66,.55);
+  transition:transform .2s cubic-bezier(.2,.7,.2,1),box-shadow .2s,background .2s;
+}
+.fab-add:hover{background:var(--stamp);transform:translateY(-2px);box-shadow:0 18px 34px -10px rgba(138,100,66,.65)}
+.fab-add:active{transform:translateY(0) scale(.97)}
+.fab-add svg{width:20px;height:20px;flex:none}
+.fab-label{font-family:var(--sans);font-weight:600;font-size:.86rem;letter-spacing:.01em;white-space:nowrap}
+@media(max-width:520px){
+  .fab-add{right:16px;bottom:16px;height:50px;padding:0 16px 0 14px}
+}
 
 ::selection{background:var(--accent-wash-2);color:var(--ink)}
 ::-webkit-scrollbar{width:11px}
@@ -521,7 +562,7 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
       <p class="pin-error" id="pinError" role="alert"></p>
       <button class="pin-submit" id="pinSubmit" type="submit">Mở khoá</button>
     </form>
-    <p class="pin-foot">Lần đầu tiên hai đứa mình gặp nhau</p>
+    <p class="pin-foot">Gợi ý: ngày mình gặp nhau lần đầu</p>
   </div>
 </div>
 
@@ -589,13 +630,17 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
       <div id="catalog"></div>
       <footer class="foot">
         <div class="sig">© <span id="year"></span> · DANG-PH · THƯ VIỆN</div>
-        <div class="cred">Ghi thẻ thủ công, sống nhờ GitHub Pages. <a href="admin.html">Quản lý</a></div>
       </footer>
     </div>
 
   </main>
 
 </div>
+
+<a class="fab-add" href="admin.html" aria-label="Thêm sách mới">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+  <span class="fab-label">Thêm sách</span>
+</a>
 
 <script>
 // ── backend API base — change this once the API is deployed ──

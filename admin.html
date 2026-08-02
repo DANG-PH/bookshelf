@@ -43,9 +43,20 @@ button{cursor:pointer;border:none;border-radius:10px;padding:12px 18px;font-weig
 button:disabled{opacity:.55;cursor:default}
 
 /* pin gate */
-.pin-gate{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--bg)}
+.pin-gate{
+  position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;padding:20px;
+  background:
+    linear-gradient(180deg,rgba(35,24,16,.32) 0%,rgba(28,19,13,.62) 65%,rgba(20,14,10,.8) 100%),
+    url("image/wp7713574.jpg") center 40%/cover no-repeat;
+}
 .pin-gate[hidden]{display:none}
-.pin-card{width:100%;max-width:320px;background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:0 26px 60px -30px rgba(80,62,42,.42);padding:32px 26px;text-align:center}
+.pin-card{
+  width:100%;max-width:320px;
+  background:rgba(255,253,248,.86);
+  -webkit-backdrop-filter:blur(18px) saturate(1.1);backdrop-filter:blur(18px) saturate(1.1);
+  border:1px solid rgba(255,255,255,.5);border-radius:16px;
+  box-shadow:0 30px 70px -20px rgba(20,14,10,.55);padding:32px 26px;text-align:center;
+}
 .pin-input{width:100%;text-align:center;font-family:var(--mono);font-size:1.3rem;letter-spacing:.4em;padding:12px;margin:18px 0 10px;border-radius:10px}
 .pin-error{font-family:var(--mono);font-size:11px;color:var(--stamp);min-height:14px;margin-bottom:10px}
 
@@ -128,7 +139,7 @@ details.more .more-body{padding-top:14px}
 <div class="pin-gate" id="pinGate">
   <div class="pin-card">
     <h1 style="font-size:1.2rem">Chào em</h1>
-    <p style="font-family:var(--serif);font-style:italic;font-size:.88rem;color:var(--soft);margin-top:4px">Nhập mã bí mật của tụi mình để vào nhé</p>
+    <p style="font-family:var(--serif);font-style:italic;font-size:.88rem;color:var(--soft);margin-top:4px">Nhập mã bí mật để vào nhé</p>
     <form id="pinForm" autocomplete="off">
       <input class="pin-input" id="pinInput" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="12" placeholder="••••••" required autofocus />
       <p class="pin-error" id="pinError"></p>
