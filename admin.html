@@ -442,7 +442,7 @@ async function addTopic(){
     const created = await api("/categories", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ slug: slugify(title), title, position: categories.length }),
+      body: JSON.stringify({ slug: slugify(title), title }),
     });
     await loadCategories();
     document.getElementById("bookCategory").value = created.id;
