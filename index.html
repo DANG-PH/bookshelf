@@ -749,7 +749,11 @@ function cardHTML(b, cat){
          <div class="no-photo" aria-hidden="true"><span>${escapeHTML(letter)}</span></div>
        </div>`;
   const searchKey = normalize([b.title, b.author, b.blurb, ...(b.tags||[])].filter(Boolean).join(" "));
-  const newRibbon = b.isNew ? `<span class="card-new-ribbon">Mới</span>` : "";
+  // "Mới" is computed from createdAt, not a stored flag — it just quietly
+  // stops applying once a book turns 1 day old, no cron/queue needed
+  const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+  const isNew = !!b.createdAt && (Date.now() - new Date(b.createdAt).getTime()) < ONE_DAY_MS;
+  const newRibbon = isNew ? `<span class="card-new-ribbon">Mới</span>` : "";
   // long blurbs get cut to a preview with a toggle to read the rest. Cut by
   // character count (not CSS line-clamp — that breaks the float-wrap the
   // cover image relies on), and trim to the last whole word so it doesn't
@@ -761,7 +765,7 @@ function cardHTML(b, cat){
     ? blurb.slice(0, PREVIEW_LEN).replace(/\s+\S*$/, "") + "…"
     : blurb;
   return `
-    <a class="card" href="${href}" target="_blank" rel="noopener" data-search="${escapeHTML(searchKey)}" aria-label="${escapeHTML(b.title)}${b.author ? ", tác giả "+escapeHTML(b.author) : ""}${b.isNew ? ", sách mới thêm" : ""} (mở trong tab mới)">
+    <a class="card" href="${href}" target="_blank" rel="noopener" data-search="${escapeHTML(searchKey)}" aria-label="${escapeHTML(b.title)}${b.author ? ", tác giả "+escapeHTML(b.author) : ""}${isNew ? ", sách mới thêm" : ""} (mở trong tab mới)">
       ${newRibbon}
       <div class="card-tab">
         <span class="call">${escapeHTML(cat.dewey||"")}.${escapeHTML(b.num||"")}</span>

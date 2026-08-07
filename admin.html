@@ -127,10 +127,6 @@ details.more summary::before{content:"+";font-size:1.1rem;line-height:1;transiti
 details.more[open] summary::before{content:"–"}
 details.more .more-body{padding-top:14px}
 
-.checkbox-row{display:flex;align-items:center;gap:10px;margin-bottom:16px}
-.checkbox-row input{width:auto;padding:0}
-.checkbox-row label{margin:0;font-weight:500;color:var(--ink)}
-
 .list{display:flex;flex-direction:column;gap:10px}
 .list-item{
   display:flex;align-items:center;justify-content:space-between;gap:10px;
@@ -242,10 +238,6 @@ details.more .more-body{padding-top:14px}
             <label for="bookBlurb">Mô tả ngắn</label>
             <textarea id="bookBlurb" name="blurb" placeholder="Vài dòng giới thiệu cuốn sách…"></textarea>
           </div>
-          <div class="checkbox-row">
-            <input id="bookIsNew" name="isNew" type="checkbox" checked />
-            <label for="bookIsNew">Gắn nhãn "Mới" cho sách này</label>
-          </div>
         </div>
       </details>
 
@@ -328,8 +320,11 @@ function slugify(s){
   return noDiacritics.replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"") || `chu-de-${Date.now()}`;
 }
 
-// ── auto-lookup title/author/year/cover/blurb from Google Books while typing ──
-const GOOGLE_BOOKS_API = "https://www.googleapis.com/books/v1/volumes";
+// ── auto-lookup title/author/year/cover/blurb while typing ──
+// Proxied through our own backend (GET /books/lookup, backed by Open
+// Library — free, no API key, no daily quota) instead of calling a third
+// party straight from the browser. Google Books' anonymous quota is 0
+// as of writing, and would silently fail here either way.
 const bookTitleEl = document.getElementById("bookTitle");
 const lookupResultsEl = document.getElementById("lookupResults");
 const lookupStatusEl = document.getElementById("lookupStatus");
@@ -338,39 +333,6 @@ const bookYearEl = document.getElementById("bookYear");
 const bookBlurbEl = document.getElementById("bookBlurb");
 const bookCoverUrlEl = document.getElementById("bookCoverUrl");
 const bookCoverFileEl = document.getElementById("bookCoverFile");
-const bookFileEl = document.getElementById("bookFile");
-const bookPdfUrlEl = document.getElementById("bookPdfUrl");
-
-function cleanGoogleCoverUrl(url){
-  if(!url) return "";
-  return url.replace(/^http:/, "https:").replace(/&edge=curl/, "");
-}
-
-async function searchGoogleBooks(query){
-  const url = `${GOOGLE_BOOKS_API}?q=${encodeURIComponent(query)}&maxResults=5`;
-  const res = await fetch(url);
-  if(!res.ok) throw new Error("Không tra được thông tin sách");
-  const data = await res.json();
-  return (data.items || []).map(item => {
-    const info = item.volumeInfo || {};
-    const access = item.accessInfo || {};
-    // Google only hands out a real, complete PDF link for books that are
-    // fully public domain — never for a copyrighted book's preview pages.
-    // That's a small slice of modern non-fiction, but free when it applies.
-    const freePdf = access.publicDomain === true
-      && access.viewability === "ALL_PAGES"
-      && access.pdf?.isAvailable
-      && access.pdf?.downloadLink;
-    return {
-      title: info.title || "",
-      author: (info.authors || []).join(", "),
-      year: info.publishedDate ? parseInt(info.publishedDate.slice(0, 4), 10) : undefined,
-      blurb: info.description ? info.description.slice(0, 400) : "",
-      cover: cleanGoogleCoverUrl(info.imageLinks?.thumbnail || info.imageLinks?.smallThumbnail || ""),
-      pdfUrl: freePdf ? access.pdf.downloadLink : "",
-    };
-  }).filter(r => r.title);
-}
 
 function renderLookupResults(results){
   if(results.length === 0){
@@ -383,7 +345,7 @@ function renderLookupResults(results){
       ${r.cover ? `<img src="${escapeHTML(r.cover)}" alt="" loading="lazy" />` : `<span style="width:32px;height:44px;flex:none"></span>`}
       <span class="li-text">
         <span class="li-title">${escapeHTML(r.title)}</span>
-        <span class="li-sub">${escapeHTML([r.author, r.year].filter(Boolean).join(" · ") || "—")}${r.pdfUrl ? " · có PDF miễn phí" : ""}</span>
+        <span class="li-sub">${escapeHTML([r.author, r.year].filter(Boolean).join(" · ") || "—")}</span>
       </span>
     </button>
   `).join("");
@@ -399,11 +361,16 @@ lookupResultsEl.addEventListener("click", (e) => {
   bookTitleEl.value = r.title;
   if(r.author && !bookAuthorEl.value.trim()) bookAuthorEl.value = r.author;
   if(r.year && !bookYearEl.value.trim()) bookYearEl.value = r.year;
-  if(r.blurb && !bookBlurbEl.value.trim()) bookBlurbEl.value = r.blurb;
   if(r.cover && !bookCoverFileEl.files[0] && !bookCoverUrlEl.value.trim()) bookCoverUrlEl.value = r.cover;
-  if(r.pdfUrl && !bookFileEl.files[0] && !bookPdfUrlEl.value.trim()) bookPdfUrlEl.value = r.pdfUrl;
   lookupResultsEl.hidden = true;
   lookupStatusEl.hidden = true;
+  // description needs a second, slower request — fetch it after the fact
+  // and drop it in only if nothing's been typed into blurb meanwhile
+  if(r.workKey && !bookBlurbEl.value.trim()){
+    api(`/books/lookup/detail?workKey=${encodeURIComponent(r.workKey)}`)
+      .then(({ blurb }) => { if(blurb && !bookBlurbEl.value.trim()) bookBlurbEl.value = blurb; })
+      .catch(() => {});
+  }
 });
 
 let lookupDebounce, lookupToken = 0;
@@ -420,14 +387,17 @@ bookTitleEl.addEventListener("input", () => {
     lookupStatusEl.hidden = false;
     lookupStatusEl.textContent = "Đang tìm thông tin sách…";
     try{
-      const results = await searchGoogleBooks(query);
+      const results = await api(`/books/lookup?q=${encodeURIComponent(query)}`);
       if(myToken !== lookupToken) return; // a newer search superseded this one
       lookupStatusEl.hidden = true;
       renderLookupResults(results);
-    }catch{
+    }catch(err){
       if(myToken !== lookupToken) return;
       lookupStatusEl.hidden = true;
       lookupResultsEl.hidden = true;
+      // "unauthorized"/"no-token" already pop the PIN gate via api(); anything
+      // else (network hiccup, Open Library down) just fails quietly here —
+      // this is a nice-to-have, not worth interrupting typing over
     }
   }, 500);
 });
@@ -651,7 +621,6 @@ document.getElementById("bookForm").addEventListener("submit", async (e) => {
   if(form.year.value) fd.append("year", form.year.value);
   if(form.tags.value.trim()) fd.append("tags", form.tags.value.trim());
   if(form.blurb.value.trim()) fd.append("blurb", form.blurb.value.trim());
-  fd.append("isNew", form.isNew.checked ? "true" : "false");
   if(form.file.files[0]) fd.append("file", form.file.files[0]);
   else if(form.pdfUrl.value.trim()) fd.append("pdfUrl", form.pdfUrl.value.trim());
   if(form.cover.files[0]) fd.append("cover", form.cover.files[0]);
