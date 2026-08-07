@@ -200,6 +200,11 @@ details.more .more-body{padding-top:14px}
       </div>
 
       <div class="field">
+        <label for="bookNote">Lời nhắn riêng <span class="opt">(không bắt buộc, hiện ngay trên thẻ sách)</span></label>
+        <textarea id="bookNote" name="note" placeholder="Mình chọn cuốn này vì…"></textarea>
+      </div>
+
+      <div class="field">
         <label for="bookFile">File sách (PDF)</label>
         <div class="file-field">
           <input id="bookFile" name="file" type="file" accept="application/pdf" />
@@ -621,6 +626,7 @@ document.getElementById("bookForm").addEventListener("submit", async (e) => {
   if(form.year.value) fd.append("year", form.year.value);
   if(form.tags.value.trim()) fd.append("tags", form.tags.value.trim());
   if(form.blurb.value.trim()) fd.append("blurb", form.blurb.value.trim());
+  if(form.note.value.trim()) fd.append("note", form.note.value.trim());
   if(form.file.files[0]) fd.append("file", form.file.files[0]);
   else if(form.pdfUrl.value.trim()) fd.append("pdfUrl", form.pdfUrl.value.trim());
   if(form.cover.files[0]) fd.append("cover", form.cover.files[0]);

@@ -359,6 +359,11 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
   box-shadow:0 2px 5px -1px rgba(80,62,42,.4);
 }
 .card-author{color:var(--soft);font-size:.84rem;margin-top:4px;font-family:var(--serif);letter-spacing:.01em}
+.card-note{
+  margin-top:8px;padding:6px 10px;border-left:2px solid var(--cat,var(--accent));
+  background:var(--accent-wash);border-radius:0 4px 4px 0;
+  font-family:var(--serif);font-style:italic;font-size:.82rem;color:var(--soft);line-height:1.55;
+}
 .card-blurb{color:var(--soft);font-size:.79rem;line-height:1.6;margin-top:10px;font-family:var(--mono);letter-spacing:.005em}
 .blurb-toggle{
   display:inline-block;margin-top:4px;
@@ -367,6 +372,29 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
   position:relative;z-index:1;
 }
 .blurb-toggle:hover{color:var(--stamp)}
+
+/* favorite heart, sits in the top strip next to the year */
+.card-tab-right{display:flex;align-items:center;gap:7px}
+.fav-toggle{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:20px;height:20px;color:var(--faint);flex:none;
+  position:relative;z-index:1;transition:color .2s,transform .15s;
+}
+.fav-toggle svg{width:14px;height:14px}
+.fav-toggle:hover{color:var(--stamp)}
+.fav-toggle.active{color:var(--stamp)}
+.fav-toggle.active svg{fill:currentColor}
+.fav-toggle:active{transform:scale(.82)}
+
+/* reading-status pills */
+.card-status{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.status-pill{
+  font-family:var(--mono);font-size:8.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;
+  padding:4px 9px;border-radius:99px;border:1px solid var(--line-2);color:var(--faint);
+  background:var(--paper);position:relative;z-index:1;transition:background .15s,border-color .15s,color .15s;
+}
+.status-pill:hover{border-color:var(--cat,var(--accent));color:var(--cat,var(--accent-deep))}
+.status-pill.active{background:var(--cat,var(--accent-deep));border-color:var(--cat,var(--accent-deep));color:#fff}
 
 .card-foot{
   display:flex;align-items:center;justify-content:space-between;gap:10px;
@@ -735,6 +763,71 @@ catalogEl.addEventListener("keydown", (e) => {
   toggleBlurb(toggle);
 });
 
+// ── favorite heart + reading-status pills — the one thing this site lets
+// whoever's reading (not just whoever's adding books) change directly.
+// Updates optimistically, then fires the PATCH; rolls back on failure. ──
+async function patchBookStatus(id, body){
+  const token = getStoredToken();
+  if(!token){ showGate(); throw new Error("no-token"); }
+  const res = await fetch(`${API_BASE}/books/${id}/status`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(body),
+  });
+  if(res.status === 401){
+    clearToken();
+    showGate("Phiên đã hết hạn, nhập lại mã PIN nhé.");
+    throw new Error("unauthorized");
+  }
+  if(!res.ok) throw new Error("HTTP " + res.status);
+  return res.json();
+}
+
+function toggleFavorite(favBtn){
+  const wasActive = favBtn.classList.contains("active");
+  favBtn.classList.toggle("active", !wasActive);
+  favBtn.setAttribute("aria-label", wasActive ? "Đánh dấu yêu thích" : "Bỏ yêu thích");
+  patchBookStatus(favBtn.dataset.bookId, { isFavorite: !wasActive })
+    .catch(() => {
+      favBtn.classList.toggle("active", wasActive);
+      favBtn.setAttribute("aria-label", wasActive ? "Bỏ yêu thích" : "Đánh dấu yêu thích");
+    });
+}
+
+function toggleReadStatus(statusBtn){
+  const group = statusBtn.closest(".card-status");
+  const wasActive = statusBtn.classList.contains("active");
+  const prevActive = group.querySelector(".status-pill.active");
+  const prevValue = prevActive ? prevActive.dataset.statusToggle : null;
+  group.querySelectorAll(".status-pill").forEach(p => p.classList.remove("active"));
+  if(!wasActive) statusBtn.classList.add("active");
+  const nextValue = wasActive ? null : statusBtn.dataset.statusToggle;
+  patchBookStatus(statusBtn.dataset.bookId, { readStatus: nextValue })
+    .catch(() => {
+      group.querySelectorAll(".status-pill").forEach(p => p.classList.remove("active"));
+      if(prevValue) group.querySelector(`[data-status-toggle="${prevValue}"]`)?.classList.add("active");
+    });
+}
+
+catalogEl.addEventListener("click", (e) => {
+  const favBtn = e.target.closest("[data-fav-toggle]");
+  if(favBtn){ e.preventDefault(); e.stopPropagation(); toggleFavorite(favBtn); return; }
+  const statusBtn = e.target.closest("[data-status-toggle]");
+  if(statusBtn){ e.preventDefault(); e.stopPropagation(); toggleReadStatus(statusBtn); }
+});
+catalogEl.addEventListener("keydown", (e) => {
+  if(e.key !== "Enter" && e.key !== " ") return;
+  const favBtn = e.target.closest("[data-fav-toggle]");
+  if(favBtn){ e.preventDefault(); e.stopPropagation(); toggleFavorite(favBtn); return; }
+  const statusBtn = e.target.closest("[data-status-toggle]");
+  if(statusBtn){ e.preventDefault(); e.stopPropagation(); toggleReadStatus(statusBtn); }
+});
+
+const READ_STATUS_LABELS = { want: "Muốn đọc", reading: "Đang đọc", done: "Đã đọc" };
+
 function cardHTML(b, cat){
   const tags = (b.tags||[]).join(" · ");
   const href = encodeURI(resolvePath(cat, b.file));
@@ -764,20 +857,30 @@ function cardHTML(b, cat){
   const blurbPreview = blurbLong
     ? blurb.slice(0, PREVIEW_LEN).replace(/\s+\S*$/, "") + "…"
     : blurb;
+  const statusPills = Object.entries(READ_STATUS_LABELS).map(([value, label]) => `
+    <span class="status-pill${b.readStatus === value ? " active" : ""}" role="button" tabindex="0" data-status-toggle="${value}" data-book-id="${b.id}">${label}</span>
+  `).join("");
   return `
     <a class="card" href="${href}" target="_blank" rel="noopener" data-search="${escapeHTML(searchKey)}" aria-label="${escapeHTML(b.title)}${b.author ? ", tác giả "+escapeHTML(b.author) : ""}${isNew ? ", sách mới thêm" : ""} (mở trong tab mới)">
       ${newRibbon}
       <div class="card-tab">
         <span class="call">${escapeHTML(cat.dewey||"")}.${escapeHTML(b.num||"")}</span>
-        <span>${escapeHTML(String(b.year||""))}</span>
+        <span class="card-tab-right">
+          <span>${escapeHTML(String(b.year||""))}</span>
+          <span class="fav-toggle${b.isFavorite ? " active" : ""}" role="button" tabindex="0" data-fav-toggle data-book-id="${b.id}" aria-label="${b.isFavorite ? "Bỏ yêu thích" : "Đánh dấu yêu thích"}">
+            <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.8Z"/></svg>
+          </span>
+        </span>
       </div>
       <div class="card-body">
         ${photoBlock}
         <div class="card-title">${escapeHTML(b.title)}</div>
         <div class="card-author">${escapeHTML(b.author||"")}</div>
+        ${b.note ? `<p class="card-note">${escapeHTML(b.note)}</p>` : ""}
         ${blurb ? `<p class="card-blurb" data-preview="${escapeHTML(blurbPreview)}" data-full="${escapeHTML(blurb)}">${escapeHTML(blurbPreview)}</p>` : ""}
         ${blurbLong ? `<span class="blurb-toggle" role="button" tabindex="0" data-blurb-toggle data-expanded="0">Xem thêm</span>` : ""}
       </div>
+      <div class="card-status">${statusPills}</div>
       <div class="card-foot">
         <div class="card-subjects">${tags ? `<b>Chủ đề</b><br>${escapeHTML(tags)}` : ""}</div>
         <div class="stamp" aria-hidden="true">Đọc<br>ngay</div>
