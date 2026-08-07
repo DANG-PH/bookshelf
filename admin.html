@@ -99,6 +99,23 @@ button:disabled{opacity:.55;cursor:default}
 .file-field input[type=file]{border:none;background:none;padding:0;font-size:.82rem}
 .file-hint{font-size:.76rem;color:var(--faint);margin-top:6px}
 
+/* Google Books lookup dropdown under the title field */
+.lookup-results{
+  position:absolute;left:0;right:0;top:100%;margin-top:4px;z-index:10;
+  background:var(--card);border:1px solid var(--line-2);border-radius:12px;
+  box-shadow:0 16px 34px -16px rgba(80,62,42,.4);
+  max-height:280px;overflow-y:auto;padding:6px;
+}
+.lookup-results[hidden]{display:none}
+.lookup-item{
+  display:flex;gap:10px;align-items:center;padding:8px;border-radius:8px;cursor:pointer;text-align:left;width:100%;
+}
+.lookup-item:hover,.lookup-item:focus{background:var(--paper);outline:none}
+.lookup-item img{width:32px;height:44px;object-fit:cover;border-radius:3px;background:var(--paper);flex:none}
+.lookup-item .li-text{min-width:0}
+.lookup-item .li-title{font-family:var(--serif);font-size:.9rem;font-weight:600;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lookup-item .li-sub{font-size:.76rem;color:var(--faint);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
 /* collapsible extra details */
 details.more{margin:4px 0 18px}
 details.more summary{
@@ -174,9 +191,11 @@ details.more .more-body{padding-top:14px}
         </div>
       </div>
 
-      <div class="field">
+      <div class="field" style="position:relative">
         <label for="bookTitle">Tên sách</label>
-        <input id="bookTitle" name="title" placeholder="Tên cuốn sách" required />
+        <input id="bookTitle" name="title" placeholder="Gõ tên sách, gợi ý sẽ hiện ra…" required autocomplete="off" />
+        <p class="field-hint" id="lookupStatus" hidden></p>
+        <div class="lookup-results" id="lookupResults" hidden></div>
       </div>
 
       <div class="field">
@@ -187,7 +206,11 @@ details.more .more-body{padding-top:14px}
       <div class="field">
         <label for="bookFile">File sách (PDF)</label>
         <div class="file-field">
-          <input id="bookFile" name="file" type="file" accept="application/pdf" required />
+          <input id="bookFile" name="file" type="file" accept="application/pdf" />
+          <p class="file-hint">Hoặc dán link PDF có sẵn bên dưới thay vì tải lên</p>
+        </div>
+        <div class="field" style="margin-top:10px">
+          <input id="bookPdfUrl" name="pdfUrl" type="url" placeholder="https://… (link PDF có sẵn)" />
         </div>
       </div>
 
@@ -304,6 +327,116 @@ function slugify(s){
     .replace(/đ/g,"d");
   return noDiacritics.replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"") || `chu-de-${Date.now()}`;
 }
+
+// ── auto-lookup title/author/year/cover/blurb from Google Books while typing ──
+const GOOGLE_BOOKS_API = "https://www.googleapis.com/books/v1/volumes";
+const bookTitleEl = document.getElementById("bookTitle");
+const lookupResultsEl = document.getElementById("lookupResults");
+const lookupStatusEl = document.getElementById("lookupStatus");
+const bookAuthorEl = document.getElementById("bookAuthor");
+const bookYearEl = document.getElementById("bookYear");
+const bookBlurbEl = document.getElementById("bookBlurb");
+const bookCoverUrlEl = document.getElementById("bookCoverUrl");
+const bookCoverFileEl = document.getElementById("bookCoverFile");
+const bookFileEl = document.getElementById("bookFile");
+const bookPdfUrlEl = document.getElementById("bookPdfUrl");
+
+function cleanGoogleCoverUrl(url){
+  if(!url) return "";
+  return url.replace(/^http:/, "https:").replace(/&edge=curl/, "");
+}
+
+async function searchGoogleBooks(query){
+  const url = `${GOOGLE_BOOKS_API}?q=${encodeURIComponent(query)}&maxResults=5`;
+  const res = await fetch(url);
+  if(!res.ok) throw new Error("Không tra được thông tin sách");
+  const data = await res.json();
+  return (data.items || []).map(item => {
+    const info = item.volumeInfo || {};
+    const access = item.accessInfo || {};
+    // Google only hands out a real, complete PDF link for books that are
+    // fully public domain — never for a copyrighted book's preview pages.
+    // That's a small slice of modern non-fiction, but free when it applies.
+    const freePdf = access.publicDomain === true
+      && access.viewability === "ALL_PAGES"
+      && access.pdf?.isAvailable
+      && access.pdf?.downloadLink;
+    return {
+      title: info.title || "",
+      author: (info.authors || []).join(", "),
+      year: info.publishedDate ? parseInt(info.publishedDate.slice(0, 4), 10) : undefined,
+      blurb: info.description ? info.description.slice(0, 400) : "",
+      cover: cleanGoogleCoverUrl(info.imageLinks?.thumbnail || info.imageLinks?.smallThumbnail || ""),
+      pdfUrl: freePdf ? access.pdf.downloadLink : "",
+    };
+  }).filter(r => r.title);
+}
+
+function renderLookupResults(results){
+  if(results.length === 0){
+    lookupResultsEl.hidden = true;
+    lookupResultsEl.innerHTML = "";
+    return;
+  }
+  lookupResultsEl.innerHTML = results.map((r, i) => `
+    <button type="button" class="lookup-item" data-lookup-index="${i}">
+      ${r.cover ? `<img src="${escapeHTML(r.cover)}" alt="" loading="lazy" />` : `<span style="width:32px;height:44px;flex:none"></span>`}
+      <span class="li-text">
+        <span class="li-title">${escapeHTML(r.title)}</span>
+        <span class="li-sub">${escapeHTML([r.author, r.year].filter(Boolean).join(" · ") || "—")}${r.pdfUrl ? " · có PDF miễn phí" : ""}</span>
+      </span>
+    </button>
+  `).join("");
+  lookupResultsEl.hidden = false;
+  lookupResultsEl._results = results;
+}
+
+lookupResultsEl.addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-lookup-index]");
+  if(!btn) return;
+  const r = lookupResultsEl._results[Number(btn.dataset.lookupIndex)];
+  if(!r) return;
+  bookTitleEl.value = r.title;
+  if(r.author && !bookAuthorEl.value.trim()) bookAuthorEl.value = r.author;
+  if(r.year && !bookYearEl.value.trim()) bookYearEl.value = r.year;
+  if(r.blurb && !bookBlurbEl.value.trim()) bookBlurbEl.value = r.blurb;
+  if(r.cover && !bookCoverFileEl.files[0] && !bookCoverUrlEl.value.trim()) bookCoverUrlEl.value = r.cover;
+  if(r.pdfUrl && !bookFileEl.files[0] && !bookPdfUrlEl.value.trim()) bookPdfUrlEl.value = r.pdfUrl;
+  lookupResultsEl.hidden = true;
+  lookupStatusEl.hidden = true;
+});
+
+let lookupDebounce, lookupToken = 0;
+bookTitleEl.addEventListener("input", () => {
+  clearTimeout(lookupDebounce);
+  const query = bookTitleEl.value.trim();
+  if(query.length < 3){
+    lookupResultsEl.hidden = true;
+    lookupStatusEl.hidden = true;
+    return;
+  }
+  lookupDebounce = setTimeout(async () => {
+    const myToken = ++lookupToken;
+    lookupStatusEl.hidden = false;
+    lookupStatusEl.textContent = "Đang tìm thông tin sách…";
+    try{
+      const results = await searchGoogleBooks(query);
+      if(myToken !== lookupToken) return; // a newer search superseded this one
+      lookupStatusEl.hidden = true;
+      renderLookupResults(results);
+    }catch{
+      if(myToken !== lookupToken) return;
+      lookupStatusEl.hidden = true;
+      lookupResultsEl.hidden = true;
+    }
+  }, 500);
+});
+
+// hide the dropdown on outside click, but let a click on a result register first
+document.addEventListener("click", (e) => {
+  if(e.target === bookTitleEl || lookupResultsEl.contains(e.target)) return;
+  lookupResultsEl.hidden = true;
+});
 
 const pinGateEl = document.getElementById("pinGate");
 const pinFormEl = document.getElementById("pinForm");
@@ -506,6 +639,10 @@ document.getElementById("bookForm").addEventListener("submit", async (e) => {
     flash("Chọn hoặc thêm một chủ đề trước đã nhé.", "err");
     return;
   }
+  if(!form.file.files[0] && !form.pdfUrl.value.trim()){
+    flash("Chọn file PDF hoặc dán link PDF trước đã nhé.", "err");
+    return;
+  }
   const submitBtn = document.getElementById("bookSubmit");
   const fd = new FormData();
   fd.append("categoryId", form.categoryId.value);
@@ -516,6 +653,7 @@ document.getElementById("bookForm").addEventListener("submit", async (e) => {
   if(form.blurb.value.trim()) fd.append("blurb", form.blurb.value.trim());
   fd.append("isNew", form.isNew.checked ? "true" : "false");
   if(form.file.files[0]) fd.append("file", form.file.files[0]);
+  else if(form.pdfUrl.value.trim()) fd.append("pdfUrl", form.pdfUrl.value.trim());
   if(form.cover.files[0]) fd.append("cover", form.cover.files[0]);
   else if(form.coverUrl.value.trim()) fd.append("coverUrl", form.coverUrl.value.trim());
 
