@@ -430,6 +430,62 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
 }
 .search-status.visible{display:block}
 
+.tag-filter-status{
+  display:flex;align-items:center;gap:6px;margin:2px 6px 0;
+  font-family:var(--mono);font-size:10px;color:var(--accent-deep);letter-spacing:.03em;
+}
+.tag-filter-status[hidden]{display:none}
+.tag-filter-status button{
+  color:var(--faint);font-size:12px;line-height:1;padding:0 2px;
+}
+.tag-filter-status button:hover{color:var(--stamp)}
+
+/* sort dropdown + random-pick button, sit right under the search box */
+.tool-row{display:flex;gap:8px;align-items:center}
+.sort-select{
+  flex:1;min-width:0;
+  font-family:var(--mono);font-size:10.5px;color:var(--soft);
+  background:var(--paper);border:1px solid var(--line-2);border-radius:99px;
+  padding:7px 10px;cursor:pointer;
+}
+.sort-select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-wash)}
+.random-btn{
+  flex:none;width:32px;height:32px;border-radius:50%;
+  display:grid;place-items:center;
+  background:var(--paper);border:1px solid var(--line-2);color:var(--soft);
+  transition:border-color .2s,color .2s,transform .15s;
+}
+.random-btn:hover{border-color:var(--accent);color:var(--accent-deep)}
+.random-btn:active{transform:scale(.9)}
+.random-btn svg{width:14px;height:14px}
+
+/* "new since your last visit" banner above the catalog */
+.new-since-banner{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  background:var(--accent-wash);border:1px solid var(--line-2);border-radius:8px;
+  padding:11px 14px;margin:-8px 0 4px;
+  font-family:var(--mono);font-size:11.5px;color:var(--accent-deep);
+}
+.new-since-banner[hidden]{display:none}
+.new-since-banner button{
+  flex:none;font-size:16px;line-height:1;color:var(--faint);padding:0 2px;
+}
+.new-since-banner button:hover{color:var(--stamp)}
+
+/* clickable tags inside a card's subject line */
+.card-subjects .tag-chip{
+  cursor:pointer;position:relative;z-index:1;
+  border-bottom:1px dotted transparent;
+}
+.card-subjects .tag-chip:hover{color:var(--cat,var(--accent-deep));border-bottom-color:currentColor}
+
+/* pulses briefly around whatever the "chọn ngẫu nhiên" button lands on */
+@keyframes pick-glow{
+  0%,100%{box-shadow:0 0 0 0 var(--accent-wash-2)}
+  50%{box-shadow:0 0 0 8px transparent}
+}
+.card.picked{animation:pick-glow 1s ease-out 2;border-color:var(--accent)}
+
 /* load / error */
 .load-note,.error-note{
   padding:28px 20px;text-align:center;font-family:var(--mono);font-size:12px;color:var(--faint);
@@ -627,6 +683,22 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
         <input type="search" id="searchInput" placeholder="Tìm sách, tác giả…" aria-label="Tìm sách" autocomplete="off" />
       </label>
       <p class="search-status" id="searchStatus" role="status" aria-live="polite"></p>
+      <p class="tag-filter-status" id="tagFilterStatus" hidden>
+        Đang lọc theo tag: <b id="tagFilterLabel"></b>
+        <button type="button" id="tagFilterClear" aria-label="Bỏ lọc tag">×</button>
+      </p>
+
+      <div class="tool-row">
+        <select id="sortSelect" class="sort-select" aria-label="Sắp xếp sách trong ngăn">
+          <option value="newest">Mới thêm trước</option>
+          <option value="title">Tên A–Z</option>
+          <option value="year-desc">Năm xuất bản mới nhất</option>
+          <option value="year-asc">Năm xuất bản cũ nhất</option>
+        </select>
+        <button type="button" class="random-btn" id="randomBtn" aria-label="Chọn ngẫu nhiên một cuốn cho mình" title="Chọn ngẫu nhiên cho mình">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6"/><path d="M4 4l5 5"/></svg>
+        </button>
+      </div>
 
       <div>
         <div class="nav-head">Ngăn kéo</div>
@@ -634,9 +706,11 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
       </div>
 
       <div class="sidebar-meta">
+        <div class="meta-line"><span class="meta-key">Bên nhau</span><span class="meta-dots"></span><span class="meta-val" id="statTogether">—</span></div>
         <div class="meta-line"><span class="meta-key">Cập nhật</span><span class="meta-dots"></span><span class="meta-val" id="statUpdated">—</span></div>
         <div class="meta-line"><span class="meta-key">Đầu sách</span><span class="meta-dots"></span><span class="meta-val" id="statVolumes">—</span></div>
         <div class="meta-line"><span class="meta-key">Ngăn dùng</span><span class="meta-dots"></span><span class="meta-val" id="statCategories">—</span></div>
+        <div class="meta-line"><span class="meta-key">Yêu thích</span><span class="meta-dots"></span><span class="meta-val" id="statFavorites">—</span></div>
         <div class="meta-line"><span class="meta-key">Phân loại</span><span class="meta-dots"></span><span class="meta-val">Dewey</span></div>
         <div class="meta-line"><span class="meta-key">Truy cập</span><span class="meta-dots"></span><span class="meta-val">Kho mở</span></div>
       </div>
@@ -662,6 +736,10 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
     </header>
 
     <div class="content">
+      <div class="new-since-banner" id="newSinceBanner" hidden>
+        <span id="newSinceText"></span>
+        <button type="button" id="newSinceDismiss" aria-label="Đóng thông báo">×</button>
+      </div>
       <div id="catalog"></div>
       <footer class="foot">
         <div class="sig">© <span id="year"></span> · DANG-PH · THƯ VIỆN</div>
@@ -732,6 +810,18 @@ const hamburgerEl = document.getElementById("hamburger");
 const searchInputEl = document.getElementById("searchInput");
 const searchInputMobileEl = document.getElementById("searchInputMobile");
 const searchStatusEl = document.getElementById("searchStatus");
+const sortSelectEl = document.getElementById("sortSelect");
+const randomBtnEl = document.getElementById("randomBtn");
+const tagFilterStatusEl = document.getElementById("tagFilterStatus");
+const tagFilterLabelEl = document.getElementById("tagFilterLabel");
+const tagFilterClearEl = document.getElementById("tagFilterClear");
+const newSinceBannerEl = document.getElementById("newSinceBanner");
+const newSinceTextEl = document.getElementById("newSinceText");
+const newSinceDismissEl = document.getElementById("newSinceDismiss");
+
+let lastCatalogData = null;
+let activeTagFilter = null;
+let currentApplyFilter = null;
 
 // ── "Xem thêm/Thu gọn" toggle for long book descriptions — delegated once
 // on the stable catalog container so it survives re-renders, and stops the
@@ -829,7 +919,10 @@ catalogEl.addEventListener("keydown", (e) => {
 const READ_STATUS_LABELS = { want: "Muốn đọc", reading: "Đang đọc", done: "Đã đọc" };
 
 function cardHTML(b, cat){
-  const tags = (b.tags||[]).join(" · ");
+  const tagList = b.tags || [];
+  const tagsHTML = tagList
+    .map(t => `<span class="tag-chip" role="button" tabindex="0" data-tag-filter="${escapeHTML(t)}">${escapeHTML(t)}</span>`)
+    .join(" · ");
   const href = encodeURI(resolvePath(cat, b.file));
   const coverSrc = b.cover ? encodeURI(resolvePath(cat, b.cover)) : "";
   const letter = (b.title||"?").trim().charAt(0).toUpperCase();
@@ -882,19 +975,29 @@ function cardHTML(b, cat){
       </div>
       <div class="card-status">${statusPills}</div>
       <div class="card-foot">
-        <div class="card-subjects">${tags ? `<b>Chủ đề</b><br>${escapeHTML(tags)}` : ""}</div>
+        <div class="card-subjects">${tagsHTML ? `<b>Chủ đề</b><br>${tagsHTML}` : ""}</div>
         <div class="stamp" aria-hidden="true">Đọc<br>ngay</div>
       </div>
     </a>
   `;
 }
 
+function applyBookSort(books, mode){
+  const sorted = books.slice();
+  if(mode === "newest") sorted.sort((a,b) => new Date(b.createdAt||0) - new Date(a.createdAt||0));
+  else if(mode === "title") sorted.sort((a,b) => (a.title||"").localeCompare(b.title||"", "vi"));
+  else if(mode === "year-desc") sorted.sort((a,b) => (b.year||0) - (a.year||0));
+  else if(mode === "year-asc") sorted.sort((a,b) => (a.year||0) - (b.year||0));
+  return sorted;
+}
+
 function render(data){
   // newest topic first — a topic you just added is the one worth reading,
   // not something to go dig for at the bottom of the sidebar
-  const categories = (data.categories || []).slice().sort((a, b) => {
-    return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
-  });
+  const sortMode = sortSelectEl ? sortSelectEl.value : "default";
+  const categories = (data.categories || []).slice()
+    .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+    .map(cat => ({ ...cat, books: applyBookSort(cat.books || [], sortMode) }));
   let volumes = 0;
   catalogEl.innerHTML = "";
   sidebarNavEl.innerHTML = "";
@@ -1056,13 +1159,15 @@ function render(data){
       const cards = section.querySelectorAll(".card");
       let visibleInSection = 0;
       cards.forEach(card => {
-        const show = !q || card.dataset.search.includes(q);
+        const matchesText = !q || card.dataset.search.includes(q);
+        const matchesTag = !activeTagFilter || !!card.querySelector(`[data-tag-filter="${CSS.escape(activeTagFilter)}"]`);
+        const show = matchesText && matchesTag;
         card.style.display = show ? "" : "none";
         if(show){ visibleInSection++; totalVisible++; }
       });
       const noMatch = section.querySelector(".no-match");
       if(noMatch){
-        noMatch.style.display = q && cards.length > 0 && visibleInSection === 0 ? "" : "none";
+        noMatch.style.display = (q || activeTagFilter) && cards.length > 0 && visibleInSection === 0 ? "" : "none";
       }
     });
     // status line under sidebar search
@@ -1073,6 +1178,7 @@ function render(data){
         : `${totalVisible} thẻ khớp "${raw}".`;
     }
   }
+  currentApplyFilter = applyFilter;
   let debounce;
   function onSearchInput(){
     clearTimeout(debounce);
@@ -1107,6 +1213,14 @@ function render(data){
   document.getElementById("statUpdated").textContent = data.updated || new Date().getFullYear();
   document.getElementById("navCountAll").textContent = volStr;
 
+  const favoriteCount = categories.reduce((sum, c) => sum + (c.books||[]).filter(b => b.isFavorite).length, 0);
+  countUp(document.getElementById("statFavorites"), favoriteCount, 2);
+
+  // "Bên nhau" — days since the date the PIN itself is built from (01/08/2026)
+  const MET_DATE = new Date(2026, 7, 1);
+  const daysTogether = Math.max(0, Math.floor((Date.now() - MET_DATE) / 86400000));
+  document.getElementById("statTogether").textContent = `${daysTogether} ngày`;
+
   // ── curator ──
   if(data.curator && data.curator.name){
     const p = document.getElementById("brandAvatarImg");
@@ -1140,6 +1254,80 @@ document.addEventListener("keydown", (e) => {
 });
 
 document.getElementById("year").textContent = new Date().getFullYear();
+
+// ── re-sort book cards within each section without re-running the full
+// render() pipeline (which would re-attach nav/search/observer listeners
+// on top of the ones already there) ──
+function resortCards(){
+  if(!lastCatalogData) return;
+  const sortMode = sortSelectEl.value;
+  document.querySelectorAll(".section").forEach(section => {
+    const catId = section.id.replace(/^c-/, "");
+    const cat = (lastCatalogData.categories || []).find(c => c.id === catId);
+    const cardsEl = section.querySelector(".cards");
+    if(!cat || !cardsEl || (cat.books||[]).length === 0) return;
+    const sortedBooks = applyBookSort(cat.books, sortMode);
+    cardsEl.innerHTML = sortedBooks.map(b => cardHTML(b, cat)).join("");
+  });
+  if(currentApplyFilter) currentApplyFilter();
+}
+sortSelectEl.addEventListener("change", resortCards);
+
+// ── "chọn ngẫu nhiên cho mình" — picks among currently visible cards only,
+// so it respects whatever search/tag filter is active ──
+randomBtnEl.addEventListener("click", () => {
+  const visible = Array.from(document.querySelectorAll(".card")).filter(c => c.style.display !== "none");
+  if(visible.length === 0) return;
+  const pick = visible[Math.floor(Math.random() * visible.length)];
+  document.querySelectorAll(".card.picked").forEach(c => c.classList.remove("picked"));
+  pick.scrollIntoView({ behavior: "smooth", block: "center" });
+  pick.classList.add("picked");
+  setTimeout(() => pick.classList.remove("picked"), 2200);
+});
+
+// ── tag filter — click a tag chip on any card to filter the whole page
+// down to that tag; click it again (or the × ) to clear ──
+function setTagFilter(tag){
+  activeTagFilter = tag;
+  tagFilterStatusEl.hidden = !tag;
+  if(tag) tagFilterLabelEl.textContent = tag;
+  if(currentApplyFilter) currentApplyFilter();
+}
+catalogEl.addEventListener("click", (e) => {
+  const chip = e.target.closest("[data-tag-filter]");
+  if(!chip) return;
+  e.preventDefault();
+  e.stopPropagation();
+  setTagFilter(activeTagFilter === chip.dataset.tagFilter ? null : chip.dataset.tagFilter);
+});
+catalogEl.addEventListener("keydown", (e) => {
+  if(e.key !== "Enter" && e.key !== " ") return;
+  const chip = e.target.closest("[data-tag-filter]");
+  if(!chip) return;
+  e.preventDefault();
+  e.stopPropagation();
+  setTagFilter(activeTagFilter === chip.dataset.tagFilter ? null : chip.dataset.tagFilter);
+});
+tagFilterClearEl.addEventListener("click", () => setTagFilter(null));
+
+// ── "sách mới kể từ lần trước bạn ghé" banner — compares against a
+// last-visit timestamp in localStorage instead of a server-side job ──
+const LAST_VISIT_KEY = "tb_last_visit";
+function checkNewSinceLastVisit(data){
+  const lastVisit = Number(localStorage.getItem(LAST_VISIT_KEY) || 0);
+  localStorage.setItem(LAST_VISIT_KEY, String(Date.now()));
+  if(!lastVisit) return; // first visit ever — nothing to compare against
+
+  const allBooks = (data.categories || []).flatMap(c => c.books || []);
+  const newCount = allBooks.filter(b => b.createdAt && new Date(b.createdAt).getTime() > lastVisit).length;
+  if(newCount === 0) return;
+
+  newSinceTextEl.textContent = newCount === 1
+    ? "Có 1 cuốn sách mới kể từ lần trước bạn ghé."
+    : `Có ${newCount} cuốn sách mới kể từ lần trước bạn ghé.`;
+  newSinceBannerEl.hidden = false;
+}
+newSinceDismissEl.addEventListener("click", () => { newSinceBannerEl.hidden = true; });
 
 // ── PIN gate ──
 const pinGateEl = document.getElementById("pinGate");
@@ -1212,7 +1400,11 @@ function loadCatalog(){
       if(!r.ok) throw new Error("HTTP " + r.status);
       return r.json();
     })
-    .then(render)
+    .then((data) => {
+      lastCatalogData = data;
+      render(data);
+      checkNewSinceLastVisit(data);
+    })
     .catch((err) => {
       if(err.message === "unauthorized") return;
       catalogEl.innerHTML = `
