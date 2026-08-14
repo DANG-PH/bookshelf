@@ -544,6 +544,22 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
 }
 .tag-filter-status button:hover{color:var(--stamp)}
 
+/* tucked behind a disclosure — sort/status-filter are handy but not
+   something you need staring at you every time the sidebar is open */
+.filter-disclosure{margin:2px 0 4px}
+.filter-disclosure summary{
+  cursor:pointer;list-style:none;user-select:none;
+  font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;
+  color:var(--faint);padding:6px;display:flex;align-items:center;gap:6px;
+  transition:color .15s;
+}
+.filter-disclosure summary::-webkit-details-marker{display:none}
+.filter-disclosure summary::before{content:"▸";font-size:9px;transition:transform .15s}
+.filter-disclosure[open] summary::before{transform:rotate(90deg)}
+.filter-disclosure summary:hover{color:var(--accent-deep)}
+.filter-disclosure .tool-row{margin-top:8px}
+.filter-disclosure .status-filter-row{margin-top:8px}
+
 /* sort dropdown + random-pick button, sit right under the search box */
 .tool-row{display:flex;gap:8px;align-items:center}
 .sort-select{
@@ -728,7 +744,7 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
 /* ── floating "add a book" button — the obvious, discoverable way in,
    no need to know a URL or hunt through the footer ── */
 .fab-add{
-  position:fixed;right:22px;bottom:22px;z-index:50;
+  position:fixed;right:22px;bottom:calc(22px + env(safe-area-inset-bottom));z-index:50;
   display:flex;align-items:center;gap:8px;
   height:52px;padding:0 18px 0 16px;border-radius:99px;
   background:var(--accent-solid);color:#fff;
@@ -740,11 +756,11 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
 .fab-add svg{width:20px;height:20px;flex:none}
 .fab-label{font-family:var(--sans);font-weight:600;font-size:.86rem;letter-spacing:.01em;white-space:nowrap}
 @media(max-width:520px){
-  .fab-add{right:16px;bottom:16px;height:50px;padding:0 16px 0 14px}
+  .fab-add{right:16px;bottom:calc(16px + env(safe-area-inset-bottom));height:50px;padding:0 16px 0 14px}
 }
 
 .fab-diary{
-  position:fixed;right:22px;bottom:84px;z-index:50;
+  position:fixed;right:22px;bottom:calc(84px + env(safe-area-inset-bottom));z-index:50;
   display:flex;align-items:center;gap:8px;
   height:52px;padding:0 18px 0 16px;border-radius:99px;
   background:#a2678f;color:#fff;
@@ -755,7 +771,7 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
 .fab-diary:active{transform:translateY(0) scale(.97)}
 .fab-diary svg{width:20px;height:20px;flex:none}
 @media(max-width:520px){
-  .fab-diary{right:16px;bottom:78px;height:50px;padding:0 16px 0 14px}
+  .fab-diary{right:16px;bottom:calc(78px + env(safe-area-inset-bottom));height:50px;padding:0 16px 0 14px}
 }
 
 ::selection{background:var(--accent-wash-2);color:var(--ink)}
@@ -844,23 +860,26 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
         <button type="button" id="tagFilterClear" aria-label="Bỏ lọc tag">×</button>
       </p>
 
-      <div class="tool-row">
-        <select id="sortSelect" class="sort-select" aria-label="Sắp xếp sách trong ngăn">
-          <option value="newest">Mới thêm trước</option>
-          <option value="title">Tên A–Z</option>
-          <option value="year-desc">Năm xuất bản mới nhất</option>
-          <option value="year-asc">Năm xuất bản cũ nhất</option>
-        </select>
-        <button type="button" class="random-btn" id="randomBtn" aria-label="Chọn ngẫu nhiên một cuốn cho mình" title="Chọn ngẫu nhiên cho mình">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6"/><path d="M4 4l5 5"/></svg>
-        </button>
-      </div>
+      <details class="filter-disclosure">
+        <summary>Lọc &amp; sắp xếp</summary>
+        <div class="tool-row">
+          <select id="sortSelect" class="sort-select" aria-label="Sắp xếp sách trong ngăn">
+            <option value="newest">Mới thêm trước</option>
+            <option value="title">Tên A–Z</option>
+            <option value="year-desc">Năm xuất bản mới nhất</option>
+            <option value="year-asc">Năm xuất bản cũ nhất</option>
+          </select>
+          <button type="button" class="random-btn" id="randomBtn" aria-label="Chọn ngẫu nhiên một cuốn cho mình" title="Chọn ngẫu nhiên cho mình">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6"/><path d="M4 4l5 5"/></svg>
+          </button>
+        </div>
 
-      <div class="status-filter-row" id="statusFilterRow">
-        <button type="button" class="status-filter-chip" data-status-filter="want">Muốn đọc</button>
-        <button type="button" class="status-filter-chip" data-status-filter="reading">Đang đọc</button>
-        <button type="button" class="status-filter-chip" data-status-filter="done">Đã đọc</button>
-      </div>
+        <div class="status-filter-row" id="statusFilterRow">
+          <button type="button" class="status-filter-chip" data-status-filter="want">Muốn đọc</button>
+          <button type="button" class="status-filter-chip" data-status-filter="reading">Đang đọc</button>
+          <button type="button" class="status-filter-chip" data-status-filter="done">Đã đọc</button>
+        </div>
+      </details>
 
       <div>
         <div class="nav-head">Ngăn kéo</div>
@@ -879,8 +898,6 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
         <div class="meta-line"><span class="meta-key">Đầu sách</span><span class="meta-dots"></span><span class="meta-val" id="statVolumes">—</span></div>
         <div class="meta-line"><span class="meta-key">Ngăn dùng</span><span class="meta-dots"></span><span class="meta-val" id="statCategories">—</span></div>
         <div class="meta-line"><span class="meta-key">Yêu thích</span><span class="meta-dots"></span><span class="meta-val" id="statFavorites">—</span></div>
-        <div class="meta-line"><span class="meta-key">Phân loại</span><span class="meta-dots"></span><span class="meta-val">Dewey</span></div>
-        <div class="meta-line"><span class="meta-key">Truy cập</span><span class="meta-dots"></span><span class="meta-val">Kho mở</span></div>
       </div>
 
     </div>
