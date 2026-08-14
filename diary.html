@@ -87,7 +87,7 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
 .topbar{margin-bottom:26px;text-align:center;position:relative}
 .theme-toggle{
   position:absolute;top:0;right:0;
-  flex:none;width:36px;height:36px;border-radius:50%;
+  flex:none;width:36px;height:36px;padding:0;border-radius:50%;
   display:grid;place-items:center;
   background:var(--paper);border:1px solid var(--line-2);color:var(--soft);
   transition:border-color .2s,color .2s,transform .15s;
@@ -142,9 +142,9 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
 }
 .date-filter-fields span{color:var(--faint);font-size:.82rem}
 .date-filter-fields button{
-  flex:none;width:26px;height:26px;border-radius:50%;
+  flex:none;width:32px;height:32px;padding:0;border-radius:50%;
   display:grid;place-items:center;background:var(--paper);border:1px solid var(--line-2);
-  color:var(--faint);font-size:.75rem;
+  color:var(--faint);font-size:.8rem;
 }
 .date-filter-fields button:hover{color:var(--stamp);border-color:var(--stamp-wash)}
 
@@ -207,7 +207,7 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
 .entry-when{font-family:var(--mono);font-size:9.5px;color:var(--faint)}
 .entry-actions{display:flex;gap:6px;align-items:center;flex:none}
 .entry-like{
-  flex:none;width:26px;height:26px;display:grid;place-items:center;border-radius:50%;
+  flex:none;width:26px;height:26px;padding:0;display:grid;place-items:center;border-radius:50%;
   color:var(--faint);transition:color .2s,transform .15s;
 }
 .entry-like svg{width:14px;height:14px}
@@ -215,6 +215,12 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
 .entry-like.active{color:var(--stamp)}
 .entry-like.active svg{fill:currentColor}
 .entry-like:active{transform:scale(.85)}
+.entry-more{
+  display:inline-block;margin-top:6px;
+  font-size:.8rem;font-weight:600;color:var(--accent-deep);
+  text-decoration:underline;text-underline-offset:2px;cursor:pointer;
+}
+.entry-more:hover{color:var(--stamp)}
 .entry-edit-form textarea{min-height:70px}
 .entry-edit-actions{display:flex;gap:8px;margin-top:8px}
 .entry-edit-actions button{flex:1;padding:8px;font-size:.8rem}
@@ -235,6 +241,7 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
 .memory-title{font-family:var(--serif);font-size:1.05rem;font-weight:600;margin-top:2px}
 .memory-desc{font-size:.86rem;color:var(--soft);margin-top:6px;line-height:1.55;white-space:pre-wrap}
 .memory-foot{display:flex;justify-content:flex-end;align-items:center;gap:6px;margin-top:8px}
+.memory-foot .btn-del{height:26px;display:inline-flex;align-items:center}
 @media(max-width:480px){.memory-card{flex-direction:column}.memory-photo{width:100%;height:140px}}
 
 /* 16:9 YouTube thumbnail → click-to-embed facade (no iframe/tracking
@@ -426,6 +433,14 @@ function clearToken(){
 function escapeHTML(s){
   return String(s ?? "").replace(/[&<>"']/g, (c)=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 }
+// cuts long text to a preview and trims to the last whole word — plain
+// text swap on click, not a CSS clamp, so it can't fight float/layout
+function truncateText(text, maxLen){
+  const full = text || "";
+  if(full.length <= maxLen) return { full, preview: full, isLong: false };
+  const preview = full.slice(0, maxLen).replace(/\s+\S*$/, "") + "…";
+  return { full, preview, isLong: true };
+}
 function timeAgo(iso){
   if(!iso) return "";
   const diffMs = Date.now() - new Date(iso).getTime();
@@ -537,8 +552,11 @@ moodRowEl.addEventListener("click", (e) => {
 
 const MOOD_LABELS = { vui: "Vui", buon: "Buồn", nho: "Nhớ", yeu: "Yêu", gian: "Giận dỗi", "binh-yen": "Bình yên" };
 
+const ENTRY_PREVIEW_LEN = 420;
+
 function entryHTML(entry){
   const canEdit = entry.author === currentWho;
+  const { full, preview, isLong } = truncateText(entry.content, ENTRY_PREVIEW_LEN);
   return `
     <div class="entry" data-entry-id="${entry.id}">
       <div class="entry-head">
@@ -549,7 +567,8 @@ function entryHTML(entry){
       </div>
       <div class="entry-view">
         ${entry.title ? `<div class="entry-title">${escapeHTML(entry.title)}</div>` : ""}
-        <div class="entry-content">${escapeHTML(entry.content)}</div>
+        <div class="entry-content" data-preview="${escapeHTML(preview)}" data-full="${escapeHTML(full)}">${escapeHTML(preview)}</div>
+        ${isLong ? `<span class="entry-more" role="button" tabindex="0" data-more-entry data-expanded="0">Xem thêm</span>` : ""}
         <div class="entry-foot">
           <span class="entry-when">${timeAgo(entry.createdAt)}</span>
           ${canEdit ? `
@@ -685,8 +704,19 @@ document.getElementById("tabBar").addEventListener("click", (e) => {
   document.querySelectorAll("[data-tab-panel]").forEach(p => { p.hidden = p.dataset.tabPanel !== tab; });
 });
 
+function toggleEntryMore(toggleEl){
+  const contentEl = toggleEl.previousElementSibling;
+  if(!contentEl || !contentEl.classList.contains("entry-content")) return;
+  const expanded = toggleEl.dataset.expanded === "1";
+  contentEl.textContent = expanded ? contentEl.dataset.preview : contentEl.dataset.full;
+  toggleEl.textContent = expanded ? "Xem thêm" : "Thu gọn";
+  toggleEl.dataset.expanded = expanded ? "0" : "1";
+}
 document.querySelectorAll(".entry-list").forEach(list => {
   list.addEventListener("click", async (e) => {
+    const moreBtn = e.target.closest("[data-more-entry]");
+    if(moreBtn){ toggleEntryMore(moreBtn); return; }
+
     const delBtn = e.target.closest("[data-del-entry]");
     if(delBtn){
       if(!confirm("Xoá dòng nhật ký này?")) return;
@@ -773,6 +803,13 @@ document.querySelectorAll(".entry-list").forEach(list => {
       }
     }
   });
+  list.addEventListener("keydown", (e) => {
+    if(e.key !== "Enter" && e.key !== " ") return;
+    const moreBtn = e.target.closest("[data-more-entry]");
+    if(!moreBtn) return;
+    e.preventDefault();
+    toggleEntryMore(moreBtn);
+  });
 });
 
 document.getElementById("entryForm").addEventListener("submit", async (e) => {
@@ -840,11 +877,15 @@ function memoryVideoHTML(youtubeId){
   `;
 }
 
+const MEMORY_DESC_PREVIEW_LEN = 260;
+
 function memoryHTML(m){
+  const desc = truncateText(m.description || "", MEMORY_DESC_PREVIEW_LEN);
   const bodyInner = `
     ${m.memoryDate ? `<div class="memory-date">${formatMemoryDate(m.memoryDate)}</div>` : ""}
     <div class="memory-title">${escapeHTML(m.title)}</div>
-    ${m.description ? `<div class="memory-desc">${escapeHTML(m.description)}</div>` : ""}
+    ${m.description ? `<div class="memory-desc" data-preview="${escapeHTML(desc.preview)}" data-full="${escapeHTML(desc.full)}">${escapeHTML(desc.preview)}</div>` : ""}
+    ${desc.isLong ? `<span class="entry-more" role="button" tabindex="0" data-more-memory-desc data-expanded="0">Xem thêm</span>` : ""}
     <div class="memory-foot">
       <button type="button" class="entry-like${m.liked ? " active" : ""}" data-like-memory="${m.id}" aria-label="${m.liked ? "Bỏ tym" : "Tym kỷ niệm này"}">
         <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.8Z"/></svg>
@@ -887,7 +928,25 @@ document.getElementById("memoryTimeline").addEventListener("keydown", (e) => {
   e.preventDefault();
   playMemoryVideo(videoEl);
 });
+function toggleMemoryDesc(toggleEl){
+  const descEl = toggleEl.previousElementSibling;
+  if(!descEl || !descEl.classList.contains("memory-desc")) return;
+  const expanded = toggleEl.dataset.expanded === "1";
+  descEl.textContent = expanded ? descEl.dataset.preview : descEl.dataset.full;
+  toggleEl.textContent = expanded ? "Xem thêm" : "Thu gọn";
+  toggleEl.dataset.expanded = expanded ? "0" : "1";
+}
+document.getElementById("memoryTimeline").addEventListener("keydown", (e) => {
+  if(e.key !== "Enter" && e.key !== " ") return;
+  const moreBtn = e.target.closest("[data-more-memory-desc]");
+  if(!moreBtn) return;
+  e.preventDefault();
+  toggleMemoryDesc(moreBtn);
+});
 document.getElementById("memoryTimeline").addEventListener("click", async (e) => {
+  const moreBtn = e.target.closest("[data-more-memory-desc]");
+  if(moreBtn){ toggleMemoryDesc(moreBtn); return; }
+
   const videoEl = e.target.closest("[data-youtube-id]");
   if(videoEl){ playMemoryVideo(videoEl); return; }
 
