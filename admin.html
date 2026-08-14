@@ -284,6 +284,10 @@ details.more .more-body{padding-top:14px}
             <input id="updatedLabel" name="updatedLabel" placeholder="2026" />
           </div>
         </div>
+        <div class="field">
+          <label for="partnerName">Tên người kia (dùng cho trang nhật ký)</label>
+          <input id="partnerName" name="partnerName" placeholder="Vy" />
+        </div>
         <button class="btn-primary" type="submit">Lưu thông tin</button>
       </form>
     </section>
@@ -494,6 +498,7 @@ async function loadSettings(){
   document.getElementById("curatorRole").value = s.curatorRole || "";
   document.getElementById("curatorPhoto").value = s.curatorPhoto || "";
   document.getElementById("updatedLabel").value = s.updatedLabel || "";
+  document.getElementById("partnerName").value = s.partnerName || "";
 }
 
 document.getElementById("settingsForm").addEventListener("submit", async (e) => {
@@ -507,6 +512,7 @@ document.getElementById("settingsForm").addEventListener("submit", async (e) => 
         curatorRole: document.getElementById("curatorRole").value || undefined,
         curatorPhoto: document.getElementById("curatorPhoto").value || undefined,
         updatedLabel: document.getElementById("updatedLabel").value || undefined,
+        partnerName: document.getElementById("partnerName").value || undefined,
       }),
     });
     flash("Đã lưu thông tin trang.", "ok");

@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Nhật Ký Của Tụi Mình</title>
+<meta name="robots" content="noindex, nofollow" />
+<link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/2784/2784539.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;0,6..72,700;1,6..72,400;1,6..72,500&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --bg:#f6f0ec;--card:#fffefc;--paper:#fbf5f0;--ink:#3a322e;--soft:#6b5f58;--faint:#9c8f86;
+  --line:rgba(58,50,46,.10);--line-2:rgba(58,50,46,.18);
+  --accent:#c98a76;--accent-deep:#b16b56;--accent-wash:rgba(201,138,118,.13);
+  --stamp:#b5544a;--stamp-wash:rgba(181,84,74,.09);
+  --good:#6f9166;--good-wash:rgba(111,145,102,.12);
+  --me:#b16b56;--me-wash:rgba(177,107,86,.1);
+  --partner:#a2678f;--partner-wash:rgba(162,103,143,.1);
+  --sans:'Plus Jakarta Sans',system-ui,sans-serif;--serif:'Newsreader',Georgia,serif;--mono:'JetBrains Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--sans);background:var(--bg);color:var(--ink);line-height:1.5;min-height:100dvh}
+a{color:var(--accent-deep)}
+h1,h2{font-family:var(--serif);font-weight:600;letter-spacing:-.01em}
+input,textarea,select,button{font:inherit;color:inherit}
+input,textarea{
+  width:100%;padding:11px 13px;border:1.5px solid var(--line-2);border-radius:10px;
+  background:var(--paper);color:var(--ink);font-size:.94rem;
+}
+input:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-wash)}
+textarea{resize:vertical;min-height:90px;font-family:var(--serif);font-size:1rem;line-height:1.6}
+label{display:block;font-size:.8rem;font-weight:600;color:var(--soft);margin-bottom:6px}
+.field{margin-bottom:14px}
+button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weight:700;font-size:.9rem}
+.btn-primary{background:var(--accent-deep);color:#fff;width:100%;padding:13px;font-size:.98rem;box-shadow:0 8px 20px -8px rgba(177,107,86,.5)}
+.btn-primary:hover{background:var(--stamp)}
+.btn-primary:disabled{opacity:.55;cursor:default}
+.btn-del{background:transparent;color:var(--faint);padding:3px 8px;font-size:.72rem;border:1px solid var(--line-2);border-radius:7px}
+.btn-del:hover{background:var(--stamp-wash);color:var(--stamp);border-color:var(--stamp-wash)}
+
+/* pin gate — matches the rest of the site */
+.pin-gate{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--bg)}
+.pin-gate[hidden]{display:none}
+.pin-card{width:100%;max-width:320px;background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:0 26px 60px -30px rgba(80,62,42,.42);padding:32px 26px;text-align:center}
+.pin-input{width:100%;text-align:center;font-family:var(--mono);font-size:1.3rem;letter-spacing:.4em;padding:12px;margin:18px 0 10px;border-radius:10px}
+.pin-error{font-family:var(--mono);font-size:11px;color:var(--stamp);min-height:14px;margin-bottom:10px}
+
+.shell{max-width:880px;margin:0 auto;padding:36px 18px 90px}
+.shell[hidden]{display:none}
+.topbar{margin-bottom:26px;text-align:center}
+.topbar h1{font-size:1.7rem}
+.topbar p{font-family:var(--serif);font-style:italic;color:var(--soft);margin-top:6px;font-size:1rem}
+.back-link{display:inline-block;margin-top:14px;font-size:.82rem;text-decoration:none;color:var(--faint)}
+.back-link:hover{color:var(--accent-deep)}
+
+.status-msg{font-size:.88rem;padding:12px 14px;border-radius:10px;margin-bottom:16px;font-weight:600;text-align:center}
+.status-msg.ok{background:var(--good-wash);color:var(--good)}
+.status-msg.err{background:var(--stamp-wash);color:var(--stamp)}
+.status-msg[hidden]{display:none}
+
+.panel{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:24px 22px;margin-bottom:24px;box-shadow:0 16px 40px -28px rgba(80,62,42,.3)}
+
+/* ── who's writing ── */
+.who-row{display:flex;gap:10px;margin-bottom:16px}
+.who-btn{
+  flex:1;padding:12px;border-radius:12px;border:1.5px solid var(--line-2);background:var(--paper);
+  font-family:var(--serif);font-size:1rem;font-weight:600;color:var(--soft);
+  transition:all .15s;
+}
+.who-btn[data-who="me"].active{border-color:var(--me);background:var(--me-wash);color:var(--me)}
+.who-btn[data-who="partner"].active{border-color:var(--partner);background:var(--partner-wash);color:var(--partner)}
+
+/* ── mood picker ── */
+.mood-row{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:16px}
+.mood-pill{
+  padding:6px 13px;border-radius:99px;border:1.5px solid var(--line-2);background:var(--paper);
+  font-size:.82rem;color:var(--soft);transition:all .15s;
+}
+.mood-pill.active{color:#fff;border-color:transparent}
+.mood-pill[data-mood="vui"].active{background:#7a9a5f}
+.mood-pill[data-mood="buon"].active{background:#6c86a8}
+.mood-pill[data-mood="nho"].active{background:var(--accent-deep)}
+.mood-pill[data-mood="yeu"].active{background:#c4577e}
+.mood-pill[data-mood="gian"].active{background:var(--stamp)}
+.mood-pill[data-mood="binh-yen"].active{background:#5f9088}
+
+/* ── two journals side by side ── */
+.journals{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media(max-width:640px){.journals{grid-template-columns:1fr}}
+.journal-col h2{font-size:1.05rem;margin-bottom:12px;padding-bottom:10px;border-bottom:2px solid var(--line)}
+.journal-col[data-who="me"] h2{border-bottom-color:var(--me);color:var(--me)}
+.journal-col[data-who="partner"] h2{border-bottom-color:var(--partner);color:var(--partner)}
+.entry-list{display:flex;flex-direction:column;gap:12px}
+.entry{
+  background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:14px 15px;
+  position:relative;
+}
+.entry-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
+.entry-mood{
+  display:inline-flex;align-items:center;gap:5px;
+  font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--faint);
+}
+.entry-mood .dot{width:7px;height:7px;border-radius:50%;background:var(--faint)}
+.entry-mood[data-mood="vui"] .dot{background:#7a9a5f}
+.entry-mood[data-mood="buon"] .dot{background:#6c86a8}
+.entry-mood[data-mood="nho"] .dot{background:var(--accent-deep)}
+.entry-mood[data-mood="yeu"] .dot{background:#c4577e}
+.entry-mood[data-mood="gian"] .dot{background:var(--stamp)}
+.entry-mood[data-mood="binh-yen"] .dot{background:#5f9088}
+.entry-title{font-family:var(--serif);font-size:1.02rem;font-weight:600;margin-bottom:4px}
+.entry-content{font-family:var(--serif);font-size:.94rem;line-height:1.65;color:var(--ink);white-space:pre-wrap}
+.entry-foot{display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding-top:8px;border-top:1px dashed var(--line-2)}
+.entry-when{font-family:var(--mono);font-size:9.5px;color:var(--faint)}
+.empty-note{font-size:.84rem;color:var(--faint);text-align:center;padding:24px 10px;font-style:italic;font-family:var(--serif)}
+</style>
+</head>
+<body>
+
+<div class="pin-gate" id="pinGate">
+  <div class="pin-card">
+    <h1 style="font-size:1.2rem">Chào</h1>
+    <p style="font-family:var(--serif);font-style:italic;font-size:.88rem;color:var(--soft);margin-top:4px">Nhập mã bí mật để vào nhật ký nhé</p>
+    <form id="pinForm" autocomplete="off">
+      <input class="pin-input" id="pinInput" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="12" placeholder="••••••" required autofocus />
+      <p class="pin-error" id="pinError"></p>
+      <button class="btn-primary" type="submit" id="pinSubmit">Vào thôi</button>
+    </form>
+  </div>
+</div>
+
+<div class="shell" id="shell" hidden>
+  <div class="topbar">
+    <h1>Nhật Ký Của Tụi Mình</h1>
+    <p>Một góc nhỏ chỉ để viết cho nhau, không cần ai đọc cũng được.</p>
+    <a class="back-link" href="index.html">← Về trang thư viện</a>
+  </div>
+
+  <p class="status-msg" id="globalStatus" hidden></p>
+
+  <section class="panel">
+    <div class="who-row" id="whoRow">
+      <button type="button" class="who-btn" data-who="me" id="whoMeBtn">Đăng</button>
+      <button type="button" class="who-btn" data-who="partner" id="whoPartnerBtn">Vy</button>
+    </div>
+
+    <form id="entryForm">
+      <div class="mood-row" id="moodRow">
+        <span class="mood-pill" data-mood="vui">Vui</span>
+        <span class="mood-pill" data-mood="buon">Buồn</span>
+        <span class="mood-pill" data-mood="nho">Nhớ</span>
+        <span class="mood-pill" data-mood="yeu">Yêu</span>
+        <span class="mood-pill" data-mood="gian">Giận dỗi</span>
+        <span class="mood-pill" data-mood="binh-yen">Bình yên</span>
+      </div>
+      <div class="field">
+        <label for="entryTitle">Tiêu đề <span style="font-weight:400;color:var(--faint)">(không bắt buộc)</span></label>
+        <input id="entryTitle" name="title" placeholder="Hôm nay…" />
+      </div>
+      <div class="field">
+        <label for="entryContent">Viết gì đó</label>
+        <textarea id="entryContent" name="content" placeholder="Hôm nay bạn thấy thế nào?" required></textarea>
+      </div>
+      <button class="btn-primary" type="submit" id="entrySubmit">Viết vào nhật ký</button>
+    </form>
+  </section>
+
+  <div class="journals">
+    <div class="journal-col" data-who="me">
+      <h2 id="meColTitle">Đăng</h2>
+      <div class="entry-list" id="meEntryList"></div>
+    </div>
+    <div class="journal-col" data-who="partner">
+      <h2 id="partnerColTitle">Vy</h2>
+      <div class="entry-list" id="partnerEntryList"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API_BASE = "https://book-api.dangpham.id.vn/api";
+const AUTH_TOKEN_KEY = "tb_token";
+const AUTH_EXP_KEY = "tb_token_exp";
+const WHO_KEY = "tb_diary_who";
+
+function getStoredToken(){
+  const token = localStorage.getItem(AUTH_TOKEN_KEY);
+  const exp = Number(localStorage.getItem(AUTH_EXP_KEY) || 0);
+  if(!token || !exp || Date.now() >= exp) return null;
+  return token;
+}
+function storeToken(token){
+  localStorage.setItem(AUTH_TOKEN_KEY, token);
+  try{
+    const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g,"+").replace(/_/g,"/")));
+    localStorage.setItem(AUTH_EXP_KEY, String((payload.exp || 0) * 1000));
+  }catch{
+    localStorage.setItem(AUTH_EXP_KEY, String(Date.now() + 24*60*60*1000));
+  }
+}
+function clearToken(){
+  localStorage.removeItem(AUTH_TOKEN_KEY);
+  localStorage.removeItem(AUTH_EXP_KEY);
+}
+function escapeHTML(s){
+  return String(s ?? "").replace(/[&<>"']/g, (c)=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function timeAgo(iso){
+  if(!iso) return "";
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const min = Math.floor(diffMs / 60000);
+  if(min < 1) return "vừa xong";
+  if(min < 60) return `${min} phút trước`;
+  const hr = Math.floor(min / 60);
+  if(hr < 24) return `${hr} giờ trước`;
+  const day = Math.floor(hr / 24);
+  if(day === 1) return "hôm qua";
+  if(day < 7) return `${day} ngày trước`;
+  return `${Math.floor(day / 7)} tuần trước`;
+}
+
+const pinGateEl = document.getElementById("pinGate");
+const pinFormEl = document.getElementById("pinForm");
+const pinInputEl = document.getElementById("pinInput");
+const pinErrorEl = document.getElementById("pinError");
+const pinSubmitEl = document.getElementById("pinSubmit");
+const shellEl = document.getElementById("shell");
+
+function showGate(message){
+  pinGateEl.hidden = false;
+  shellEl.hidden = true;
+  pinErrorEl.textContent = message || "";
+  pinInputEl.value = "";
+  setTimeout(() => pinInputEl.focus(), 50);
+}
+function hideGate(){
+  pinGateEl.hidden = true;
+  shellEl.hidden = false;
+}
+
+pinFormEl.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const pin = pinInputEl.value.trim();
+  if(!pin) return;
+  pinSubmitEl.disabled = true;
+  pinErrorEl.textContent = "";
+  try{
+    const res = await fetch(`${API_BASE}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pin }),
+    });
+    if(!res.ok) throw new Error(res.status === 401 ? "Sai mã rồi, thử lại nhé." : "Không kết nối được máy chủ.");
+    const { accessToken } = await res.json();
+    storeToken(accessToken);
+    hideGate();
+    boot();
+  }catch(err){
+    pinErrorEl.textContent = err.message;
+  }finally{
+    pinSubmitEl.disabled = false;
+  }
+});
+
+async function api(path, options = {}){
+  const token = getStoredToken();
+  if(!token){ showGate(); throw new Error("no-token"); }
+  const headers = options.headers instanceof Headers ? options.headers : new Headers(options.headers || {});
+  headers.set("Authorization", `Bearer ${token}`);
+  const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+  if(res.status === 401){
+    clearToken();
+    showGate("Phiên đã hết hạn, nhập lại mã nhé.");
+    throw new Error("unauthorized");
+  }
+  if(!res.ok){
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.message || `HTTP ${res.status}`);
+  }
+  return res.status === 204 ? null : res.json();
+}
+
+function flash(message, kind){
+  const el = document.getElementById("globalStatus");
+  el.textContent = message;
+  el.className = `status-msg ${kind}`;
+  el.hidden = false;
+  clearTimeout(flash._t);
+  flash._t = setTimeout(() => { el.hidden = true; }, 4000);
+}
+
+// ── who's writing right now ──
+const whoMeBtn = document.getElementById("whoMeBtn");
+const whoPartnerBtn = document.getElementById("whoPartnerBtn");
+let currentWho = localStorage.getItem(WHO_KEY) || "me";
+
+function setWho(who){
+  currentWho = who;
+  localStorage.setItem(WHO_KEY, who);
+  whoMeBtn.classList.toggle("active", who === "me");
+  whoPartnerBtn.classList.toggle("active", who === "partner");
+}
+whoMeBtn.addEventListener("click", () => setWho("me"));
+whoPartnerBtn.addEventListener("click", () => setWho("partner"));
+
+// ── mood picker (single select) ──
+const moodRowEl = document.getElementById("moodRow");
+let currentMood = null;
+moodRowEl.addEventListener("click", (e) => {
+  const pill = e.target.closest(".mood-pill");
+  if(!pill) return;
+  const mood = pill.dataset.mood;
+  currentMood = currentMood === mood ? null : mood;
+  moodRowEl.querySelectorAll(".mood-pill").forEach(p => p.classList.toggle("active", p.dataset.mood === currentMood));
+});
+
+const MOOD_LABELS = { vui: "Vui", buon: "Buồn", nho: "Nhớ", yeu: "Yêu", gian: "Giận dỗi", "binh-yen": "Bình yên" };
+
+function entryHTML(entry){
+  const canDelete = entry.author === currentWho;
+  return `
+    <div class="entry" data-entry-id="${entry.id}">
+      <div class="entry-head">
+        ${entry.mood ? `<span class="entry-mood" data-mood="${entry.mood}"><span class="dot"></span>${MOOD_LABELS[entry.mood] || entry.mood}</span>` : "<span></span>"}
+      </div>
+      ${entry.title ? `<div class="entry-title">${escapeHTML(entry.title)}</div>` : ""}
+      <div class="entry-content">${escapeHTML(entry.content)}</div>
+      <div class="entry-foot">
+        <span class="entry-when">${timeAgo(entry.createdAt)}</span>
+        ${canDelete ? `<button type="button" class="btn-del" data-del-entry="${entry.id}">Xoá</button>` : "<span></span>"}
+      </div>
+    </div>
+  `;
+}
+
+let allEntries = [];
+
+function renderEntries(){
+  const meList = document.getElementById("meEntryList");
+  const partnerList = document.getElementById("partnerEntryList");
+  const meEntries = allEntries.filter(e => e.author === "me");
+  const partnerEntries = allEntries.filter(e => e.author === "partner");
+  meList.innerHTML = meEntries.length
+    ? meEntries.map(entryHTML).join("")
+    : `<p class="empty-note">Chưa có dòng nào — viết dòng đầu tiên đi.</p>`;
+  partnerList.innerHTML = partnerEntries.length
+    ? partnerEntries.map(entryHTML).join("")
+    : `<p class="empty-note">Chưa có dòng nào — viết dòng đầu tiên đi.</p>`;
+}
+
+async function loadEntries(){
+  allEntries = await api("/diary");
+  renderEntries();
+}
+
+document.querySelectorAll(".entry-list").forEach(list => {
+  list.addEventListener("click", async (e) => {
+    const btn = e.target.closest("[data-del-entry]");
+    if(!btn) return;
+    if(!confirm("Xoá dòng nhật ký này?")) return;
+    try{
+      await api(`/diary/${btn.dataset.delEntry}`, { method: "DELETE" });
+      await loadEntries();
+    }catch(err){
+      if(err.message !== "unauthorized") flash(err.message, "err");
+    }
+  });
+});
+
+document.getElementById("entryForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const form = e.target;
+  const submitBtn = document.getElementById("entrySubmit");
+  const content = form.content.value.trim();
+  if(!content) return;
+
+  submitBtn.disabled = true;
+  submitBtn.textContent = "Đang lưu…";
+  try{
+    await api("/diary", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        author: currentWho,
+        title: form.title.value.trim() || undefined,
+        content,
+        mood: currentMood || undefined,
+      }),
+    });
+    form.reset();
+    currentMood = null;
+    moodRowEl.querySelectorAll(".mood-pill").forEach(p => p.classList.remove("active"));
+    flash("Đã viết vào nhật ký rồi.", "ok");
+    await loadEntries();
+  }catch(err){
+    if(err.message !== "unauthorized") flash(err.message, "err");
+  }finally{
+    submitBtn.disabled = false;
+    submitBtn.textContent = "Viết vào nhật ký";
+  }
+});
+
+async function loadNames(){
+  try{
+    const s = await api("/settings");
+    const meName = s.curatorName || "Đăng";
+    const partnerName = s.partnerName || "Vy";
+    whoMeBtn.textContent = meName;
+    whoPartnerBtn.textContent = partnerName;
+    document.getElementById("meColTitle").textContent = meName;
+    document.getElementById("partnerColTitle").textContent = partnerName;
+  }catch{
+    // fall back to the defaults already in the markup
+  }
+}
+
+async function boot(){
+  setWho(currentWho);
+  try{
+    await Promise.all([loadNames(), loadEntries()]);
+  }catch(err){
+    if(err.message !== "unauthorized" && err.message !== "no-token") flash(err.message, "err");
+  }
+}
+
+if(getStoredToken()){
+  hideGate();
+  boot();
+}else{
+  showGate();
+}
+</script>
+</body>
+</html>

@@ -205,6 +205,32 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
 }
 .nav-item.active .nav-count{background:var(--card);color:var(--cat)}
 
+/* recent-activity timeline — visible proof the library keeps getting
+   tended to, not a static one-time gift */
+.activity-panel[hidden]{display:none}
+.activity-feed{
+  list-style:none;display:flex;flex-direction:column;gap:2px;
+  max-height:220px;overflow-y:auto;
+}
+.activity-item{
+  position:relative;padding:7px 0 7px 16px;
+  font-size:11.5px;line-height:1.4;color:var(--soft);
+}
+.activity-item::before{
+  content:"";position:absolute;left:2px;top:13px;width:5px;height:5px;
+  border-radius:50%;background:var(--accent);
+}
+.activity-item::after{
+  content:"";position:absolute;left:4px;top:20px;bottom:-2px;width:1px;
+  background:var(--line-2);
+}
+.activity-item:last-child::after{display:none}
+.activity-item b{color:var(--ink);font-weight:600}
+.activity-item .activity-when{
+  display:block;font-family:var(--mono);font-size:9px;color:var(--faint);
+  letter-spacing:.04em;margin-top:2px;
+}
+
 /* meta at bottom */
 .sidebar-meta{
   margin-top:auto;
@@ -628,6 +654,21 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
   .fab-add{right:16px;bottom:16px;height:50px;padding:0 16px 0 14px}
 }
 
+.fab-diary{
+  position:fixed;right:22px;bottom:84px;z-index:50;
+  display:flex;align-items:center;gap:8px;
+  height:52px;padding:0 18px 0 16px;border-radius:99px;
+  background:#a2678f;color:#fff;
+  box-shadow:0 14px 30px -10px rgba(162,103,143,.55);
+  transition:transform .2s cubic-bezier(.2,.7,.2,1),box-shadow .2s,background .2s;
+}
+.fab-diary:hover{background:#8f5679;transform:translateY(-2px);box-shadow:0 18px 34px -10px rgba(162,103,143,.65)}
+.fab-diary:active{transform:translateY(0) scale(.97)}
+.fab-diary svg{width:20px;height:20px;flex:none}
+@media(max-width:520px){
+  .fab-diary{right:16px;bottom:78px;height:50px;padding:0 16px 0 14px}
+}
+
 ::selection{background:var(--accent-wash-2);color:var(--ink)}
 ::-webkit-scrollbar{width:11px}
 ::-webkit-scrollbar-track{background:var(--bg)}
@@ -705,9 +746,15 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
         <nav class="sidebar-nav" id="sidebarNav" aria-label="Các ngăn sách"></nav>
       </div>
 
+      <div class="activity-panel" id="activityPanel" hidden>
+        <div class="nav-head">Nhật ký gần đây</div>
+        <ol class="activity-feed" id="activityFeed"></ol>
+      </div>
+
       <div class="sidebar-meta">
         <div class="meta-line"><span class="meta-key">Bên nhau</span><span class="meta-dots"></span><span class="meta-val" id="statTogether">—</span></div>
         <div class="meta-line"><span class="meta-key">Cập nhật</span><span class="meta-dots"></span><span class="meta-val" id="statUpdated">—</span></div>
+        <div class="meta-line"><span class="meta-key">Vừa thêm</span><span class="meta-dots"></span><span class="meta-val" id="statLastActivity">—</span></div>
         <div class="meta-line"><span class="meta-key">Đầu sách</span><span class="meta-dots"></span><span class="meta-val" id="statVolumes">—</span></div>
         <div class="meta-line"><span class="meta-key">Ngăn dùng</span><span class="meta-dots"></span><span class="meta-val" id="statCategories">—</span></div>
         <div class="meta-line"><span class="meta-key">Yêu thích</span><span class="meta-dots"></span><span class="meta-val" id="statFavorites">—</span></div>
@@ -750,6 +797,10 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
 
 </div>
 
+<a class="fab-diary" href="diary.html" aria-label="Nhật ký của tụi mình">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.8Z"/></svg>
+  <span class="fab-label">Nhật ký</span>
+</a>
 <a class="fab-add" href="admin.html" aria-label="Thêm sách mới">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
   <span class="fab-label">Thêm sách</span>
@@ -818,6 +869,8 @@ const tagFilterClearEl = document.getElementById("tagFilterClear");
 const newSinceBannerEl = document.getElementById("newSinceBanner");
 const newSinceTextEl = document.getElementById("newSinceText");
 const newSinceDismissEl = document.getElementById("newSinceDismiss");
+const activityPanelEl = document.getElementById("activityPanel");
+const activityFeedEl = document.getElementById("activityFeed");
 
 let lastCatalogData = null;
 let activeTagFilter = null;
@@ -980,6 +1033,50 @@ function cardHTML(b, cat){
       </div>
     </a>
   `;
+}
+
+// ── relative time, for the activity feed and "Vừa thêm" stat ──
+function timeAgo(iso){
+  if(!iso) return "";
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const min = Math.floor(diffMs / 60000);
+  if(min < 1) return "vừa xong";
+  if(min < 60) return `${min} phút trước`;
+  const hr = Math.floor(min / 60);
+  if(hr < 24) return `${hr} giờ trước`;
+  const day = Math.floor(hr / 24);
+  if(day === 1) return "hôm qua";
+  if(day < 7) return `${day} ngày trước`;
+  const week = Math.floor(day / 7);
+  if(week < 5) return `${week} tuần trước`;
+  return `${Math.floor(day / 30)} tháng trước`;
+}
+
+// ── "nhật ký gần đây" — visible proof the library keeps growing, built
+// straight from categories/books createdAt already in the catalog data ──
+function renderActivityFeed(data){
+  const events = [];
+  (data.categories || []).forEach(cat => {
+    if(cat.createdAt){
+      events.push({ at: cat.createdAt, html: `Mở chủ đề mới <b>${escapeHTML(cat.title)}</b>` });
+    }
+    (cat.books || []).forEach(b => {
+      if(b.createdAt){
+        events.push({ at: b.createdAt, html: `Thêm sách <b>${escapeHTML(b.title)}</b> vào ${escapeHTML(cat.title)}` });
+      }
+    });
+  });
+  events.sort((a, b) => new Date(b.at) - new Date(a.at));
+
+  if(events.length === 0){
+    activityPanelEl.hidden = true;
+    return;
+  }
+  activityPanelEl.hidden = false;
+  activityFeedEl.innerHTML = events.slice(0, 8).map(ev => `
+    <li class="activity-item">${ev.html}<span class="activity-when">${timeAgo(ev.at)}</span></li>
+  `).join("");
+  document.getElementById("statLastActivity").textContent = timeAgo(events[0].at);
 }
 
 function applyBookSort(books, mode){
@@ -1212,6 +1309,7 @@ function render(data){
   countUp(document.getElementById("statCategories"), categories.length, 2);
   document.getElementById("statUpdated").textContent = data.updated || new Date().getFullYear();
   document.getElementById("navCountAll").textContent = volStr;
+  renderActivityFeed(data);
 
   const favoriteCount = categories.reduce((sum, c) => sum + (c.books||[]).filter(b => b.isFavorite).length, 0);
   countUp(document.getElementById("statFavorites"), favoriteCount, 2);
