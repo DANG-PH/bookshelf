@@ -5,9 +5,24 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>Thư Viện Sách — Góc đọc riêng</title>
 <meta name="description" content="Một góc thư viện nhỏ được chọn lọc và ghi thẻ thủ công — từ trí tuệ cảm xúc đến công nghệ. Mỗi cuốn sách là một câu chuyện đáng đọc, mời bạn ghé qua." />
-<meta name="theme-color" content="#f4f1ea" />
+<meta name="theme-color" content="#f4f1ea" id="themeColorMeta" />
+<script>
+// applied before first paint to avoid a flash of the wrong theme
+(function(){
+  var saved = localStorage.getItem("tb_theme");
+  if(saved === "light" || saved === "dark") document.documentElement.setAttribute("data-theme", saved);
+})();
+</script>
 <link rel="canonical" href="https://book.dangpham.id.vn/" />
 <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/2784/2784539.png" />
+
+<!-- PWA — lets the site be "added to home screen" like an app -->
+<link rel="manifest" href="manifest.json" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="Thư Viện" />
+<link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2784/2784539.png" />
 
 <!-- Open Graph / Twitter — dùng khi link được chia sẻ qua Messenger, Zalo, Facebook… -->
 <meta property="og:type" content="website" />
@@ -52,6 +67,31 @@
   --sans:'Plus Jakarta Sans',system-ui,-apple-system,sans-serif;
   --serif:'Newsreader',Georgia,serif;
   --mono:'JetBrains Mono',ui-monospace,monospace;
+}
+
+/* dark theme — follows system preference by default, or the explicit
+   toggle (data-theme attribute on <html>, persisted in localStorage) */
+@media(prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#211d1a;--bg-2:#2a2521;--card:#2a2521;--paper:#262220;
+    --ink:#ede7de;--soft:#c4bbae;--faint:#8f8578;
+    --line:rgba(237,231,222,.10);--line-2:rgba(237,231,222,.18);
+    --accent:#d19b73;--accent-deep:#e0ab82;
+    --accent-wash:rgba(209,155,115,.16);--accent-wash-2:rgba(209,155,115,.26);
+    --stamp:#e0776a;--stamp-wash:rgba(224,119,106,.14);
+    --shadow:0 26px 60px -30px rgba(0,0,0,.6);
+    --shadow-sm:0 10px 24px -14px rgba(0,0,0,.5);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#211d1a;--bg-2:#2a2521;--card:#2a2521;--paper:#262220;
+  --ink:#ede7de;--soft:#c4bbae;--faint:#8f8578;
+  --line:rgba(237,231,222,.10);--line-2:rgba(237,231,222,.18);
+  --accent:#d19b73;--accent-deep:#e0ab82;
+  --accent-wash:rgba(209,155,115,.16);--accent-wash-2:rgba(209,155,115,.26);
+  --stamp:#e0776a;--stamp-wash:rgba(224,119,106,.14);
+  --shadow:0 26px 60px -30px rgba(0,0,0,.6);
+  --shadow-sm:0 10px 24px -14px rgba(0,0,0,.5);
 }
 
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -102,6 +142,12 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
   transform:translateZ(0);
   will-change:opacity;
 }
+/* multiply-blend grain reads as muddy on a dark surface — switch blend
+   mode and back off the opacity instead */
+@media(prefers-color-scheme:dark){
+  :root:not([data-theme="light"]) .grain{mix-blend-mode:overlay;opacity:.18}
+}
+:root[data-theme="dark"] .grain{mix-blend-mode:overlay;opacity:.18}
 
 /* ── shell: 2-pane layout ───────────── */
 .shell{display:grid;grid-template-columns:var(--sidebar-w) 1fr;min-height:100dvh}
@@ -140,6 +186,23 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
 }
 .brand-sub{font-family:var(--serif);font-size:.85rem;color:var(--soft);font-style:italic;margin-top:1px}
 .brand-role{font-family:var(--mono);font-size:9.5px;color:var(--faint);letter-spacing:.06em;text-transform:uppercase;margin-top:2px}
+
+.theme-toggle{
+  flex:none;width:32px;height:32px;border-radius:50%;
+  display:grid;place-items:center;
+  background:var(--paper);border:1px solid var(--line-2);color:var(--soft);
+  transition:border-color .2s,color .2s,transform .15s;
+}
+.theme-toggle:hover{border-color:var(--accent);color:var(--accent-deep)}
+.theme-toggle:active{transform:scale(.9)}
+.theme-toggle svg{width:15px;height:15px}
+.theme-toggle .icon-moon{display:none}
+:root[data-theme="dark"] .theme-toggle .icon-sun{display:none}
+:root[data-theme="dark"] .theme-toggle .icon-moon{display:block}
+@media(prefers-color-scheme:dark){
+  :root:not([data-theme="light"]) .theme-toggle .icon-sun{display:none}
+  :root:not([data-theme="light"]) .theme-toggle .icon-moon{display:block}
+}
 
 /* search */
 .search-box{
@@ -485,6 +548,17 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
 .random-btn:active{transform:scale(.9)}
 .random-btn svg{width:14px;height:14px}
 
+.status-filter-row{display:flex;gap:6px;flex-wrap:wrap}
+.status-filter-chip{
+  flex:1;min-width:0;
+  font-family:var(--mono);font-size:9.5px;font-weight:600;letter-spacing:.03em;
+  padding:6px 8px;border-radius:99px;border:1px solid var(--line-2);
+  background:var(--paper);color:var(--faint);text-align:center;
+  transition:all .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.status-filter-chip:hover{border-color:var(--accent);color:var(--accent-deep)}
+.status-filter-chip.active{background:var(--accent-deep);border-color:var(--accent-deep);color:#fff}
+
 /* "new since your last visit" banner above the catalog */
 .new-since-banner{
   display:flex;align-items:center;justify-content:space-between;gap:12px;
@@ -674,6 +748,28 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
 ::-webkit-scrollbar-track{background:var(--bg)}
 ::-webkit-scrollbar-thumb{background:#d6cebd;border-radius:6px;border:3px solid var(--bg)}
 ::-webkit-scrollbar-thumb:hover{background:var(--accent)}
+
+/* ── print: a clean card-catalog listing instead of the web chrome ── */
+@media print{
+  .sidebar,.mobile-top,.backdrop,.pin-gate,.progress-rail,.grain,.amb,
+  .fab-add,.fab-diary,.new-since-banner,.blurb-toggle,.card-new-ribbon,
+  .fav-toggle,.card-status,.stamp{display:none!important}
+  body{background:#fff;color:#000}
+  .shell{display:block}
+  .content{max-width:none;padding:0}
+  .section{break-inside:avoid;page-break-inside:avoid;animation:none!important;opacity:1!important;transform:none!important}
+  .section-head{border-bottom:1px solid #000}
+  .cards{display:block}
+  .card{
+    display:flex;gap:10px;break-inside:avoid;page-break-inside:avoid;
+    transform:none!important;box-shadow:none;border:none;border-bottom:1px dotted #999;
+    border-radius:0;padding:6px 0;
+  }
+  .card-cover-wrap{display:none}
+  .card-body{flex:1}
+  .card-tab{border-bottom:none;padding-bottom:2px}
+  .foot{border-top:1px solid #000}
+}
 </style>
 </head>
 
@@ -717,6 +813,10 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
           <div class="brand-sub" id="brandSub">Danh mục sách</div>
           <div class="brand-role" id="brandRole"></div>
         </div>
+        <button type="button" class="theme-toggle" id="themeToggle" aria-label="Đổi giao diện sáng/tối">
+          <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+          <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z"/></svg>
+        </button>
       </div>
 
       <label class="search-box" for="searchInput">
@@ -739,6 +839,12 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
         <button type="button" class="random-btn" id="randomBtn" aria-label="Chọn ngẫu nhiên một cuốn cho mình" title="Chọn ngẫu nhiên cho mình">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6"/><path d="M4 4l5 5"/></svg>
         </button>
+      </div>
+
+      <div class="status-filter-row" id="statusFilterRow">
+        <button type="button" class="status-filter-chip" data-status-filter="want">Muốn đọc</button>
+        <button type="button" class="status-filter-chip" data-status-filter="reading">Đang đọc</button>
+        <button type="button" class="status-filter-chip" data-status-filter="done">Đã đọc</button>
       </div>
 
       <div>
@@ -853,6 +959,26 @@ function normalize(s){
 
 const SPINE_COLORS = ["var(--spine-1)","var(--spine-2)","var(--spine-3)","var(--spine-4)","var(--spine-5)","var(--spine-6)"];
 
+// ── light/dark toggle — defaults to system preference, remembers an
+// explicit choice in localStorage (already applied pre-paint in <head>) ──
+const themeToggleEl = document.getElementById("themeToggle");
+const themeColorMetaEl = document.querySelector('meta[name="theme-color"]');
+function currentTheme(){
+  const explicit = document.documentElement.getAttribute("data-theme");
+  if(explicit) return explicit;
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+function applyThemeColorMeta(){
+  themeColorMetaEl.setAttribute("content", currentTheme() === "dark" ? "#211d1a" : "#f4f1ea");
+}
+themeToggleEl.addEventListener("click", () => {
+  const next = currentTheme() === "dark" ? "light" : "dark";
+  document.documentElement.setAttribute("data-theme", next);
+  localStorage.setItem("tb_theme", next);
+  applyThemeColorMeta();
+});
+applyThemeColorMeta();
+
 const catalogEl = document.getElementById("catalog");
 const sidebarNavEl = document.getElementById("sidebarNav");
 const sidebarEl = document.getElementById("sidebar");
@@ -871,10 +997,24 @@ const newSinceTextEl = document.getElementById("newSinceText");
 const newSinceDismissEl = document.getElementById("newSinceDismiss");
 const activityPanelEl = document.getElementById("activityPanel");
 const activityFeedEl = document.getElementById("activityFeed");
+const statusFilterRowEl = document.getElementById("statusFilterRow");
 
 let lastCatalogData = null;
 let activeTagFilter = null;
+let activeStatusFilter = null;
 let currentApplyFilter = null;
+
+// ── quick filter: Muốn đọc / Đang đọc / Đã đọc ──
+statusFilterRowEl.addEventListener("click", (e) => {
+  const chip = e.target.closest("[data-status-filter]");
+  if(!chip) return;
+  const value = chip.dataset.statusFilter;
+  activeStatusFilter = activeStatusFilter === value ? null : value;
+  statusFilterRowEl.querySelectorAll(".status-filter-chip").forEach(c => {
+    c.classList.toggle("active", c.dataset.statusFilter === activeStatusFilter);
+  });
+  if(currentApplyFilter) currentApplyFilter();
+});
 
 // ── "Xem thêm/Thu gọn" toggle for long book descriptions — delegated once
 // on the stable catalog container so it survives re-renders, and stops the
@@ -1258,13 +1398,14 @@ function render(data){
       cards.forEach(card => {
         const matchesText = !q || card.dataset.search.includes(q);
         const matchesTag = !activeTagFilter || !!card.querySelector(`[data-tag-filter="${CSS.escape(activeTagFilter)}"]`);
-        const show = matchesText && matchesTag;
+        const matchesStatus = !activeStatusFilter || card.querySelector(".status-pill.active")?.dataset.statusToggle === activeStatusFilter;
+        const show = matchesText && matchesTag && matchesStatus;
         card.style.display = show ? "" : "none";
         if(show){ visibleInSection++; totalVisible++; }
       });
       const noMatch = section.querySelector(".no-match");
       if(noMatch){
-        noMatch.style.display = (q || activeTagFilter) && cards.length > 0 && visibleInSection === 0 ? "" : "none";
+        noMatch.style.display = (q || activeTagFilter || activeStatusFilter) && cards.length > 0 && visibleInSection === 0 ? "" : "none";
       }
     });
     // status line under sidebar search
@@ -1314,8 +1455,11 @@ function render(data){
   const favoriteCount = categories.reduce((sum, c) => sum + (c.books||[]).filter(b => b.isFavorite).length, 0);
   countUp(document.getElementById("statFavorites"), favoriteCount, 2);
 
-  // "Bên nhau" — days since the date the PIN itself is built from (01/08/2026)
-  const MET_DATE = new Date(2026, 7, 1);
+  // "Bên nhau" — days since the date the PIN itself is built from (01/08/2026).
+  // Anchored to Vietnam midnight explicitly (not the viewer's own device
+  // timezone) so the count doesn't shift by a day if it's ever opened from
+  // a phone set to a different timezone.
+  const MET_DATE = new Date("2026-08-01T00:00:00+07:00");
   const daysTogether = Math.max(0, Math.floor((Date.now() - MET_DATE) / 86400000));
   document.getElementById("statTogether").textContent = `${daysTogether} ngày`;
 

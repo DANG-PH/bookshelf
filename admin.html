@@ -530,7 +530,7 @@ function renderCategorySelect(){
   const sel = document.getElementById("bookCategory");
   const prevValue = sel.value;
   if(categories.length === 0){
-    sel.innerHTML = `<option value="" disabled selected>Chưa có chủ đề nào — thêm một cái đi</option>`;
+    sel.innerHTML = `<option value="" disabled selected>Chưa có chủ đề nào — thêm cái đầu tiên đi</option>`;
     return;
   }
   sel.innerHTML = categories.map(c => `<option value="${c.id}">${escapeHTML(c.title)}</option>`).join("");

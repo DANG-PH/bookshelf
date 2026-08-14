@@ -39,6 +39,9 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
 .btn-primary:disabled{opacity:.55;cursor:default}
 .btn-del{background:transparent;color:var(--faint);padding:3px 8px;font-size:.72rem;border:1px solid var(--line-2);border-radius:7px}
 .btn-del:hover{background:var(--stamp-wash);color:var(--stamp);border-color:var(--stamp-wash)}
+.btn-secondary{background:var(--paper);color:var(--soft);padding:9px 16px;font-size:.82rem;border:1.5px solid var(--line-2);border-radius:10px}
+.btn-secondary:hover{border-color:var(--accent);color:var(--accent-deep)}
+.btn-secondary:disabled{opacity:.6;cursor:default}
 
 /* pin gate — matches the rest of the site */
 .pin-gate{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--bg)}
@@ -115,6 +118,19 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
 .entry-foot{display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding-top:8px;border-top:1px dashed var(--line-2)}
 .entry-when{font-family:var(--mono);font-size:9.5px;color:var(--faint)}
 .empty-note{font-size:.84rem;color:var(--faint);text-align:center;padding:24px 10px;font-style:italic;font-family:var(--serif)}
+
+/* ── shared memories timeline ── */
+.memory-timeline{display:flex;flex-direction:column;gap:14px;margin-top:20px}
+.memory-card{
+  display:flex;gap:14px;background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:14px;
+}
+.memory-photo{width:84px;height:84px;border-radius:10px;object-fit:cover;flex:none;background:var(--line-2)}
+.memory-body{min-width:0;flex:1}
+.memory-date{font-family:var(--mono);font-size:9.5px;color:var(--faint);letter-spacing:.05em;text-transform:uppercase}
+.memory-title{font-family:var(--serif);font-size:1.05rem;font-weight:600;margin-top:2px}
+.memory-desc{font-size:.86rem;color:var(--soft);margin-top:6px;line-height:1.55;white-space:pre-wrap}
+.memory-foot{display:flex;justify-content:flex-end;margin-top:8px}
+@media(max-width:480px){.memory-card{flex-direction:column}.memory-photo{width:100%;height:140px}}
 </style>
 </head>
 <body>
@@ -134,7 +150,7 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
 <div class="shell" id="shell" hidden>
   <div class="topbar">
     <h1>Nhật Ký Của Tụi Mình</h1>
-    <p>Một góc nhỏ chỉ để viết cho nhau, không cần ai đọc cũng được.</p>
+    <p>Một góc nhỏ để viết cho nhau — có ai đọc hay không cũng không sao.</p>
     <a class="back-link" href="index.html">← Về trang thư viện</a>
   </div>
 
@@ -167,6 +183,22 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
     </form>
   </section>
 
+  <section class="panel" id="diaryFilterPanel">
+    <div class="row">
+      <div class="field">
+        <label for="filterStartDate">Từ ngày</label>
+        <input id="filterStartDate" type="date" />
+      </div>
+      <div class="field">
+        <label for="filterEndDate">Đến ngày</label>
+        <input id="filterEndDate" type="date" />
+      </div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button type="button" class="btn-secondary" id="filterClearBtn" style="flex:none">Bỏ lọc ngày</button>
+    </div>
+  </section>
+
   <div class="journals">
     <div class="journal-col" data-who="me">
       <h2 id="meColTitle">Đăng</h2>
@@ -177,6 +209,38 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
       <div class="entry-list" id="partnerEntryList"></div>
     </div>
   </div>
+
+  <div style="text-align:center;margin-top:6px">
+    <button type="button" class="btn-secondary" id="loadMoreBtn" style="display:none">Tải thêm nhật ký cũ hơn</button>
+  </div>
+
+  <section class="panel">
+    <h2 style="font-size:1.15rem">Kỷ Niệm Chung</h2>
+    <p style="font-size:.86rem;color:var(--faint);margin:4px 0 16px">Những khoảnh khắc đáng nhớ của cả hai — ai thêm cũng được, cả hai cùng thấy.</p>
+    <form id="memoryForm">
+      <div class="row">
+        <div class="field">
+          <label for="memoryTitle">Tên khoảnh khắc</label>
+          <input id="memoryTitle" name="title" placeholder="VD: Lần đầu đi xem phim" required />
+        </div>
+        <div class="field">
+          <label for="memoryDate">Ngày <span style="font-weight:400;color:var(--faint)">(không bắt buộc)</span></label>
+          <input id="memoryDate" name="memoryDate" type="date" />
+        </div>
+      </div>
+      <div class="field">
+        <label for="memoryDesc">Kể lại chút về khoảnh khắc này</label>
+        <textarea id="memoryDesc" name="description" placeholder="Hôm đó có gì đáng nhớ…"></textarea>
+      </div>
+      <div class="field">
+        <label for="memoryPhoto">Ảnh <span style="font-weight:400;color:var(--faint)">(dán link, không bắt buộc)</span></label>
+        <input id="memoryPhoto" name="photoUrl" type="url" placeholder="https://…" />
+      </div>
+      <button class="btn-primary" type="submit" id="memorySubmit">Thêm vào kỷ niệm chung</button>
+    </form>
+
+    <div class="memory-timeline" id="memoryTimeline"></div>
+  </section>
 </div>
 
 <script>
@@ -335,7 +399,15 @@ function entryHTML(entry){
   `;
 }
 
+const DIARY_PAGE_SIZE = 30;
 let allEntries = [];
+let diaryOffset = 0;
+let diaryTotal = 0;
+
+const filterStartDateEl = document.getElementById("filterStartDate");
+const filterEndDateEl = document.getElementById("filterEndDate");
+const filterClearBtn = document.getElementById("filterClearBtn");
+const loadMoreBtn = document.getElementById("loadMoreBtn");
 
 function renderEntries(){
   const meList = document.getElementById("meEntryList");
@@ -344,16 +416,56 @@ function renderEntries(){
   const partnerEntries = allEntries.filter(e => e.author === "partner");
   meList.innerHTML = meEntries.length
     ? meEntries.map(entryHTML).join("")
-    : `<p class="empty-note">Chưa có dòng nào — viết dòng đầu tiên đi.</p>`;
+    : `<p class="empty-note">Chưa có gì ở đây — viết vài dòng đầu tiên đi.</p>`;
   partnerList.innerHTML = partnerEntries.length
     ? partnerEntries.map(entryHTML).join("")
-    : `<p class="empty-note">Chưa có dòng nào — viết dòng đầu tiên đi.</p>`;
+    : `<p class="empty-note">Chưa có gì ở đây — viết vài dòng đầu tiên đi.</p>`;
+  loadMoreBtn.style.display = allEntries.length < diaryTotal ? "" : "none";
 }
 
+function diaryQueryParams(offset){
+  const params = new URLSearchParams({ limit: String(DIARY_PAGE_SIZE), offset: String(offset) });
+  if(filterStartDateEl.value) params.set("startDate", filterStartDateEl.value);
+  if(filterEndDateEl.value) params.set("endDate", filterEndDateEl.value);
+  return params.toString();
+}
+
+// resets to the first page — used on initial load, after adding/deleting
+// an entry, or when the date filter changes
 async function loadEntries(){
-  allEntries = await api("/diary");
+  diaryOffset = 0;
+  const res = await api(`/diary?${diaryQueryParams(0)}`);
+  allEntries = res.items;
+  diaryTotal = res.total;
+  diaryOffset = res.items.length;
   renderEntries();
 }
+
+async function loadMoreEntries(){
+  loadMoreBtn.disabled = true;
+  loadMoreBtn.textContent = "Đang tải…";
+  try{
+    const res = await api(`/diary?${diaryQueryParams(diaryOffset)}`);
+    allEntries = allEntries.concat(res.items);
+    diaryTotal = res.total;
+    diaryOffset += res.items.length;
+    renderEntries();
+  }catch(err){
+    if(err.message !== "unauthorized") flash(err.message, "err");
+  }finally{
+    loadMoreBtn.disabled = false;
+    loadMoreBtn.textContent = "Tải thêm nhật ký cũ hơn";
+  }
+}
+loadMoreBtn.addEventListener("click", loadMoreEntries);
+
+filterStartDateEl.addEventListener("change", () => loadEntries().catch(() => {}));
+filterEndDateEl.addEventListener("change", () => loadEntries().catch(() => {}));
+filterClearBtn.addEventListener("click", () => {
+  filterStartDateEl.value = "";
+  filterEndDateEl.value = "";
+  loadEntries().catch(() => {});
+});
 
 document.querySelectorAll(".entry-list").forEach(list => {
   list.addEventListener("click", async (e) => {
@@ -416,10 +528,85 @@ async function loadNames(){
   }
 }
 
+// ── shared memories timeline — no author gating, either person can
+// add or remove since it's explicitly a joint space ──
+function formatMemoryDate(d){
+  if(!d) return "";
+  const [y, m, day] = d.split("-");
+  return `${day}/${m}/${y}`;
+}
+
+function memoryHTML(m){
+  return `
+    <div class="memory-card" data-memory-id="${m.id}">
+      ${m.photoUrl ? `<img class="memory-photo" src="${escapeHTML(m.photoUrl)}" alt="" loading="lazy" onerror="this.style.display='none'" />` : ""}
+      <div class="memory-body">
+        ${m.memoryDate ? `<div class="memory-date">${formatMemoryDate(m.memoryDate)}</div>` : ""}
+        <div class="memory-title">${escapeHTML(m.title)}</div>
+        ${m.description ? `<div class="memory-desc">${escapeHTML(m.description)}</div>` : ""}
+        <div class="memory-foot">
+          <button type="button" class="btn-del" data-del-memory="${m.id}">Xoá</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+async function loadMemories(){
+  const memories = await api("/memories");
+  const timelineEl = document.getElementById("memoryTimeline");
+  timelineEl.innerHTML = memories.length
+    ? memories.map(memoryHTML).join("")
+    : `<p class="empty-note">Chưa có kỷ niệm nào — thêm khoảnh khắc đầu tiên đi.</p>`;
+}
+
+document.getElementById("memoryTimeline").addEventListener("click", async (e) => {
+  const btn = e.target.closest("[data-del-memory]");
+  if(!btn) return;
+  if(!confirm("Xoá kỷ niệm này khỏi dòng thời gian chung?")) return;
+  try{
+    await api(`/memories/${btn.dataset.delMemory}`, { method: "DELETE" });
+    await loadMemories();
+  }catch(err){
+    if(err.message !== "unauthorized") flash(err.message, "err");
+  }
+});
+
+document.getElementById("memoryForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const form = e.target;
+  const title = form.title.value.trim();
+  if(!title) return;
+  const submitBtn = document.getElementById("memorySubmit");
+  submitBtn.disabled = true;
+  submitBtn.textContent = "Đang lưu…";
+  try{
+    await api("/memories", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title,
+        description: form.description.value.trim() || undefined,
+        memoryDate: form.memoryDate.value || undefined,
+        photoUrl: form.photoUrl.value.trim() || undefined,
+        addedBy: currentWho,
+      }),
+    });
+    form.reset();
+    flash("Đã thêm vào kỷ niệm chung.", "ok");
+    await loadMemories();
+  }catch(err){
+    if(err.message !== "unauthorized") flash(err.message, "err");
+  }finally{
+    submitBtn.disabled = false;
+    submitBtn.textContent = "Thêm vào kỷ niệm chung";
+  }
+});
+
 async function boot(){
   setWho(currentWho);
   try{
-    await Promise.all([loadNames(), loadEntries()]);
+    await Promise.all([loadNames(), loadEntries(), loadMemories()]);
   }catch(err){
     if(err.message !== "unauthorized" && err.message !== "no-token") flash(err.message, "err");
   }

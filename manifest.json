@@ -1,0 +1,20 @@
+{
+  "name": "Thư Viện Sách",
+  "short_name": "Thư Viện",
+  "description": "Một góc thư viện nhỏ được chọn lọc và ghi thẻ thủ công.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#f4f1ea",
+  "theme_color": "#f4f1ea",
+  "lang": "vi",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2784/2784539.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
