@@ -215,6 +215,11 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
 .entry-like.active{color:var(--stamp)}
 .entry-like.active svg{fill:currentColor}
 .entry-like:active{transform:scale(.85)}
+.like-wrap{display:inline-flex;align-items:center;gap:3px}
+.like-count{
+  font-family:var(--mono);font-size:10px;font-weight:700;color:var(--faint);
+  min-width:12px;text-align:left;
+}
 .entry-more{
   display:inline-block;margin-top:6px;
   font-size:.8rem;font-weight:600;color:var(--accent-deep);
@@ -530,11 +535,17 @@ const whoMeBtn = document.getElementById("whoMeBtn");
 const whoPartnerBtn = document.getElementById("whoPartnerBtn");
 let currentWho = localStorage.getItem(WHO_KEY) || "me";
 
-function setWho(who){
+function setWho(who, opts){
   currentWho = who;
   localStorage.setItem(WHO_KEY, who);
   whoMeBtn.classList.toggle("active", who === "me");
   whoPartnerBtn.classList.toggle("active", who === "partner");
+  // re-render hearts so "active" state reflects the newly-selected viewer —
+  // skipped on the initial boot call since loadEntries/loadMemories run right after anyway
+  if(!opts || !opts.silent){
+    renderEntries();
+    loadMemories();
+  }
 }
 whoMeBtn.addEventListener("click", () => setWho("me"));
 whoPartnerBtn.addEventListener("click", () => setWho("partner"));
@@ -554,6 +565,22 @@ const MOOD_LABELS = { vui: "Vui", buon: "Buồn", nho: "Nhớ", yeu: "Yêu", gia
 
 const ENTRY_PREVIEW_LEN = 420;
 
+// shared by diary entries and memories — heart + a small count badge
+// (0–2, since only "me"/"partner" can ever be in likedBy)
+function likeButtonHTML(id, likedBy, dataAttr){
+  const list = likedBy || [];
+  const isLikedByMe = list.includes(currentWho);
+  const count = list.length;
+  return `
+    <span class="like-wrap">
+      <button type="button" class="entry-like${isLikedByMe ? " active" : ""}" ${dataAttr}="${id}" aria-label="${isLikedByMe ? "Bỏ tym" : "Tym"}">
+        <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.8Z"/></svg>
+      </button>
+      ${count > 0 ? `<span class="like-count">${count}</span>` : ""}
+    </span>
+  `;
+}
+
 function entryHTML(entry){
   const canEdit = entry.author === currentWho;
   const { full, preview, isLong } = truncateText(entry.content, ENTRY_PREVIEW_LEN);
@@ -561,9 +588,7 @@ function entryHTML(entry){
     <div class="entry" data-entry-id="${entry.id}">
       <div class="entry-head">
         ${entry.mood ? `<span class="entry-mood" data-mood="${entry.mood}"><span class="dot"></span>${MOOD_LABELS[entry.mood] || entry.mood}</span>` : "<span></span>"}
-        <button type="button" class="entry-like${entry.liked ? " active" : ""}" data-like-entry="${entry.id}" aria-label="${entry.liked ? "Bỏ tym" : "Tym dòng này"}">
-          <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.8Z"/></svg>
-        </button>
+        ${likeButtonHTML(entry.id, entry.likedBy, "data-like-entry")}
       </div>
       <div class="entry-view">
         ${entry.title ? `<div class="entry-title">${escapeHTML(entry.title)}</div>` : ""}
@@ -733,14 +758,16 @@ document.querySelectorAll(".entry-list").forEach(list => {
     if(likeBtn){
       likeBtn.disabled = true;
       try{
-        const updated = await api(`/diary/${likeBtn.dataset.likeEntry}/like`, { method: "PATCH" });
+        const updated = await api(`/diary/${likeBtn.dataset.likeEntry}/like`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ author: currentWho }),
+        });
         const idx = allEntries.findIndex(en => en.id === updated.id);
         if(idx !== -1) allEntries[idx] = updated;
-        likeBtn.classList.toggle("active", updated.liked);
-        likeBtn.setAttribute("aria-label", updated.liked ? "Bỏ tym" : "Tym dòng này");
+        likeBtn.closest(".like-wrap").outerHTML = likeButtonHTML(updated.id, updated.likedBy, "data-like-entry");
       }catch(err){
         if(err.message !== "unauthorized") flash(err.message, "err");
-      }finally{
         likeBtn.disabled = false;
       }
       return;
@@ -887,9 +914,7 @@ function memoryHTML(m){
     ${m.description ? `<div class="memory-desc" data-preview="${escapeHTML(desc.preview)}" data-full="${escapeHTML(desc.full)}">${escapeHTML(desc.preview)}</div>` : ""}
     ${desc.isLong ? `<span class="entry-more" role="button" tabindex="0" data-more-memory-desc data-expanded="0">Xem thêm</span>` : ""}
     <div class="memory-foot">
-      <button type="button" class="entry-like${m.liked ? " active" : ""}" data-like-memory="${m.id}" aria-label="${m.liked ? "Bỏ tym" : "Tym kỷ niệm này"}">
-        <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.8Z"/></svg>
-      </button>
+      ${likeButtonHTML(m.id, m.likedBy, "data-like-memory")}
       <button type="button" class="btn-del" data-del-memory="${m.id}">Xoá</button>
     </div>
   `;
@@ -954,12 +979,14 @@ document.getElementById("memoryTimeline").addEventListener("click", async (e) =>
   if(likeBtn){
     likeBtn.disabled = true;
     try{
-      const updated = await api(`/memories/${likeBtn.dataset.likeMemory}/like`, { method: "PATCH" });
-      likeBtn.classList.toggle("active", updated.liked);
-      likeBtn.setAttribute("aria-label", updated.liked ? "Bỏ tym" : "Tym kỷ niệm này");
+      const updated = await api(`/memories/${likeBtn.dataset.likeMemory}/like`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ author: currentWho }),
+      });
+      likeBtn.closest(".like-wrap").outerHTML = likeButtonHTML(updated.id, updated.likedBy, "data-like-memory");
     }catch(err){
       if(err.message !== "unauthorized") flash(err.message, "err");
-    }finally{
       likeBtn.disabled = false;
     }
     return;
@@ -1010,7 +1037,7 @@ document.getElementById("memoryForm").addEventListener("submit", async (e) => {
 });
 
 async function boot(){
-  setWho(currentWho);
+  setWho(currentWho, { silent: true });
   try{
     await Promise.all([loadNames(), loadEntries(), loadMemories()]);
   }catch(err){
