@@ -65,6 +65,40 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
 
 .panel{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:24px 22px;margin-bottom:24px;box-shadow:0 16px 40px -28px rgba(80,62,42,.3)}
 
+/* ── tabs: Nhật Ký / Kỷ Niệm Chung, so the page isn't one long scroll ── */
+.tab-bar{display:flex;gap:6px;margin-bottom:20px;border-bottom:1px solid var(--line)}
+.tab-btn{
+  padding:10px 6px;margin-bottom:-1px;
+  font-family:var(--serif);font-size:1rem;font-weight:600;color:var(--faint);
+  border-bottom:2px solid transparent;
+}
+.tab-btn:hover{color:var(--soft)}
+.tab-btn.active{color:var(--accent-deep);border-bottom-color:var(--accent-deep)}
+@media(min-width:420px){.tab-btn{padding:10px 14px}}
+.tab-panel[hidden]{display:none}
+
+/* ── compact "lọc theo ngày" toolbar, replaces a whole heavy panel ── */
+.diary-toolbar{margin-bottom:18px}
+.date-filter-toggle{
+  display:inline-flex;align-items:center;gap:6px;
+  font-size:.82rem;color:var(--faint);padding:4px 2px;
+}
+.date-filter-toggle:hover{color:var(--accent-deep)}
+.date-filter-toggle svg{width:15px;height:15px}
+.date-filter-fields{
+  display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap;
+}
+.date-filter-fields input{
+  width:auto;flex:1;min-width:130px;padding:7px 10px;font-size:.82rem;border-radius:8px;
+}
+.date-filter-fields span{color:var(--faint);font-size:.82rem}
+.date-filter-fields button{
+  flex:none;width:26px;height:26px;border-radius:50%;
+  display:grid;place-items:center;background:var(--paper);border:1px solid var(--line-2);
+  color:var(--faint);font-size:.75rem;
+}
+.date-filter-fields button:hover{color:var(--stamp);border-color:var(--stamp-wash)}
+
 /* ── who's writing ── */
 .who-row{display:flex;gap:10px;margin-bottom:16px}
 .who-btn{
@@ -156,91 +190,97 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
 
   <p class="status-msg" id="globalStatus" hidden></p>
 
-  <section class="panel">
-    <div class="who-row" id="whoRow">
-      <button type="button" class="who-btn" data-who="me" id="whoMeBtn">Đăng</button>
-      <button type="button" class="who-btn" data-who="partner" id="whoPartnerBtn">Vy</button>
+  <div class="tab-bar" id="tabBar">
+    <button type="button" class="tab-btn active" data-tab="diary">Nhật Ký</button>
+    <button type="button" class="tab-btn" data-tab="memories">Kỷ Niệm Chung</button>
+  </div>
+
+  <div class="tab-panel" data-tab-panel="diary">
+    <section class="panel">
+      <div class="who-row" id="whoRow">
+        <button type="button" class="who-btn" data-who="me" id="whoMeBtn">Đăng</button>
+        <button type="button" class="who-btn" data-who="partner" id="whoPartnerBtn">Vy</button>
+      </div>
+
+      <form id="entryForm">
+        <div class="mood-row" id="moodRow">
+          <span class="mood-pill" data-mood="vui">Vui</span>
+          <span class="mood-pill" data-mood="buon">Buồn</span>
+          <span class="mood-pill" data-mood="nho">Nhớ</span>
+          <span class="mood-pill" data-mood="yeu">Yêu</span>
+          <span class="mood-pill" data-mood="gian">Giận dỗi</span>
+          <span class="mood-pill" data-mood="binh-yen">Bình yên</span>
+        </div>
+        <div class="field">
+          <label for="entryTitle">Tiêu đề <span style="font-weight:400;color:var(--faint)">(không bắt buộc)</span></label>
+          <input id="entryTitle" name="title" placeholder="Hôm nay…" />
+        </div>
+        <div class="field">
+          <label for="entryContent">Viết gì đó</label>
+          <textarea id="entryContent" name="content" placeholder="Hôm nay bạn thấy thế nào?" required></textarea>
+        </div>
+        <button class="btn-primary" type="submit" id="entrySubmit">Viết vào nhật ký</button>
+      </form>
+    </section>
+
+    <div class="diary-toolbar">
+      <button type="button" class="date-filter-toggle" id="dateFilterToggle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+        Lọc theo ngày
+      </button>
+      <div class="date-filter-fields" id="dateFilterFields" hidden>
+        <input id="filterStartDate" type="date" aria-label="Từ ngày" />
+        <span>–</span>
+        <input id="filterEndDate" type="date" aria-label="Đến ngày" />
+        <button type="button" id="filterClearBtn" hidden aria-label="Bỏ lọc ngày">✕</button>
+      </div>
     </div>
 
-    <form id="entryForm">
-      <div class="mood-row" id="moodRow">
-        <span class="mood-pill" data-mood="vui">Vui</span>
-        <span class="mood-pill" data-mood="buon">Buồn</span>
-        <span class="mood-pill" data-mood="nho">Nhớ</span>
-        <span class="mood-pill" data-mood="yeu">Yêu</span>
-        <span class="mood-pill" data-mood="gian">Giận dỗi</span>
-        <span class="mood-pill" data-mood="binh-yen">Bình yên</span>
+    <div class="journals">
+      <div class="journal-col" data-who="me">
+        <h2 id="meColTitle">Đăng</h2>
+        <div class="entry-list" id="meEntryList"></div>
       </div>
-      <div class="field">
-        <label for="entryTitle">Tiêu đề <span style="font-weight:400;color:var(--faint)">(không bắt buộc)</span></label>
-        <input id="entryTitle" name="title" placeholder="Hôm nay…" />
+      <div class="journal-col" data-who="partner">
+        <h2 id="partnerColTitle">Vy</h2>
+        <div class="entry-list" id="partnerEntryList"></div>
       </div>
-      <div class="field">
-        <label for="entryContent">Viết gì đó</label>
-        <textarea id="entryContent" name="content" placeholder="Hôm nay bạn thấy thế nào?" required></textarea>
-      </div>
-      <button class="btn-primary" type="submit" id="entrySubmit">Viết vào nhật ký</button>
-    </form>
-  </section>
+    </div>
 
-  <section class="panel" id="diaryFilterPanel">
-    <div class="row">
-      <div class="field">
-        <label for="filterStartDate">Từ ngày</label>
-        <input id="filterStartDate" type="date" />
-      </div>
-      <div class="field">
-        <label for="filterEndDate">Đến ngày</label>
-        <input id="filterEndDate" type="date" />
-      </div>
-    </div>
-    <div style="display:flex;gap:8px">
-      <button type="button" class="btn-secondary" id="filterClearBtn" style="flex:none">Bỏ lọc ngày</button>
-    </div>
-  </section>
-
-  <div class="journals">
-    <div class="journal-col" data-who="me">
-      <h2 id="meColTitle">Đăng</h2>
-      <div class="entry-list" id="meEntryList"></div>
-    </div>
-    <div class="journal-col" data-who="partner">
-      <h2 id="partnerColTitle">Vy</h2>
-      <div class="entry-list" id="partnerEntryList"></div>
+    <div style="text-align:center;margin-top:6px">
+      <button type="button" class="btn-secondary" id="loadMoreBtn" style="display:none">Tải thêm nhật ký cũ hơn</button>
     </div>
   </div>
 
-  <div style="text-align:center;margin-top:6px">
-    <button type="button" class="btn-secondary" id="loadMoreBtn" style="display:none">Tải thêm nhật ký cũ hơn</button>
+  <div class="tab-panel" data-tab-panel="memories" hidden>
+    <section class="panel">
+      <h2 style="font-size:1.15rem">Kỷ Niệm Chung</h2>
+      <p style="font-size:.86rem;color:var(--faint);margin:4px 0 16px">Những khoảnh khắc đáng nhớ của cả hai — ai thêm cũng được, cả hai cùng thấy.</p>
+      <form id="memoryForm">
+        <div class="row">
+          <div class="field">
+            <label for="memoryTitle">Tên khoảnh khắc</label>
+            <input id="memoryTitle" name="title" placeholder="VD: Lần đầu đi xem phim" required />
+          </div>
+          <div class="field">
+            <label for="memoryDate">Ngày <span style="font-weight:400;color:var(--faint)">(không bắt buộc)</span></label>
+            <input id="memoryDate" name="memoryDate" type="date" />
+          </div>
+        </div>
+        <div class="field">
+          <label for="memoryDesc">Kể lại chút về khoảnh khắc này</label>
+          <textarea id="memoryDesc" name="description" placeholder="Hôm đó có gì đáng nhớ…"></textarea>
+        </div>
+        <div class="field">
+          <label for="memoryPhoto">Ảnh <span style="font-weight:400;color:var(--faint)">(dán link, không bắt buộc)</span></label>
+          <input id="memoryPhoto" name="photoUrl" type="url" placeholder="https://…" />
+        </div>
+        <button class="btn-primary" type="submit" id="memorySubmit">Thêm vào kỷ niệm chung</button>
+      </form>
+
+      <div class="memory-timeline" id="memoryTimeline"></div>
+    </section>
   </div>
-
-  <section class="panel">
-    <h2 style="font-size:1.15rem">Kỷ Niệm Chung</h2>
-    <p style="font-size:.86rem;color:var(--faint);margin:4px 0 16px">Những khoảnh khắc đáng nhớ của cả hai — ai thêm cũng được, cả hai cùng thấy.</p>
-    <form id="memoryForm">
-      <div class="row">
-        <div class="field">
-          <label for="memoryTitle">Tên khoảnh khắc</label>
-          <input id="memoryTitle" name="title" placeholder="VD: Lần đầu đi xem phim" required />
-        </div>
-        <div class="field">
-          <label for="memoryDate">Ngày <span style="font-weight:400;color:var(--faint)">(không bắt buộc)</span></label>
-          <input id="memoryDate" name="memoryDate" type="date" />
-        </div>
-      </div>
-      <div class="field">
-        <label for="memoryDesc">Kể lại chút về khoảnh khắc này</label>
-        <textarea id="memoryDesc" name="description" placeholder="Hôm đó có gì đáng nhớ…"></textarea>
-      </div>
-      <div class="field">
-        <label for="memoryPhoto">Ảnh <span style="font-weight:400;color:var(--faint)">(dán link, không bắt buộc)</span></label>
-        <input id="memoryPhoto" name="photoUrl" type="url" placeholder="https://…" />
-      </div>
-      <button class="btn-primary" type="submit" id="memorySubmit">Thêm vào kỷ niệm chung</button>
-    </form>
-
-    <div class="memory-timeline" id="memoryTimeline"></div>
-  </section>
 </div>
 
 <script>
@@ -408,6 +448,8 @@ const filterStartDateEl = document.getElementById("filterStartDate");
 const filterEndDateEl = document.getElementById("filterEndDate");
 const filterClearBtn = document.getElementById("filterClearBtn");
 const loadMoreBtn = document.getElementById("loadMoreBtn");
+const dateFilterToggle = document.getElementById("dateFilterToggle");
+const dateFilterFields = document.getElementById("dateFilterFields");
 
 function renderEntries(){
   const meList = document.getElementById("meEntryList");
@@ -459,12 +501,37 @@ async function loadMoreEntries(){
 }
 loadMoreBtn.addEventListener("click", loadMoreEntries);
 
-filterStartDateEl.addEventListener("change", () => loadEntries().catch(() => {}));
-filterEndDateEl.addEventListener("change", () => loadEntries().catch(() => {}));
+function updateFilterClearVisibility(){
+  filterClearBtn.hidden = !filterStartDateEl.value && !filterEndDateEl.value;
+}
+filterStartDateEl.addEventListener("change", () => {
+  updateFilterClearVisibility();
+  loadEntries().catch(() => {});
+});
+filterEndDateEl.addEventListener("change", () => {
+  updateFilterClearVisibility();
+  loadEntries().catch(() => {});
+});
 filterClearBtn.addEventListener("click", () => {
   filterStartDateEl.value = "";
   filterEndDateEl.value = "";
+  updateFilterClearVisibility();
   loadEntries().catch(() => {});
+});
+
+// toggle "lọc theo ngày" open — collapsed by default so it doesn't sit in
+// the way when nobody's actually filtering
+dateFilterToggle.addEventListener("click", () => {
+  dateFilterFields.hidden = !dateFilterFields.hidden;
+});
+
+// ── tabs: Nhật Ký / Kỷ Niệm Chung ──
+document.getElementById("tabBar").addEventListener("click", (e) => {
+  const btn = e.target.closest(".tab-btn");
+  if(!btn) return;
+  const tab = btn.dataset.tab;
+  document.querySelectorAll(".tab-btn").forEach(b => b.classList.toggle("active", b.dataset.tab === tab));
+  document.querySelectorAll("[data-tab-panel]").forEach(p => { p.hidden = p.dataset.tabPanel !== tab; });
 });
 
 document.querySelectorAll(".entry-list").forEach(list => {
