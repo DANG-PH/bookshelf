@@ -341,6 +341,25 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
   border:1.5px solid rgba(255,255,255,.5);
 }
 .memory-media iframe{width:100%;height:100%;border:0;display:block}
+
+/* ── print: strip the app chrome down to just the writing — text-first
+   fine print for reading on a phone becomes plain body copy on paper ── */
+@media print{
+  .pin-gate,.theme-toggle,.write-toggle,.write-panel-wrap,.tab-bar,
+  .topbar-links,.status-msg,.entry-search,.date-filter-toggle,.date-filter-fields,
+  .entry-actions,.like-wrap,#loadMoreBtn,.entry-more,.memory-foot .btn-del,
+  .memory-media .play-btn{display:none!important}
+  body{background:#fff;color:#000}
+  .shell{padding:0;max-width:none}
+  /* the side-by-side columns don't paginate well — print the same
+     chronological single-file feed used on mobile, for both authors */
+  .journals{display:none!important}
+  .journals-mobile{display:block!important}
+  .entry,.memory-card{
+    background:#fff;border:1px solid #ccc;box-shadow:none;
+    break-inside:avoid;page-break-inside:avoid;
+  }
+}
 </style>
 </head>
 <body>
@@ -628,6 +647,15 @@ function flash(message, kind){
   flash._t = setTimeout(() => { el.hidden = true; }, 4000);
 }
 
+async function copyTextToClipboard(text){
+  try{
+    await navigator.clipboard.writeText(text);
+    flash("Đã sao chép.", "ok");
+  }catch{
+    flash("Không sao chép được — trình duyệt chặn quyền clipboard.", "err");
+  }
+}
+
 // ── who's writing right now ──
 const whoMeBtn = document.getElementById("whoMeBtn");
 const whoPartnerBtn = document.getElementById("whoPartnerBtn");
@@ -815,12 +843,13 @@ function entryHTML(entry, opts){
         ${isLong ? `<span class="entry-more" role="button" tabindex="0" data-more-entry data-expanded="0">Xem thêm</span>` : ""}
         <div class="entry-foot">
           <span class="entry-when">${timeAgo(entry.createdAt)}</span>
-          ${canEdit ? `
-            <div class="entry-actions">
+          <div class="entry-actions">
+            <button type="button" class="btn-del" data-copy-entry="${entry.id}">Copy</button>
+            ${canEdit ? `
               <button type="button" class="btn-del" data-edit-entry="${entry.id}">Sửa</button>
               <button type="button" class="btn-del" data-del-entry="${entry.id}">Xoá</button>
-            </div>
-          ` : "<span></span>"}
+            ` : ""}
+          </div>
         </div>
       </div>
     </div>
@@ -971,6 +1000,13 @@ document.querySelectorAll(".entry-list").forEach(list => {
   list.addEventListener("click", async (e) => {
     const moreBtn = e.target.closest("[data-more-entry]");
     if(moreBtn){ toggleEntryMore(moreBtn); return; }
+
+    const copyBtn = e.target.closest("[data-copy-entry]");
+    if(copyBtn){
+      const entry = allEntries.find(en => en.id === copyBtn.dataset.copyEntry);
+      if(entry) copyTextToClipboard([entry.title, entry.content].filter(Boolean).join("\n\n"));
+      return;
+    }
 
     const delBtn = e.target.closest("[data-del-entry]");
     if(delBtn){
@@ -1165,6 +1201,7 @@ function memoryHTML(m){
       ${m.description ? `<div class="memory-desc" data-preview="${escapeHTML(desc.preview)}" data-full="${escapeHTML(desc.full)}">${escapeHTML(desc.preview)}</div>` : ""}
       ${desc.isLong ? `<span class="entry-more" role="button" tabindex="0" data-more-memory-desc data-expanded="0">Xem thêm</span>` : ""}
       <div class="memory-foot">
+        <button type="button" class="btn-del" data-copy-memory="${m.id}">Copy</button>
         ${likeButtonHTML(m.id, m.likedBy, "data-like-memory")}
         <button type="button" class="btn-del" data-edit-memory="${m.id}">Sửa</button>
         <button type="button" class="btn-del" data-del-memory="${m.id}">Xoá</button>
@@ -1283,6 +1320,13 @@ document.getElementById("memoryTimeline").addEventListener("click", async (e) =>
       if(err.message !== "unauthorized") flash(err.message, "err");
       likeBtn.disabled = false;
     }
+    return;
+  }
+
+  const copyBtn = e.target.closest("[data-copy-memory]");
+  if(copyBtn){
+    const memory = allMemories.find(m => m.id === copyBtn.dataset.copyMemory);
+    if(memory) copyTextToClipboard([memory.title, memory.description].filter(Boolean).join("\n\n"));
     return;
   }
 
@@ -1457,6 +1501,22 @@ async function boot(){
     if(err.message !== "unauthorized" && err.message !== "no-token") flash(err.message, "err");
   }
 }
+
+// print should show everything, not whatever's currently truncated behind
+// a "Xem thêm" — expand it all beforehand, put it back after so the
+// on-screen state (and anyone's "Thu gọn" click) isn't disturbed
+window.addEventListener("beforeprint", () => {
+  document.querySelectorAll(".entry-content[data-full], .memory-desc[data-full]").forEach(el => {
+    el.dataset.printRestore = el.textContent === el.dataset.preview ? "1" : "0";
+    el.textContent = el.dataset.full;
+  });
+});
+window.addEventListener("afterprint", () => {
+  document.querySelectorAll("[data-print-restore]").forEach(el => {
+    if(el.dataset.printRestore === "1") el.textContent = el.dataset.preview;
+    delete el.dataset.printRestore;
+  });
+});
 
 if(getStoredToken()){
   hideGate();
