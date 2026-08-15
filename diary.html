@@ -57,7 +57,7 @@ h1,h2{font-family:var(--serif);font-weight:600;letter-spacing:-.01em}
 input,textarea,select,button{font:inherit;color:inherit}
 input,textarea{
   width:100%;padding:11px 13px;border:1.5px solid var(--line-2);border-radius:10px;
-  background:var(--paper);color:var(--ink);font-size:.94rem;
+  background:var(--paper);color:var(--ink);font-size:1rem;
 }
 input:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-wash)}
 textarea{resize:vertical;min-height:90px;font-family:var(--serif);font-size:1rem;line-height:1.6}
@@ -71,6 +71,7 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
 .btn-primary:disabled{opacity:.55;cursor:default}
 .btn-del{background:transparent;color:var(--faint);padding:3px 8px;font-size:.72rem;border:1px solid var(--line-2);border-radius:7px}
 .btn-del:hover{background:var(--stamp-wash);color:var(--stamp);border-color:var(--stamp-wash)}
+@media(max-width:480px){.btn-del{padding:7px 11px;font-size:.78rem}}
 .btn-secondary{background:var(--paper);color:var(--soft);padding:9px 16px;font-size:.82rem;border:1.5px solid var(--line-2);border-radius:10px}
 .btn-secondary:hover{border-color:var(--accent);color:var(--accent-deep)}
 .btn-secondary:disabled{opacity:.6;cursor:default}
@@ -84,7 +85,11 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
 
 .shell{max-width:880px;margin:0 auto;padding:36px 18px 90px}
 .shell[hidden]{display:none}
+@media(max-width:480px){.shell{padding:22px 14px 84px}}
 .topbar{margin-bottom:26px;text-align:center;position:relative}
+/* leaves a gutter around the centered title so it can't wrap under the
+   absolutely-positioned theme button on narrow phones */
+@media(max-width:480px){.topbar{margin-bottom:18px;padding:0 44px}.topbar h1{font-size:1.4rem}.topbar p{font-size:.88rem}}
 .theme-toggle{
   position:absolute;top:0;right:0;
   flex:none;width:36px;height:36px;padding:0;border-radius:50%;
@@ -114,6 +119,21 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
 
 .panel{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:24px 22px;margin-bottom:24px;box-shadow:0 16px 40px -28px rgba(80,62,42,.3)}
 
+/* ── collapsible "write new" panel — closed by default so the tab opens
+   straight onto the entries/memories instead of a tall form ── */
+.write-toggle{
+  display:flex;align-items:center;justify-content:center;gap:8px;width:100%;
+  background:var(--paper);border:1.5px dashed var(--line-2);color:var(--accent-deep);
+  padding:13px;border-radius:12px;font-family:var(--serif);font-size:.98rem;font-weight:600;
+  margin-bottom:20px;
+  transition:border-color .15s,background .15s;
+}
+.write-toggle:hover{border-color:var(--accent);background:var(--accent-wash)}
+.write-toggle svg{width:16px;height:16px;transition:transform .2s}
+.write-toggle.open svg{transform:rotate(45deg)}
+.write-panel{margin-top:16px}
+.write-panel[hidden]{display:none}
+
 /* ── tabs: Nhật Ký / Kỷ Niệm Chung, so the page isn't one long scroll ── */
 .tab-bar{display:flex;gap:6px;margin-bottom:20px;border-bottom:1px solid var(--line)}
 .tab-btn{
@@ -140,6 +160,7 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
 .date-filter-fields input{
   width:auto;flex:1;min-width:130px;padding:7px 10px;font-size:.82rem;border-radius:8px;
 }
+@media(max-width:360px){.date-filter-fields input{min-width:110px}}
 .date-filter-fields span{color:var(--faint);font-size:.82rem}
 .date-filter-fields button{
   flex:none;width:32px;height:32px;padding:0;border-radius:50%;
@@ -147,6 +168,7 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
   color:var(--faint);font-size:.8rem;
 }
 .date-filter-fields button:hover{color:var(--stamp);border-color:var(--stamp-wash)}
+@media(max-width:480px){.date-filter-fields button{width:36px;height:36px}}
 
 /* ── who's writing ── */
 .who-row{display:flex;gap:10px;margin-bottom:16px}
@@ -162,7 +184,7 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
 .mood-row{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:16px}
 .mood-pill{
   padding:6px 13px;border-radius:99px;border:1.5px solid var(--line-2);background:var(--paper);
-  font-size:.82rem;color:var(--soft);transition:all .15s;
+  font-size:.82rem;font-weight:500;color:var(--soft);transition:all .15s;
 }
 .mood-pill.active{color:#fff;border-color:transparent}
 .mood-pill[data-mood="vui"].active{background:#7a9a5f}
@@ -211,6 +233,7 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
   color:var(--faint);transition:color .2s,transform .15s;
 }
 .entry-like svg{width:14px;height:14px}
+@media(max-width:480px){.entry-like{width:34px;height:34px}.entry-like svg{width:16px;height:16px}}
 .entry-like:hover{color:var(--stamp)}
 .entry-like.active{color:var(--stamp)}
 .entry-like.active svg{fill:currentColor}
@@ -234,41 +257,39 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
 /* ── shared memories timeline ── */
 .memory-timeline{display:flex;flex-direction:column;gap:14px;margin-top:20px}
 .memory-card{
-  display:flex;gap:14px;background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:14px;
+  background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:14px;
   box-shadow:0 10px 22px -16px rgba(80,62,42,.4);
   transition:box-shadow .2s,transform .2s;
 }
 .memory-card:hover{box-shadow:0 14px 28px -16px rgba(80,62,42,.5);transform:translateY(-1px)}
-.memory-card.has-video{display:block}
-.memory-photo{width:84px;height:84px;border-radius:10px;object-fit:cover;flex:none;background:var(--line-2)}
-.memory-body{min-width:0;flex:1}
 .memory-date{font-family:var(--mono);font-size:9.5px;color:var(--faint);letter-spacing:.05em;text-transform:uppercase}
 .memory-title{font-family:var(--serif);font-size:1.05rem;font-weight:600;margin-top:2px}
 .memory-desc{font-size:.86rem;color:var(--soft);margin-top:6px;line-height:1.55;white-space:pre-wrap}
 .memory-foot{display:flex;justify-content:flex-end;align-items:center;gap:6px;margin-top:8px}
 .memory-foot .btn-del{height:26px;display:inline-flex;align-items:center}
-@media(max-width:480px){.memory-card{flex-direction:column}.memory-photo{width:100%;height:140px}}
+@media(max-width:480px){.memory-foot .btn-del{height:32px}}
 
-/* 16:9 YouTube thumbnail → click-to-embed facade (no iframe/tracking
-   loaded until the viewer actually presses play) */
-.memory-video{
+/* full-width media on top — same treatment for a photo or a YouTube
+   thumbnail, so the feed doesn't mix two different card shapes */
+.memory-media{
   position:relative;width:100%;aspect-ratio:16/9;border-radius:10px;overflow:hidden;
-  background:#000;cursor:pointer;margin-bottom:12px;
+  margin-bottom:12px;background:var(--line-2);
 }
-.memory-video img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .3s}
-.memory-video:hover img{transform:scale(1.03)}
-.memory-video .play-btn{
+.memory-media img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .3s}
+.memory-media.memory-video{cursor:pointer;background:#000}
+.memory-media.memory-video:hover img{transform:scale(1.03)}
+.memory-media .play-btn{
   position:absolute;inset:0;display:grid;place-items:center;
   background:rgba(20,14,10,.28);transition:background .2s;
 }
-.memory-video:hover .play-btn{background:rgba(20,14,10,.42)}
-.memory-video .play-btn svg{width:25px;height:25px;fill:#fff;filter:drop-shadow(0 2px 10px rgba(0,0,0,.6))}
-.memory-video .play-circle{
+.memory-media.memory-video:hover .play-btn{background:rgba(20,14,10,.42)}
+.memory-media .play-btn svg{width:25px;height:25px;fill:#fff;filter:drop-shadow(0 2px 10px rgba(0,0,0,.6))}
+.memory-media .play-circle{
   width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,.18);
   display:grid;place-items:center;-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);
   border:1.5px solid rgba(255,255,255,.5);
 }
-.memory-video iframe{width:100%;height:100%;border:0;display:block}
+.memory-media iframe{width:100%;height:100%;border:0;display:block}
 </style>
 </head>
 <body>
@@ -304,7 +325,11 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
   </div>
 
   <div class="tab-panel" data-tab-panel="diary">
-    <section class="panel">
+    <button type="button" class="write-toggle" id="entryWriteToggle" aria-expanded="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+      <span id="entryWriteToggleLabel">Viết nhật ký mới</span>
+    </button>
+    <section class="panel write-panel" id="entryWritePanel" hidden>
       <div class="who-row" id="whoRow">
         <button type="button" class="who-btn" data-who="me" id="whoMeBtn">Đăng</button>
         <button type="button" class="who-btn" data-who="partner" id="whoPartnerBtn">Vy</button>
@@ -312,12 +337,12 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
 
       <form id="entryForm">
         <div class="mood-row" id="moodRow">
-          <span class="mood-pill" data-mood="vui">Vui</span>
-          <span class="mood-pill" data-mood="buon">Buồn</span>
-          <span class="mood-pill" data-mood="nho">Nhớ</span>
-          <span class="mood-pill" data-mood="yeu">Yêu</span>
-          <span class="mood-pill" data-mood="gian">Giận dỗi</span>
-          <span class="mood-pill" data-mood="binh-yen">Bình yên</span>
+          <button type="button" class="mood-pill" data-mood="vui">Vui</button>
+          <button type="button" class="mood-pill" data-mood="buon">Buồn</button>
+          <button type="button" class="mood-pill" data-mood="nho">Nhớ</button>
+          <button type="button" class="mood-pill" data-mood="yeu">Yêu</button>
+          <button type="button" class="mood-pill" data-mood="gian">Giận dỗi</button>
+          <button type="button" class="mood-pill" data-mood="binh-yen">Bình yên</button>
         </div>
         <div class="field">
           <label for="entryTitle">Tiêu đề <span style="font-weight:400;color:var(--faint)">(không bắt buộc)</span></label>
@@ -361,7 +386,11 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
   </div>
 
   <div class="tab-panel" data-tab-panel="memories" hidden>
-    <section class="panel">
+    <button type="button" class="write-toggle" id="memoryWriteToggle" aria-expanded="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+      <span id="memoryWriteToggleLabel">Thêm kỷ niệm mới</span>
+    </button>
+    <section class="panel write-panel" id="memoryWritePanel" hidden>
       <h2 style="font-size:1.15rem">Kỷ Niệm Chung</h2>
       <p style="font-size:.86rem;color:var(--faint);margin:4px 0 16px">Những khoảnh khắc đáng nhớ của cả hai — ai thêm cũng được, cả hai cùng thấy.</p>
       <form id="memoryForm">
@@ -389,9 +418,9 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
         </div>
         <button class="btn-primary" type="submit" id="memorySubmit">Thêm vào kỷ niệm chung</button>
       </form>
-
-      <div class="memory-timeline" id="memoryTimeline"></div>
     </section>
+
+    <div class="memory-timeline" id="memoryTimeline"></div>
   </div>
 </div>
 
@@ -550,6 +579,33 @@ function setWho(who, opts){
 whoMeBtn.addEventListener("click", () => setWho("me"));
 whoPartnerBtn.addEventListener("click", () => setWho("partner"));
 
+// ── collapsible "write new" panels — closed on load so each tab opens
+// straight onto the entries/memories instead of a tall form ──
+function setupWriteToggle(toggleBtn, panelEl, labelEl, openLabel, closeLabel, focusEl){
+  toggleBtn.addEventListener("click", () => {
+    const willOpen = panelEl.hidden;
+    panelEl.hidden = !willOpen;
+    toggleBtn.classList.toggle("open", willOpen);
+    toggleBtn.setAttribute("aria-expanded", String(willOpen));
+    labelEl.textContent = willOpen ? closeLabel : openLabel;
+    if(willOpen && focusEl) setTimeout(() => focusEl.focus(), 50);
+  });
+}
+setupWriteToggle(
+  document.getElementById("entryWriteToggle"),
+  document.getElementById("entryWritePanel"),
+  document.getElementById("entryWriteToggleLabel"),
+  "Viết nhật ký mới", "Thu gọn",
+  document.getElementById("entryTitle"),
+);
+setupWriteToggle(
+  document.getElementById("memoryWriteToggle"),
+  document.getElementById("memoryWritePanel"),
+  document.getElementById("memoryWriteToggleLabel"),
+  "Thêm kỷ niệm mới", "Thu gọn",
+  document.getElementById("memoryTitle"),
+);
+
 // ── mood picker (single select) ──
 const moodRowEl = document.getElementById("moodRow");
 let currentMood = null;
@@ -609,22 +665,19 @@ function entryHTML(entry){
 }
 
 function entryEditFormHTML(entry){
-  const moodOptions = Object.entries(MOOD_LABELS)
-    .map(([value, label]) => `<option value="${value}"${entry.mood === value ? " selected" : ""}>${label}</option>`)
+  const moodPills = Object.entries(MOOD_LABELS)
+    .map(([value, label]) => `<button type="button" class="mood-pill${entry.mood === value ? " active" : ""}" data-mood="${value}">${label}</button>`)
     .join("");
   return `
-    <div class="entry-edit-form">
+    <div class="entry-edit-form" data-edit-mood="${entry.mood || ""}">
       <div class="field">
         <input type="text" class="edit-title" placeholder="Tiêu đề (không bắt buộc)" value="${escapeHTML(entry.title || "")}" />
       </div>
       <div class="field">
         <textarea class="edit-content" required>${escapeHTML(entry.content)}</textarea>
       </div>
-      <div class="field">
-        <select class="edit-mood">
-          <option value="">Không chọn tâm trạng</option>
-          ${moodOptions}
-        </select>
+      <div class="mood-row">
+        ${moodPills}
       </div>
       <div class="entry-edit-actions">
         <button type="button" class="btn-secondary" data-cancel-edit="${entry.id}">Huỷ</button>
@@ -773,6 +826,16 @@ document.querySelectorAll(".entry-list").forEach(list => {
       return;
     }
 
+    const editMoodPill = e.target.closest(".entry-edit-form .mood-pill");
+    if(editMoodPill){
+      const form = editMoodPill.closest(".entry-edit-form");
+      const mood = editMoodPill.dataset.mood;
+      const next = form.dataset.editMood === mood ? "" : mood;
+      form.dataset.editMood = next;
+      form.querySelectorAll(".mood-pill").forEach(p => p.classList.toggle("active", p.dataset.mood === next));
+      return;
+    }
+
     const editBtn = e.target.closest("[data-edit-entry]");
     if(editBtn){
       const entry = allEntries.find(en => en.id === editBtn.dataset.editEntry);
@@ -818,7 +881,7 @@ document.querySelectorAll(".entry-list").forEach(list => {
           body: JSON.stringify({
             title: form.querySelector(".edit-title").value.trim() || null,
             content,
-            mood: form.querySelector(".edit-mood").value || null,
+            mood: form.dataset.editMood || null,
           }),
         });
         await loadEntries();
@@ -896,7 +959,7 @@ function formatMemoryDate(d){
 
 function memoryVideoHTML(youtubeId){
   return `
-    <div class="memory-video" data-youtube-id="${escapeHTML(youtubeId)}" role="button" tabindex="0" aria-label="Phát video">
+    <div class="memory-media memory-video" data-youtube-id="${escapeHTML(youtubeId)}" role="button" tabindex="0" aria-label="Phát video">
       <img src="https://img.youtube.com/vi/${escapeHTML(youtubeId)}/maxresdefault.jpg" alt="" loading="lazy"
         onerror="this.src='https://img.youtube.com/vi/${escapeHTML(youtubeId)}/hqdefault.jpg'" />
       <div class="play-btn"><span class="play-circle"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></span></div>
@@ -906,30 +969,26 @@ function memoryVideoHTML(youtubeId){
 
 const MEMORY_DESC_PREVIEW_LEN = 260;
 
+// same top-media-then-text shape for a photo or a video — keeps the feed
+// from mixing two different card layouts
 function memoryHTML(m){
   const desc = truncateText(m.description || "", MEMORY_DESC_PREVIEW_LEN);
-  const bodyInner = `
-    ${m.memoryDate ? `<div class="memory-date">${formatMemoryDate(m.memoryDate)}</div>` : ""}
-    <div class="memory-title">${escapeHTML(m.title)}</div>
-    ${m.description ? `<div class="memory-desc" data-preview="${escapeHTML(desc.preview)}" data-full="${escapeHTML(desc.full)}">${escapeHTML(desc.preview)}</div>` : ""}
-    ${desc.isLong ? `<span class="entry-more" role="button" tabindex="0" data-more-memory-desc data-expanded="0">Xem thêm</span>` : ""}
-    <div class="memory-foot">
-      ${likeButtonHTML(m.id, m.likedBy, "data-like-memory")}
-      <button type="button" class="btn-del" data-del-memory="${m.id}">Xoá</button>
-    </div>
-  `;
-  if(m.youtubeId){
-    return `
-      <div class="memory-card has-video" data-memory-id="${m.id}">
-        ${memoryVideoHTML(m.youtubeId)}
-        <div class="memory-body">${bodyInner}</div>
-      </div>
-    `;
-  }
+  const mediaHTML = m.youtubeId
+    ? memoryVideoHTML(m.youtubeId)
+    : m.photoUrl
+      ? `<div class="memory-media"><img src="${escapeHTML(m.photoUrl)}" alt="" loading="lazy" onerror="this.parentElement.remove()" /></div>`
+      : "";
   return `
     <div class="memory-card" data-memory-id="${m.id}">
-      ${m.photoUrl ? `<img class="memory-photo" src="${escapeHTML(m.photoUrl)}" alt="" loading="lazy" onerror="this.style.display='none'" />` : ""}
-      <div class="memory-body">${bodyInner}</div>
+      ${mediaHTML}
+      ${m.memoryDate ? `<div class="memory-date">${formatMemoryDate(m.memoryDate)}</div>` : ""}
+      <div class="memory-title">${escapeHTML(m.title)}</div>
+      ${m.description ? `<div class="memory-desc" data-preview="${escapeHTML(desc.preview)}" data-full="${escapeHTML(desc.full)}">${escapeHTML(desc.preview)}</div>` : ""}
+      ${desc.isLong ? `<span class="entry-more" role="button" tabindex="0" data-more-memory-desc data-expanded="0">Xem thêm</span>` : ""}
+      <div class="memory-foot">
+        ${likeButtonHTML(m.id, m.likedBy, "data-like-memory")}
+        <button type="button" class="btn-del" data-del-memory="${m.id}">Xoá</button>
+      </div>
     </div>
   `;
 }
