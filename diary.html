@@ -342,13 +342,32 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
 }
 .memory-media iframe{width:100%;height:100%;border:0;display:block}
 
+/* ── "tải về" format picker ── */
+.export-modal-backdrop{
+  position:fixed;inset:0;z-index:250;display:flex;align-items:center;justify-content:center;
+  padding:20px;background:rgba(20,14,10,.45);
+}
+.export-modal-backdrop[hidden]{display:none}
+.export-modal{
+  width:100%;max-width:320px;background:var(--card);border:1px solid var(--line);border-radius:16px;
+  box-shadow:0 26px 60px -30px rgba(80,62,42,.5);padding:26px 24px;text-align:center;
+}
+.export-modal h3{font-family:var(--serif);font-size:1.15rem;font-weight:600;margin-bottom:6px}
+.export-modal p{font-size:.84rem;color:var(--faint);margin-bottom:18px;line-height:1.5}
+.export-modal button{width:100%;margin-bottom:10px}
+.export-modal-cancel{
+  background:none;border:none;color:var(--faint);font-size:.82rem;font-weight:400;
+  padding:2px;margin-bottom:0;
+}
+.export-modal-cancel:hover{color:var(--accent-deep)}
+
 /* ── print: strip the app chrome down to just the writing — text-first
    fine print for reading on a phone becomes plain body copy on paper ── */
 @media print{
   .pin-gate,.theme-toggle,.write-toggle,.write-panel-wrap,.tab-bar,
   .topbar-links,.status-msg,.entry-search,.date-filter-toggle,.date-filter-fields,
   .entry-actions,.like-wrap,#loadMoreBtn,.entry-more,.memory-foot .btn-del,
-  .memory-media .play-btn{display:none!important}
+  .memory-media .play-btn,.export-modal-backdrop{display:none!important}
   body{background:#fff;color:#000}
   .shell{padding:0;max-width:none}
   /* the side-by-side columns don't paginate well — print the same
@@ -512,6 +531,16 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
   </div>
 </div>
 
+<div class="export-modal-backdrop" id="exportModalBackdrop" hidden>
+  <div class="export-modal">
+    <h3>Tải về dưới dạng nào?</h3>
+    <p>Gồm toàn bộ nhật ký và kỷ niệm chung, không thiếu dòng nào.</p>
+    <button type="button" class="btn-primary" id="exportAsPdfBtn">In ra PDF</button>
+    <button type="button" class="btn-secondary" id="exportAsTxtBtn">Tải file văn bản (.txt)</button>
+    <button type="button" class="export-modal-cancel" id="exportModalCancel">Huỷ</button>
+  </div>
+</div>
+
 <script>
 const API_BASE = "https://book-api.dangpham.id.vn/api";
 const AUTH_TOKEN_KEY = "tb_token";
@@ -645,15 +674,6 @@ function flash(message, kind){
   el.hidden = false;
   clearTimeout(flash._t);
   flash._t = setTimeout(() => { el.hidden = true; }, 4000);
-}
-
-async function copyTextToClipboard(text){
-  try{
-    await navigator.clipboard.writeText(text);
-    flash("Đã sao chép.", "ok");
-  }catch{
-    flash("Không sao chép được — trình duyệt chặn quyền clipboard.", "err");
-  }
 }
 
 // ── who's writing right now ──
@@ -843,13 +863,12 @@ function entryHTML(entry, opts){
         ${isLong ? `<span class="entry-more" role="button" tabindex="0" data-more-entry data-expanded="0">Xem thêm</span>` : ""}
         <div class="entry-foot">
           <span class="entry-when">${timeAgo(entry.createdAt)}</span>
-          <div class="entry-actions">
-            <button type="button" class="btn-del" data-copy-entry="${entry.id}">Copy</button>
-            ${canEdit ? `
+          ${canEdit ? `
+            <div class="entry-actions">
               <button type="button" class="btn-del" data-edit-entry="${entry.id}">Sửa</button>
               <button type="button" class="btn-del" data-del-entry="${entry.id}">Xoá</button>
-            ` : ""}
-          </div>
+            </div>
+          ` : "<span></span>"}
         </div>
       </div>
     </div>
@@ -1000,13 +1019,6 @@ document.querySelectorAll(".entry-list").forEach(list => {
   list.addEventListener("click", async (e) => {
     const moreBtn = e.target.closest("[data-more-entry]");
     if(moreBtn){ toggleEntryMore(moreBtn); return; }
-
-    const copyBtn = e.target.closest("[data-copy-entry]");
-    if(copyBtn){
-      const entry = allEntries.find(en => en.id === copyBtn.dataset.copyEntry);
-      if(entry) copyTextToClipboard([entry.title, entry.content].filter(Boolean).join("\n\n"));
-      return;
-    }
 
     const delBtn = e.target.closest("[data-del-entry]");
     if(delBtn){
@@ -1201,7 +1213,6 @@ function memoryHTML(m){
       ${m.description ? `<div class="memory-desc" data-preview="${escapeHTML(desc.preview)}" data-full="${escapeHTML(desc.full)}">${escapeHTML(desc.preview)}</div>` : ""}
       ${desc.isLong ? `<span class="entry-more" role="button" tabindex="0" data-more-memory-desc data-expanded="0">Xem thêm</span>` : ""}
       <div class="memory-foot">
-        <button type="button" class="btn-del" data-copy-memory="${m.id}">Copy</button>
         ${likeButtonHTML(m.id, m.likedBy, "data-like-memory")}
         <button type="button" class="btn-del" data-edit-memory="${m.id}">Sửa</button>
         <button type="button" class="btn-del" data-del-memory="${m.id}">Xoá</button>
@@ -1320,13 +1331,6 @@ document.getElementById("memoryTimeline").addEventListener("click", async (e) =>
       if(err.message !== "unauthorized") flash(err.message, "err");
       likeBtn.disabled = false;
     }
-    return;
-  }
-
-  const copyBtn = e.target.closest("[data-copy-memory]");
-  if(copyBtn){
-    const memory = allMemories.find(m => m.id === copyBtn.dataset.copyMemory);
-    if(memory) copyTextToClipboard([memory.title, memory.description].filter(Boolean).join("\n\n"));
     return;
   }
 
@@ -1463,13 +1467,106 @@ function buildExportText(entries, memories){
   return lines.join("\n");
 }
 
-document.getElementById("exportBtn").addEventListener("click", async () => {
-  const btn = document.getElementById("exportBtn");
+// builds a standalone, self-contained HTML document (own <style>, no
+// dependency on this page) so the popup window can render + print it on
+// its own — same content coverage as the .txt export, plus the photos
+function buildPrintableHTML(entries, memories){
+  const entryItems = entries.length
+    ? [...entries].reverse().map(e => {
+        const name = authorNames[e.author] || e.author;
+        const when = new Date(e.createdAt).toLocaleString("vi-VN");
+        const mood = e.mood ? ` · ${MOOD_LABELS[e.mood] || e.mood}` : "";
+        return `
+          <div class="item">
+            <div class="item-head">${escapeHTML(name)} — ${escapeHTML(when)}${escapeHTML(mood)}</div>
+            ${e.title ? `<div class="item-title">${escapeHTML(e.title)}</div>` : ""}
+            <div class="item-body">${escapeHTML(e.content)}</div>
+          </div>
+        `;
+      }).join("")
+    : `<p class="empty">(chưa có dòng nào)</p>`;
+
+  const memoryItems = memories.length
+    ? [...memories].reverse().map(m => {
+        const when = m.memoryDate ? formatMemoryDate(m.memoryDate) : new Date(m.createdAt).toLocaleDateString("vi-VN");
+        return `
+          <div class="item">
+            <div class="item-head">${escapeHTML(when)}</div>
+            <div class="item-title">${escapeHTML(m.title)}</div>
+            ${m.description ? `<div class="item-body">${escapeHTML(m.description)}</div>` : ""}
+            ${m.photoUrl ? `<img src="${escapeHTML(m.photoUrl)}" alt="" />` : ""}
+            ${m.youtubeId ? `<p class="empty">Video: https://youtu.be/${escapeHTML(m.youtubeId)}</p>` : ""}
+          </div>
+        `;
+      }).join("")
+    : `<p class="empty">(chưa có kỷ niệm nào)</p>`;
+
+  return `<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<title>Nhật Ký Của Tụi Mình</title>
+<style>
+  body{font-family:Georgia,'Times New Roman',serif;color:#222;max-width:720px;margin:40px auto;padding:0 24px 60px;line-height:1.65}
+  h1{font-size:1.6rem;margin-bottom:4px}
+  .meta{color:#888;font-size:.85rem;margin-bottom:8px}
+  h2{font-size:1.2rem;margin:36px 0 16px;border-bottom:2px solid #ccc;padding-bottom:6px}
+  .item{margin-bottom:18px;padding-bottom:18px;border-bottom:1px dashed #ccc;break-inside:avoid;page-break-inside:avoid}
+  .item-head{font-size:.78rem;color:#888;text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px}
+  .item-title{font-weight:700;margin-bottom:6px}
+  .item-body{white-space:pre-wrap}
+  .empty{color:#888;font-style:italic}
+  img{max-width:100%;border-radius:6px;margin-top:10px;display:block}
+  @media print{ body{margin:0;padding:20px} }
+</style>
+</head>
+<body>
+  <h1>Nhật Ký Của Tụi Mình</h1>
+  <p class="meta">Xuất lúc: ${escapeHTML(new Date().toLocaleString("vi-VN"))}</p>
+  <h2>Nhật Ký</h2>
+  ${entryItems}
+  <h2>Kỷ Niệm Chung</h2>
+  ${memoryItems}
+</body>
+</html>`;
+}
+
+const exportBtnEl = document.getElementById("exportBtn");
+const exportModalBackdrop = document.getElementById("exportModalBackdrop");
+const exportAsPdfBtn = document.getElementById("exportAsPdfBtn");
+const exportAsTxtBtn = document.getElementById("exportAsTxtBtn");
+const exportModalCancel = document.getElementById("exportModalCancel");
+
+function closeExportModal(){
+  exportModalBackdrop.hidden = true;
+}
+exportBtnEl.addEventListener("click", () => { exportModalBackdrop.hidden = false; });
+exportModalCancel.addEventListener("click", closeExportModal);
+exportModalBackdrop.addEventListener("click", (e) => {
+  if(e.target === exportModalBackdrop) closeExportModal();
+});
+document.addEventListener("keydown", (e) => {
+  if(e.key === "Escape" && !exportModalBackdrop.hidden) closeExportModal();
+});
+
+async function withExportData(btn, run){
   const originalText = btn.textContent;
   btn.disabled = true;
   btn.textContent = "Đang chuẩn bị…";
   try{
     const [entries, memories] = await Promise.all([fetchAllEntriesForExport(), api("/memories")]);
+    run(entries, memories);
+  }catch(err){
+    if(err.message !== "unauthorized") flash(err.message, "err");
+  }finally{
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+}
+
+exportAsTxtBtn.addEventListener("click", async () => {
+  closeExportModal();
+  await withExportData(exportBtnEl, (entries, memories) => {
     const text = buildExportText(entries, memories);
     const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -1480,12 +1577,26 @@ document.getElementById("exportBtn").addEventListener("click", async () => {
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
-  }catch(err){
-    if(err.message !== "unauthorized") flash(err.message, "err");
-  }finally{
-    btn.disabled = false;
-    btn.textContent = originalText;
+  });
+});
+
+exportAsPdfBtn.addEventListener("click", async () => {
+  closeExportModal();
+  // open the tab synchronously, on the click itself — opening it only
+  // after the data finishes loading would get blocked as a popup
+  const printWin = window.open("", "_blank");
+  if(!printWin){
+    flash("Trình duyệt đã chặn cửa sổ mới — cho phép popup cho trang này rồi thử lại.", "err");
+    return;
   }
+  printWin.document.write("<p style=\"font-family:sans-serif;padding:40px;color:#888\">Đang chuẩn bị nội dung…</p>");
+  await withExportData(exportBtnEl, (entries, memories) => {
+    printWin.document.open();
+    printWin.document.write(buildPrintableHTML(entries, memories));
+    printWin.document.close();
+    // a beat to let images start laying out before the print dialog grabs focus
+    setTimeout(() => printWin.print(), 400);
+  });
 });
 
 async function boot(){
