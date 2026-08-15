@@ -129,10 +129,30 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
   transition:border-color .15s,background .15s;
 }
 .write-toggle:hover{border-color:var(--accent);background:var(--accent-wash)}
-.write-toggle svg{width:16px;height:16px;transition:transform .2s}
+.write-toggle svg{width:16px;height:16px;transition:transform .25s cubic-bezier(.2,.7,.2,1)}
 .write-toggle.open svg{transform:rotate(45deg)}
-.write-panel{margin-top:16px}
-.write-panel[hidden]{display:none}
+
+/* grows/fades open instead of snapping — JS sets an explicit max-height
+   (measured from scrollHeight) so this transitions reliably everywhere,
+   unlike animating straight to "auto" which browsers can't tween */
+.write-panel-wrap{
+  max-height:0;margin-top:0;opacity:0;overflow:hidden;visibility:hidden;
+  transition:max-height .35s cubic-bezier(.2,.7,.2,1),
+             margin-top .35s cubic-bezier(.2,.7,.2,1),
+             opacity .2s ease,
+             visibility 0s linear .35s;
+}
+.write-panel-wrap.open{
+  margin-top:16px;opacity:1;visibility:visible;
+  transition:max-height .4s cubic-bezier(.2,.7,.2,1),
+             margin-top .4s cubic-bezier(.2,.7,.2,1),
+             opacity .3s ease .06s,
+             visibility 0s linear 0s;
+}
+@media(prefers-reduced-motion:reduce){
+  .write-panel-wrap,.write-panel-wrap.open{transition:none}
+  .write-toggle svg{transition:none}
+}
 
 /* ── tabs: Nhật Ký / Kỷ Niệm Chung, so the page isn't one long scroll ── */
 .tab-bar{display:flex;gap:6px;margin-bottom:20px;border-bottom:1px solid var(--line)}
@@ -194,9 +214,24 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
 .mood-pill[data-mood="gian"].active{background:var(--stamp-solid)}
 .mood-pill[data-mood="binh-yen"].active{background:#5f9088}
 
-/* ── two journals side by side ── */
+/* ── two journals side by side on desktop; on a narrow screen a
+   side-by-side pair just means scrolling through all of one person's
+   entries before reaching the other's, so it collapses into one
+   chronological feed instead, color-coded per author ── */
 .journals{display:grid;grid-template-columns:1fr 1fr;gap:18px}
-@media(max-width:640px){.journals{grid-template-columns:1fr}}
+.journals-mobile{display:none}
+@media(max-width:640px){
+  .journals{display:none}
+  .journals-mobile{display:block}
+}
+.entry-author{
+  font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+}
+.entry-author[data-who="me"]{color:var(--me)}
+.entry-author[data-who="partner"]{color:var(--partner)}
+.journals-mobile .entry{border-left-width:3px}
+.journals-mobile .entry[data-author="me"]{border-left-color:var(--me)}
+.journals-mobile .entry[data-author="partner"]{border-left-color:var(--partner)}
 .journal-col h2{font-size:1.05rem;margin-bottom:12px;padding-bottom:10px;border-bottom:2px solid var(--line)}
 .journal-col[data-who="me"] h2{border-bottom-color:var(--me);color:var(--me)}
 .journal-col[data-who="partner"] h2{border-bottom-color:var(--partner);color:var(--partner)}
@@ -211,6 +246,7 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
 .journal-col[data-who="me"] .entry{border-left-color:var(--me)}
 .journal-col[data-who="partner"] .entry{border-left-color:var(--partner)}
 .entry-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
+.entry-tags{display:inline-flex;align-items:center;gap:8px}
 .entry-mood{
   display:inline-flex;align-items:center;gap:5px;
   font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
@@ -329,7 +365,8 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
       <span id="entryWriteToggleLabel">Viết nhật ký mới</span>
     </button>
-    <section class="panel write-panel" id="entryWritePanel" hidden>
+    <div class="write-panel-wrap" id="entryWritePanel">
+    <section class="panel write-panel">
       <div class="who-row" id="whoRow">
         <button type="button" class="who-btn" data-who="me" id="whoMeBtn">Đăng</button>
         <button type="button" class="who-btn" data-who="partner" id="whoPartnerBtn">Vy</button>
@@ -355,6 +392,7 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
         <button class="btn-primary" type="submit" id="entrySubmit">Viết vào nhật ký</button>
       </form>
     </section>
+    </div>
 
     <div class="diary-toolbar">
       <button type="button" class="date-filter-toggle" id="dateFilterToggle">
@@ -379,6 +417,9 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
         <div class="entry-list" id="partnerEntryList"></div>
       </div>
     </div>
+    <div class="journals-mobile">
+      <div class="entry-list" id="combinedEntryList"></div>
+    </div>
 
     <div style="text-align:center;margin-top:6px">
       <button type="button" class="btn-secondary" id="loadMoreBtn" style="display:none">Tải thêm nhật ký cũ hơn</button>
@@ -390,7 +431,8 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
       <span id="memoryWriteToggleLabel">Thêm kỷ niệm mới</span>
     </button>
-    <section class="panel write-panel" id="memoryWritePanel" hidden>
+    <div class="write-panel-wrap" id="memoryWritePanel">
+    <section class="panel write-panel">
       <h2 style="font-size:1.15rem">Kỷ Niệm Chung</h2>
       <p style="font-size:.86rem;color:var(--faint);margin:4px 0 16px">Những khoảnh khắc đáng nhớ của cả hai — ai thêm cũng được, cả hai cùng thấy.</p>
       <form id="memoryForm">
@@ -419,6 +461,7 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
         <button class="btn-primary" type="submit" id="memorySubmit">Thêm vào kỷ niệm chung</button>
       </form>
     </section>
+    </div>
 
     <div class="memory-timeline" id="memoryTimeline"></div>
   </div>
@@ -581,14 +624,23 @@ whoPartnerBtn.addEventListener("click", () => setWho("partner"));
 
 // ── collapsible "write new" panels — closed on load so each tab opens
 // straight onto the entries/memories instead of a tall form ──
-function setupWriteToggle(toggleBtn, panelEl, labelEl, openLabel, closeLabel, focusEl){
+function setupWriteToggle(toggleBtn, panelEl, labelEl, openLabel, closeLabel){
   toggleBtn.addEventListener("click", () => {
-    const willOpen = panelEl.hidden;
-    panelEl.hidden = !willOpen;
+    const willOpen = !panelEl.classList.contains("open");
+    if(willOpen){
+      panelEl.classList.add("open");
+      panelEl.style.maxHeight = panelEl.scrollHeight + "px";
+    }else{
+      // pin the current height first — a transition can't start from
+      // "auto", it needs an explicit px value to animate down from
+      panelEl.style.maxHeight = panelEl.scrollHeight + "px";
+      panelEl.offsetHeight; // force layout so the browser registers that height before it changes
+      panelEl.classList.remove("open");
+      panelEl.style.maxHeight = "0px";
+    }
     toggleBtn.classList.toggle("open", willOpen);
     toggleBtn.setAttribute("aria-expanded", String(willOpen));
     labelEl.textContent = willOpen ? closeLabel : openLabel;
-    if(willOpen && focusEl) setTimeout(() => focusEl.focus(), 50);
   });
 }
 setupWriteToggle(
@@ -596,14 +648,12 @@ setupWriteToggle(
   document.getElementById("entryWritePanel"),
   document.getElementById("entryWriteToggleLabel"),
   "Viết nhật ký mới", "Thu gọn",
-  document.getElementById("entryTitle"),
 );
 setupWriteToggle(
   document.getElementById("memoryWriteToggle"),
   document.getElementById("memoryWritePanel"),
   document.getElementById("memoryWriteToggleLabel"),
   "Thêm kỷ niệm mới", "Thu gọn",
-  document.getElementById("memoryTitle"),
 );
 
 // ── mood picker (single select) ──
@@ -618,6 +668,7 @@ moodRowEl.addEventListener("click", (e) => {
 });
 
 const MOOD_LABELS = { vui: "Vui", buon: "Buồn", nho: "Nhớ", yeu: "Yêu", gian: "Giận dỗi", "binh-yen": "Bình yên" };
+let authorNames = { me: "Đăng", partner: "Vy" };
 
 const ENTRY_PREVIEW_LEN = 420;
 
@@ -637,13 +688,17 @@ function likeButtonHTML(id, likedBy, dataAttr){
   `;
 }
 
-function entryHTML(entry){
+function entryHTML(entry, opts){
   const canEdit = entry.author === currentWho;
+  const showAuthor = opts && opts.showAuthor;
   const { full, preview, isLong } = truncateText(entry.content, ENTRY_PREVIEW_LEN);
   return `
-    <div class="entry" data-entry-id="${entry.id}">
+    <div class="entry" data-entry-id="${entry.id}" data-author="${entry.author}">
       <div class="entry-head">
-        ${entry.mood ? `<span class="entry-mood" data-mood="${entry.mood}"><span class="dot"></span>${MOOD_LABELS[entry.mood] || entry.mood}</span>` : "<span></span>"}
+        <span class="entry-tags">
+          ${showAuthor ? `<span class="entry-author" data-who="${entry.author}">${escapeHTML(authorNames[entry.author] || entry.author)}</span>` : ""}
+          ${entry.mood ? `<span class="entry-mood" data-mood="${entry.mood}"><span class="dot"></span>${MOOD_LABELS[entry.mood] || entry.mood}</span>` : ""}
+        </span>
         ${likeButtonHTML(entry.id, entry.likedBy, "data-like-entry")}
       </div>
       <div class="entry-view">
@@ -702,14 +757,19 @@ const dateFilterFields = document.getElementById("dateFilterFields");
 function renderEntries(){
   const meList = document.getElementById("meEntryList");
   const partnerList = document.getElementById("partnerEntryList");
+  const combinedList = document.getElementById("combinedEntryList");
   const meEntries = allEntries.filter(e => e.author === "me");
   const partnerEntries = allEntries.filter(e => e.author === "partner");
-  meList.innerHTML = meEntries.length
-    ? meEntries.map(entryHTML).join("")
-    : `<p class="empty-note">Chưa có gì ở đây — viết vài dòng đầu tiên đi.</p>`;
-  partnerList.innerHTML = partnerEntries.length
-    ? partnerEntries.map(entryHTML).join("")
-    : `<p class="empty-note">Chưa có gì ở đây — viết vài dòng đầu tiên đi.</p>`;
+  const emptyNote = `<p class="empty-note">Chưa có gì ở đây — viết vài dòng đầu tiên đi.</p>`;
+  meList.innerHTML = meEntries.length ? meEntries.map(e => entryHTML(e)).join("") : emptyNote;
+  partnerList.innerHTML = partnerEntries.length ? partnerEntries.map(e => entryHTML(e)).join("") : emptyNote;
+  // mobile-only: same entries as one chronological feed instead of two
+  // columns, so reading doesn't mean scrolling past all of one person's
+  // entries first — each card gets a name tag since there's no column
+  // header to tell them apart anymore
+  combinedList.innerHTML = allEntries.length
+    ? allEntries.map(e => entryHTML(e, { showAuthor: true })).join("")
+    : emptyNote;
   loadMoreBtn.style.display = allEntries.length < diaryTotal ? "" : "none";
 }
 
@@ -940,6 +1000,7 @@ async function loadNames(){
     const s = await api("/settings");
     const meName = s.curatorName || "Đăng";
     const partnerName = s.partnerName || "Vy";
+    authorNames = { me: meName, partner: partnerName };
     whoMeBtn.textContent = meName;
     whoPartnerBtn.textContent = partnerName;
     document.getElementById("meColTitle").textContent = meName;
@@ -1098,7 +1159,10 @@ document.getElementById("memoryForm").addEventListener("submit", async (e) => {
 async function boot(){
   setWho(currentWho, { silent: true });
   try{
-    await Promise.all([loadNames(), loadEntries(), loadMemories()]);
+    // names load first so the mobile combined feed's author tags are
+    // correct on first paint, not the "Đăng/Vy" placeholder defaults
+    await loadNames();
+    await Promise.all([loadEntries(), loadMemories()]);
   }catch(err){
     if(err.message !== "unauthorized" && err.message !== "no-token") flash(err.message, "err");
   }

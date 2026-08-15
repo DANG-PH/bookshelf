@@ -54,7 +54,7 @@ h1,h2{font-family:var(--serif);font-weight:600;letter-spacing:-.01em}
 input,textarea,select,button{font:inherit;color:inherit}
 input,textarea,select{
   width:100%;padding:12px 14px;border:1.5px solid var(--line-2);border-radius:10px;
-  background:var(--paper);color:var(--ink);font-size:.96rem;
+  background:var(--paper);color:var(--ink);font-size:1rem;
 }
 input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-wash)}
 textarea{resize:vertical;min-height:60px}
@@ -69,6 +69,7 @@ button{cursor:pointer;border:none;border-radius:10px;padding:12px 18px;font-weig
 .btn-ghost{background:transparent;color:var(--accent-deep);padding:8px 4px;font-size:.86rem;text-decoration:underline;text-underline-offset:3px}
 .btn-danger{background:transparent;color:var(--faint);padding:6px 10px;font-size:.78rem;border:1px solid var(--line-2);border-radius:8px}
 .btn-danger:hover{background:var(--stamp-wash);color:var(--stamp);border-color:var(--stamp-wash)}
+@media(max-width:480px){.btn-danger{padding:9px 13px;font-size:.82rem}}
 button:disabled{opacity:.55;cursor:default}
 
 /* pin gate */
