@@ -224,8 +224,8 @@ details.more .more-body{padding-top:14px}
 
   <!-- ── add a book — the main thing she'll actually use ── -->
   <section class="panel">
-    <h2>Sách mới</h2>
-    <p class="panel-sub">Chỉ cần chủ đề, tên sách và file PDF là đủ.</p>
+    <h2 id="bookFormTitle">Sách mới</h2>
+    <p class="panel-sub" id="bookFormSub">Chỉ cần chủ đề, tên sách và file PDF là đủ.</p>
     <form id="bookForm">
       <div class="field">
         <label for="bookCategory">Chủ đề</label>
@@ -261,6 +261,7 @@ details.more .more-body{padding-top:14px}
         <div class="file-field">
           <input id="bookFile" name="file" type="file" accept="application/pdf" />
           <p class="file-hint">Hoặc dán link PDF có sẵn bên dưới thay vì tải lên</p>
+          <p class="file-hint" id="bookFileEditHint" hidden>Đang sửa sách — để trống cả 2 ô này nếu không muốn đổi file</p>
         </div>
         <div class="field" style="margin-top:10px">
           <input id="bookPdfUrl" name="pdfUrl" type="url" placeholder="https://… (link PDF có sẵn)" />
@@ -299,6 +300,7 @@ details.more .more-body{padding-top:14px}
       </details>
 
       <button class="btn-primary" type="submit" id="bookSubmit">Thêm sách vào thư viện</button>
+      <button type="button" class="btn-ghost" id="bookEditCancel" hidden style="display:block;width:100%;text-align:center;margin-top:8px">Huỷ sửa, quay lại thêm sách mới</button>
     </form>
   </section>
 
@@ -660,12 +662,60 @@ function renderBooks(){
         <div class="t">${escapeHTML(b.title)}</div>
         <div class="s">${escapeHTML(b.author || "—")} · ${escapeHTML(b.category?.title || "")}</div>
       </div>
-      <button class="btn-danger" data-del-book="${b.id}">Xoá</button>
+      <div style="display:flex;gap:6px;flex:none">
+        <button class="btn-danger" data-edit-book="${b.id}">Sửa</button>
+        <button class="btn-danger" data-del-book="${b.id}">Xoá</button>
+      </div>
     </div>
   `).join("");
 }
 
+let editingBookId = null;
+function startEditBook(book){
+  editingBookId = book.id;
+  const form = document.getElementById("bookForm");
+  form.categoryId.value = book.categoryId;
+  form.title.value = book.title || "";
+  form.author.value = book.author || "";
+  form.note.value = book.note || "";
+  form.year.value = book.year || "";
+  form.tags.value = (book.tags || []).join(", ");
+  form.blurb.value = book.blurb || "";
+  form.file.value = "";
+  form.pdfUrl.value = "";
+  form.cover.value = "";
+  // only worth prefilling if it's a real external link — a local
+  // /api/files/... path isn't something you'd resubmit as a "cover URL"
+  form.coverUrl.value = /^https?:\/\//.test(book.coverUrl || "") ? book.coverUrl : "";
+  if(book.year || (book.tags && book.tags.length) || book.blurb){
+    document.querySelector(".more").open = true;
+  }
+  document.getElementById("bookFormTitle").textContent = "Sửa sách";
+  document.getElementById("bookFormSub").textContent = `Đang sửa "${book.title}".`;
+  document.getElementById("bookFileEditHint").hidden = false;
+  document.getElementById("bookSubmit").textContent = "Lưu thay đổi";
+  document.getElementById("bookEditCancel").hidden = false;
+  form.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+function cancelEditBook(){
+  editingBookId = null;
+  const form = document.getElementById("bookForm");
+  form.reset();
+  document.getElementById("bookFormTitle").textContent = "Sách mới";
+  document.getElementById("bookFormSub").textContent = "Chỉ cần chủ đề, tên sách và file PDF là đủ.";
+  document.getElementById("bookFileEditHint").hidden = true;
+  document.getElementById("bookSubmit").textContent = "Thêm sách vào thư viện";
+  document.getElementById("bookEditCancel").hidden = true;
+}
+document.getElementById("bookEditCancel").addEventListener("click", cancelEditBook);
+
 document.getElementById("bookList").addEventListener("click", async (e) => {
+  const editBtn = e.target.closest("[data-edit-book]");
+  if(editBtn){
+    const book = books.find(b => b.id === editBtn.dataset.editBook);
+    if(book) startEditBook(book);
+    return;
+  }
   const btn = e.target.closest("[data-del-book]");
   if(!btn) return;
   const book = books.find(b => b.id === btn.dataset.delBook);
@@ -673,6 +723,7 @@ document.getElementById("bookList").addEventListener("click", async (e) => {
   if(!confirm(`Bỏ cuốn "${book.title}" ra khỏi thư viện?`)) return;
   try{
     await api(`/books/${book.id}`, { method: "DELETE" });
+    if(editingBookId === book.id) cancelEditBook();
     flash("Đã bỏ sách khỏi thư viện.", "ok");
     await loadBooks();
   }catch(err){
@@ -683,11 +734,13 @@ document.getElementById("bookList").addEventListener("click", async (e) => {
 document.getElementById("bookForm").addEventListener("submit", async (e) => {
   e.preventDefault();
   const form = e.target;
+  const isEdit = Boolean(editingBookId);
   if(!form.categoryId.value){
     flash("Chọn hoặc thêm một chủ đề trước đã nhé.", "err");
     return;
   }
-  if(!form.file.files[0] && !form.pdfUrl.value.trim()){
+  // a new book needs a PDF; an edit is fine leaving it untouched
+  if(!isEdit && !form.file.files[0] && !form.pdfUrl.value.trim()){
     flash("Chọn file PDF hoặc dán link PDF trước đã nhé.", "err");
     return;
   }
@@ -706,17 +759,24 @@ document.getElementById("bookForm").addEventListener("submit", async (e) => {
   else if(form.coverUrl.value.trim()) fd.append("coverUrl", form.coverUrl.value.trim());
 
   submitBtn.disabled = true;
-  submitBtn.textContent = "Đang thêm…";
+  submitBtn.textContent = isEdit ? "Đang lưu…" : "Đang thêm…";
   try{
-    await api("/books", { method: "POST", body: fd });
-    form.reset();
-    flash("Đã thêm sách vào thư viện rồi!", "ok");
+    if(isEdit){
+      await api(`/books/${editingBookId}`, { method: "PATCH", body: fd });
+      flash("Đã lưu thay đổi.", "ok");
+      cancelEditBook(); // also resets the button label back to "add" mode
+    }else{
+      await api("/books", { method: "POST", body: fd });
+      form.reset();
+      flash("Đã thêm sách vào thư viện rồi!", "ok");
+      submitBtn.textContent = "Thêm sách vào thư viện";
+    }
     await loadBooks();
   }catch(err){
     if(err.message !== "unauthorized") flash(err.message, "err");
+    submitBtn.textContent = isEdit ? "Lưu thay đổi" : "Thêm sách vào thư viện";
   }finally{
     submitBtn.disabled = false;
-    submitBtn.textContent = "Thêm sách vào thư viện";
   }
 });
 
