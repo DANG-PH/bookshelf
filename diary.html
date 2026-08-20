@@ -249,6 +249,23 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
 .locked-banner[hidden]{display:none}
 .locked-banner button{background:none;border:none;color:var(--accent-deep);font-weight:700;text-decoration:underline;padding:0;font-size:inherit}
 
+/* ── "new entries since last visit" nudge — same pill shape as
+   locked-banner but accent-colored since it's good news, not a wall ── */
+.new-entries-banner{
+  font-size:.84rem;font-weight:600;color:var(--accent-deep);text-align:center;
+  padding:10px 14px;background:var(--accent-wash);border:1px dashed var(--accent);
+  border-radius:10px;margin-bottom:14px;cursor:pointer;transition:background .15s;
+}
+.new-entries-banner:hover{background:var(--accent)}
+.new-entries-banner[hidden]{display:none}
+
+/* ── nhật ký riêng — a fully separate, per-person space; no author tag,
+   no like button, since by design nobody else ever sees it ── */
+.private-intro{
+  font-size:.84rem;color:var(--faint);line-height:1.55;margin-bottom:16px;
+  font-family:var(--serif);font-style:italic;
+}
+
 /* ── mood picker ── */
 .mood-row{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:16px}
 .mood-pill{
@@ -412,7 +429,8 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
   .pin-gate,.theme-toggle,.write-toggle,.write-panel-wrap,.tab-bar,
   .topbar-links,.status-msg,.entry-search,.date-filter-toggle,.date-filter-fields,
   .entry-actions,.like-wrap,#loadMoreBtn,.entry-more,.memory-foot .btn-del,
-  .memory-media .play-btn,.export-modal-backdrop{display:none!important}
+  .memory-media .play-btn,.export-modal-backdrop,.new-entries-banner,
+  [data-tab-panel="private"]{display:none!important}
   body{background:#fff;color:#000}
   .shell{padding:0;max-width:none}
   /* the side-by-side columns don't paginate well — print the same
@@ -459,6 +477,7 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
   <div class="tab-bar" id="tabBar">
     <button type="button" class="tab-btn active" data-tab="diary">Nhật Ký</button>
     <button type="button" class="tab-btn" data-tab="memories">Kỷ Niệm Chung</button>
+    <button type="button" class="tab-btn" data-tab="private">Nhật Ký Riêng</button>
   </div>
 
   <div class="tab-panel" data-tab-panel="diary">
@@ -512,6 +531,8 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
         <button type="button" id="filterClearBtn" hidden aria-label="Bỏ lọc ngày">✕</button>
       </div>
     </div>
+
+    <p class="new-entries-banner" id="newEntriesBanner" hidden></p>
 
     <div class="journals">
       <div class="journal-col" data-who="me">
@@ -575,6 +596,42 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
       <input type="search" id="memorySearchInput" placeholder="Tìm trong kỷ niệm…" aria-label="Tìm trong kỷ niệm" autocomplete="off" />
     </label>
     <div class="memory-timeline" id="memoryTimeline"><p class="empty-note">Đang tải…</p></div>
+  </div>
+
+  <div class="tab-panel" data-tab-panel="private" hidden>
+    <p class="private-intro">Góc riêng chỉ mình bạn thấy — viết gì ở đây thì chỉ bạn đọc lại được thôi, không hiện cho người kia đâu.</p>
+    <button type="button" class="write-toggle" id="privateWriteToggle" aria-expanded="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+      <span id="privateWriteToggleLabel">Viết nhật ký riêng</span>
+    </button>
+    <div class="write-panel-wrap" id="privateWritePanel">
+    <section class="panel write-panel">
+      <form id="privateEntryForm">
+        <div class="mood-row" id="privateMoodRow">
+          <button type="button" class="mood-pill" data-mood="vui">Vui</button>
+          <button type="button" class="mood-pill" data-mood="buon">Buồn</button>
+          <button type="button" class="mood-pill" data-mood="nho">Nhớ</button>
+          <button type="button" class="mood-pill" data-mood="yeu">Yêu</button>
+          <button type="button" class="mood-pill" data-mood="gian">Giận dỗi</button>
+          <button type="button" class="mood-pill" data-mood="binh-yen">Bình yên</button>
+        </div>
+        <div class="field">
+          <label for="privateEntryTitle">Tiêu đề <span style="font-weight:400;color:var(--faint)">(không bắt buộc)</span></label>
+          <input id="privateEntryTitle" name="title" placeholder="Hôm nay…" />
+        </div>
+        <div class="field">
+          <label for="privateEntryContent">Viết gì đó</label>
+          <textarea id="privateEntryContent" name="content" placeholder="Chỉ mình bạn đọc được thôi…" required></textarea>
+        </div>
+        <button class="btn-primary" type="submit" id="privateEntrySubmit">Viết vào nhật ký riêng</button>
+      </form>
+    </section>
+    </div>
+
+    <div class="entry-list" id="privateEntryList"><p class="empty-note">Đang tải…</p></div>
+    <div style="text-align:center;margin-top:6px">
+      <button type="button" class="btn-secondary" id="privateLoadMoreBtn" style="display:none">Tải thêm nhật ký cũ hơn</button>
+    </div>
   </div>
 </div>
 
@@ -755,6 +812,7 @@ function setWho(who, opts){
   if(!opts || !opts.silent){
     renderEntries();
     loadMemories();
+    loadPrivateEntries().catch(() => {});
   }
 }
 // ── per-person diary privacy lock — a password each person can set up
@@ -1055,6 +1113,7 @@ function likeButtonHTML(id, likedBy, dataAttr){
 function entryHTML(entry, opts){
   const canEdit = entry.author === currentWho;
   const showAuthor = opts && opts.showAuthor;
+  const hideLike = opts && opts.hideLike;
   const { full, preview, isLong } = truncateText(entry.content, ENTRY_PREVIEW_LEN);
   return `
     <div class="entry" data-entry-id="${entry.id}" data-author="${entry.author}">
@@ -1063,7 +1122,7 @@ function entryHTML(entry, opts){
           ${showAuthor ? `<span class="entry-author" data-who="${entry.author}">${escapeHTML(authorNames[entry.author] || entry.author)}</span>` : ""}
           ${entry.mood ? `<span class="entry-mood" data-mood="${entry.mood}"><span class="dot"></span>${MOOD_LABELS[entry.mood] || entry.mood}</span>` : ""}
         </span>
-        ${likeButtonHTML(entry.id, entry.likedBy, "data-like-entry")}
+        ${hideLike ? "" : likeButtonHTML(entry.id, entry.likedBy, "data-like-entry")}
       </div>
       <div class="entry-view">
         ${entry.title ? `<div class="entry-title">${escapeHTML(entry.title)}</div>` : ""}
@@ -1233,6 +1292,173 @@ dateFilterToggle.addEventListener("click", () => {
   dateFilterFields.hidden = !dateFilterFields.hidden;
 });
 
+// ── nhật ký riêng — same shape as the shared diary but a separate list,
+// separate endpoint, and always scoped to currentWho's own entries only ──
+const PRIVATE_PAGE_SIZE = 30;
+let allPrivateEntries = [];
+let privateOffset = 0;
+let privateTotal = 0;
+const privateEntryListEl = document.getElementById("privateEntryList");
+const privateLoadMoreBtn = document.getElementById("privateLoadMoreBtn");
+
+function findEntryById(id){
+  return allEntries.find(en => en.id === id) || allPrivateEntries.find(en => en.id === id);
+}
+
+function privateQueryParams(offset){
+  return new URLSearchParams({ limit: String(PRIVATE_PAGE_SIZE), offset: String(offset), author: currentWho }).toString();
+}
+
+async function loadPrivateEntries(){
+  privateOffset = 0;
+  const res = await api(`/diary/private?${privateQueryParams(0)}`);
+  allPrivateEntries = res.items;
+  privateTotal = res.total;
+  privateOffset = res.items.length;
+  renderPrivateEntries();
+}
+
+function renderPrivateEntries(){
+  privateEntryListEl.innerHTML = allPrivateEntries.length
+    ? allPrivateEntries.map(e => entryHTML(e, { hideLike: true })).join("")
+    : `<p class="empty-note">Chưa có gì ở đây — viết vài dòng chỉ riêng bạn đọc thôi.</p>`;
+  privateLoadMoreBtn.style.display = allPrivateEntries.length < privateTotal ? "" : "none";
+}
+
+async function loadMorePrivateEntries(){
+  privateLoadMoreBtn.disabled = true;
+  privateLoadMoreBtn.textContent = "Đang tải…";
+  try{
+    const res = await api(`/diary/private?${privateQueryParams(privateOffset)}`);
+    allPrivateEntries = allPrivateEntries.concat(res.items);
+    privateTotal = res.total;
+    privateOffset += res.items.length;
+    renderPrivateEntries();
+  }catch(err){
+    if(err.message !== "unauthorized") flash(err.message, "err");
+  }finally{
+    privateLoadMoreBtn.disabled = false;
+    privateLoadMoreBtn.textContent = "Tải thêm nhật ký cũ hơn";
+  }
+}
+privateLoadMoreBtn.addEventListener("click", loadMorePrivateEntries);
+
+setupWriteToggle(
+  document.getElementById("privateWriteToggle"),
+  document.getElementById("privateWritePanel"),
+  document.getElementById("privateWriteToggleLabel"),
+  "Viết nhật ký riêng", "Thu gọn",
+);
+
+const privateMoodRowEl = document.getElementById("privateMoodRow");
+let currentPrivateMood = null;
+privateMoodRowEl.addEventListener("click", (e) => {
+  const pill = e.target.closest(".mood-pill");
+  if(!pill) return;
+  const mood = pill.dataset.mood;
+  currentPrivateMood = currentPrivateMood === mood ? null : mood;
+  privateMoodRowEl.querySelectorAll(".mood-pill").forEach(p => p.classList.toggle("active", p.dataset.mood === currentPrivateMood));
+  savePrivateDraft();
+});
+
+const PRIVATE_DRAFT_KEY = "tb_private_diary_draft";
+const privateTitleEl = document.getElementById("privateEntryTitle");
+const privateContentEl = document.getElementById("privateEntryContent");
+function savePrivateDraft(){
+  const title = privateTitleEl.value;
+  const content = privateContentEl.value;
+  if(!title && !content && !currentPrivateMood){
+    localStorage.removeItem(PRIVATE_DRAFT_KEY);
+    return;
+  }
+  localStorage.setItem(PRIVATE_DRAFT_KEY, JSON.stringify({ title, content, mood: currentPrivateMood }));
+}
+function restorePrivateDraft(){
+  const raw = localStorage.getItem(PRIVATE_DRAFT_KEY);
+  if(!raw) return;
+  try{
+    const draft = JSON.parse(raw);
+    if(draft.title) privateTitleEl.value = draft.title;
+    if(draft.content) privateContentEl.value = draft.content;
+    if(draft.mood){
+      currentPrivateMood = draft.mood;
+      privateMoodRowEl.querySelectorAll(".mood-pill").forEach(p => p.classList.toggle("active", p.dataset.mood === currentPrivateMood));
+    }
+    if(draft.title || draft.content){
+      flash("Nãy viết dở, mình giữ lại cho bạn rồi nè.", "ok");
+      openWritePanelIfClosed("privateWriteToggle", "privateWritePanel");
+    }
+  }catch{
+    localStorage.removeItem(PRIVATE_DRAFT_KEY);
+  }
+}
+privateTitleEl.addEventListener("input", savePrivateDraft);
+privateContentEl.addEventListener("input", savePrivateDraft);
+
+document.getElementById("privateEntryForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const form = e.target;
+  const submitBtn = document.getElementById("privateEntrySubmit");
+  const content = form.content.value.trim();
+  if(!content) return;
+
+  if(isAuthorLocked(currentWho)){
+    openAuthorLockPrompt(currentWho, "verify", () => setWho(currentWho));
+    return;
+  }
+
+  submitBtn.disabled = true;
+  submitBtn.textContent = "Đang lưu…";
+  try{
+    await api("/diary/private", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        author: currentWho,
+        title: form.title.value.trim() || undefined,
+        content,
+        mood: currentPrivateMood || undefined,
+      }),
+    });
+    form.reset();
+    currentPrivateMood = null;
+    privateMoodRowEl.querySelectorAll(".mood-pill").forEach(p => p.classList.remove("active"));
+    localStorage.removeItem(PRIVATE_DRAFT_KEY);
+    flash("Đã cất vào nhật ký riêng rồi nhé.", "ok");
+    await loadPrivateEntries();
+  }catch(err){
+    if(err.message !== "unauthorized") flash(err.message, "err");
+  }finally{
+    submitBtn.disabled = false;
+    submitBtn.textContent = "Viết vào nhật ký riêng";
+  }
+});
+
+// ── "có nhật ký mới" nudge — localStorage-based, same spirit as the
+// "sách mới" popup on trang chính but lighter-touch: a dismissible pill,
+// not a modal, and only checked once at boot against the true unfiltered
+// newest entry (never after a search/filter reload, which could see a
+// narrower slice and wrongly mark newer entries as "seen") ──
+const DIARY_SEEN_KEY = "tb_diary_last_seen_at";
+function checkNewEntriesSinceLastVisit(){
+  const banner = document.getElementById("newEntriesBanner");
+  if(!allEntries.length) return;
+  const lastSeen = localStorage.getItem(DIARY_SEEN_KEY);
+  const newest = allEntries[0].createdAt;
+  if(lastSeen){
+    const newCount = allEntries.filter(e => new Date(e.createdAt) > new Date(lastSeen)).length;
+    if(newCount > 0){
+      banner.textContent = `✨ Có ${newCount} dòng nhật ký mới từ lần trước ghé qua — bấm để xem`;
+      banner.hidden = false;
+    }
+  }
+  localStorage.setItem(DIARY_SEEN_KEY, newest);
+}
+document.getElementById("newEntriesBanner").addEventListener("click", function(){
+  this.hidden = true;
+  document.querySelector(".diary-toolbar").scrollIntoView({ behavior: "smooth", block: "start" });
+});
+
 // ── tabs: Nhật Ký / Kỷ Niệm Chung ──
 document.getElementById("tabBar").addEventListener("click", (e) => {
   const btn = e.target.closest(".tab-btn");
@@ -1263,7 +1489,9 @@ document.querySelectorAll(".entry-list").forEach(list => {
       if(!confirm("Xoá dòng nhật ký này?")) return;
       try{
         await api(`/diary/${delBtn.dataset.delEntry}`, { method: "DELETE" });
-        await loadEntries();
+        // don't know up front whether this was a shared or private entry —
+        // reloading both is cheap and always correct
+        await Promise.all([loadEntries(), loadPrivateEntries()]);
       }catch(err){
         if(err.message !== "unauthorized") flash(err.message, "err");
       }
@@ -1301,7 +1529,7 @@ document.querySelectorAll(".entry-list").forEach(list => {
 
     const editBtn = e.target.closest("[data-edit-entry]");
     if(editBtn){
-      const entry = allEntries.find(en => en.id === editBtn.dataset.editEntry);
+      const entry = findEntryById(editBtn.dataset.editEntry);
       const card = editBtn.closest(".entry");
       if(entry && card){
         card.querySelector(".entry-view").outerHTML = entryEditFormHTML(entry);
@@ -1315,12 +1543,12 @@ document.querySelectorAll(".entry-list").forEach(list => {
 
     const cancelBtn = e.target.closest("[data-cancel-edit]");
     if(cancelBtn){
-      const entry = allEntries.find(en => en.id === cancelBtn.dataset.cancelEdit);
+      const entry = findEntryById(cancelBtn.dataset.cancelEdit);
       const form = cancelBtn.closest(".entry-edit-form");
       const card = cancelBtn.closest(".entry");
       if(entry && form){
         const wrapper = document.createElement("div");
-        wrapper.innerHTML = entryHTML(entry);
+        wrapper.innerHTML = entryHTML(entry, { hideLike: entry.isPrivate });
         form.replaceWith(wrapper.querySelector(".entry-view"));
       }
       if(card){
@@ -1347,7 +1575,7 @@ document.querySelectorAll(".entry-list").forEach(list => {
             mood: form.dataset.editMood || null,
           }),
         });
-        await loadEntries();
+        await Promise.all([loadEntries(), loadPrivateEntries()]);
       }catch(err){
         if(err.message !== "unauthorized") flash(err.message, "err");
       }finally{
@@ -1849,6 +2077,7 @@ async function boot(){
   setWho(currentWho, { silent: true });
   restoreEntryDraft();
   restoreMemoryDraft();
+  restorePrivateDraft();
   try{
     // names + lock status load first — entries render based on both
     // (author tags, and whether a column should be hidden behind a lock)
@@ -1861,7 +2090,10 @@ async function boot(){
       if(!isAuthorLocked(other)) setWho(other, { silent: true });
     }
     updateRelockButton();
-    await Promise.all([loadEntries(), loadMemories()]);
+    await Promise.all([loadEntries(), loadMemories(), loadPrivateEntries()]);
+    // only ever checked against this one unfiltered load — never after a
+    // search/date-filter reload, which could see a narrower slice
+    checkNewEntriesSinceLastVisit();
   }catch(err){
     if(err.message !== "unauthorized" && err.message !== "no-token") flash(err.message, "err");
   }

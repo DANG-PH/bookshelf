@@ -218,6 +218,21 @@ details.more .more-body{padding-top:14px}
 .advanced summary::-webkit-details-marker{display:none}
 .advanced summary:hover{color:var(--soft)}
 @media(max-width:480px){.row{grid-template-columns:1fr}}
+
+/* ── desktop: lay the add-book form out sideways instead of one long
+   vertical scroll — mobile keeps the original single-column stack
+   untouched, this only kicks in once there's actually room for it ── */
+@media(min-width:760px){
+  .shell{max-width:760px}
+  #bookForm.form-grid{display:grid;grid-template-columns:1fr 1fr;column-gap:20px}
+  #bookForm.form-grid > .field,
+  #bookForm.form-grid > details,
+  #bookForm.form-grid > button{grid-column:1/-1}
+  #bookForm.form-grid > .field-pair{display:contents}
+  .more-body{display:grid;grid-template-columns:1fr 1fr;column-gap:20px}
+  .more-body > .field,.more-body > .row{grid-column:1/-1}
+  .more-body > .field-pair{display:contents}
+}
 </style>
 </head>
 <body>
@@ -251,7 +266,8 @@ details.more .more-body{padding-top:14px}
   <section class="panel">
     <h2 id="bookFormTitle">Sách mới</h2>
     <p class="panel-sub" id="bookFormSub">Chỉ cần chủ đề, tên sách và file PDF là đủ.</p>
-    <form id="bookForm">
+    <form id="bookForm" class="form-grid">
+      <div class="field-pair">
       <div class="field">
         <label for="bookCategory">Chủ đề</label>
         <div class="topic-row">
@@ -269,6 +285,7 @@ details.more .more-body{padding-top:14px}
         <input id="bookTitle" name="title" placeholder="Gõ tên sách, gợi ý sẽ hiện ra…" required autocomplete="off" />
         <p class="field-hint" id="lookupStatus" hidden></p>
         <div class="lookup-results" id="lookupResults" hidden></div>
+      </div>
       </div>
 
       <div class="field" id="pdfField" data-mode="upload">
@@ -291,6 +308,7 @@ details.more .more-body{padding-top:14px}
       <details class="more">
         <summary id="moreSummary">Thêm chi tiết <span class="opt">(tác giả, ảnh bìa, mô tả…)</span></summary>
         <div class="more-body">
+          <div class="field-pair">
           <div class="field">
             <label for="bookAuthor">Tác giả <span class="opt">(không bắt buộc)</span></label>
             <input id="bookAuthor" name="author" placeholder="Tên tác giả" />
@@ -309,6 +327,7 @@ details.more .more-body{padding-top:14px}
             <div class="mode-panel-url">
               <input id="bookCoverUrl" name="coverUrl" type="url" placeholder="https://…" />
             </div>
+          </div>
           </div>
           <div class="field">
             <label for="bookNote">Lời nhắn riêng <span class="opt">(không bắt buộc, hiện ngay trên thẻ sách)</span></label>
