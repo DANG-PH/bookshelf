@@ -628,6 +628,7 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
       </section>
       </div>
 
+      <p class="new-entries-banner" id="newPrivateEntriesBanner" hidden></p>
       <div class="entry-list" id="privateEntryList"><p class="empty-note">Đang tải…</p></div>
       <div style="text-align:center;margin-top:6px">
         <button type="button" class="btn-secondary" id="privateLoadMoreBtn" style="display:none">Tải thêm nhật ký cũ hơn</button>
@@ -958,7 +959,10 @@ function showPrivateContent(author){
   privatePickerEl.hidden = true;
   privateContentPanelEl.hidden = false;
   privateActiveWhoNameEl.textContent = authorNames[author] || author;
-  loadPrivateEntries().catch(() => {});
+  document.getElementById("newPrivateEntriesBanner").hidden = true;
+  loadPrivateEntries()
+    .then(() => checkNewPrivateEntriesSinceLastVisit(author, allPrivateEntries))
+    .catch(() => {});
 }
 function attemptSelectPrivateWho(author){
   if(!authorLockConfigured[author]){
@@ -1427,7 +1431,9 @@ document.getElementById("privateEntryForm").addEventListener("submit", async (e)
 // "sách mới" popup on trang chính but lighter-touch: a dismissible pill,
 // not a modal, and only checked once at boot against the true unfiltered
 // newest entry (never after a search/filter reload, which could see a
-// narrower slice and wrongly mark newer entries as "seen") ──
+// narrower slice and wrongly mark newer entries as "seen"). Names who
+// wrote the new entries — that's fine here since the shared tab already
+// shows both people's entries to each other anyway ──
 const DIARY_SEEN_KEY = "tb_diary_last_seen_at";
 function checkNewEntriesSinceLastVisit(){
   const banner = document.getElementById("newEntriesBanner");
@@ -1435,9 +1441,15 @@ function checkNewEntriesSinceLastVisit(){
   const lastSeen = localStorage.getItem(DIARY_SEEN_KEY);
   const newest = allEntries[0].createdAt;
   if(lastSeen){
-    const newCount = allEntries.filter(e => new Date(e.createdAt) > new Date(lastSeen)).length;
-    if(newCount > 0){
-      banner.textContent = `✨ Có ${newCount} dòng nhật ký mới từ lần trước ghé qua — bấm để xem`;
+    const newOnes = allEntries.filter(e => new Date(e.createdAt) > new Date(lastSeen));
+    if(newOnes.length){
+      const byAuthor = {};
+      newOnes.forEach(e => { byAuthor[e.author] = (byAuthor[e.author] || 0) + 1; });
+      const who = Object.keys(byAuthor);
+      const names = who.map(a => authorNames[a] || a);
+      banner.textContent = who.length === 1
+        ? `✨ ${names[0]} vừa thêm ${byAuthor[who[0]]} dòng nhật ký mới — bấm để xem`
+        : `✨ ${names.join(" và ")} vừa thêm nhật ký mới — bấm để xem`;
       banner.hidden = false;
     }
   }
@@ -1446,6 +1458,35 @@ function checkNewEntriesSinceLastVisit(){
 document.getElementById("newEntriesBanner").addEventListener("click", function(){
   this.hidden = true;
   document.querySelector(".diary-toolbar").scrollIntoView({ behavior: "smooth", block: "start" });
+});
+
+// ── same nudge for "Nhật Ký Riêng" — but scoped to just your own entries.
+// Private entries never cross identities (the API itself won't return
+// the other person's), so this can only ever mean "you wrote this from
+// another device/session," never "the other person wrote something" —
+// naming a person here would either be redundant (always you) or, if it
+// somehow meant the other author, would leak private-diary activity
+// across identities. Tracked per-author since the same browser/device
+// can be used by both people ──
+function checkNewPrivateEntriesSinceLastVisit(author, entries){
+  const banner = document.getElementById("newPrivateEntriesBanner");
+  if(!entries.length){ banner.hidden = true; return; }
+  const key = `tb_private_last_seen_${author}`;
+  const lastSeen = localStorage.getItem(key);
+  const newest = entries[0].createdAt;
+  if(lastSeen){
+    const newCount = entries.filter(e => new Date(e.createdAt) > new Date(lastSeen)).length;
+    banner.hidden = newCount === 0;
+    if(newCount > 0){
+      banner.textContent = `✨ Có ${newCount} dòng nhật ký riêng mới từ lần trước — chắc bạn viết ở thiết bị khác`;
+    }
+  }else{
+    banner.hidden = true;
+  }
+  localStorage.setItem(key, newest);
+}
+document.getElementById("newPrivateEntriesBanner").addEventListener("click", function(){
+  this.hidden = true;
 });
 
 // ── tabs: Nhật Ký / Kỷ Niệm Chung ──
