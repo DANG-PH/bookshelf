@@ -239,8 +239,12 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
   display:grid;place-items:center;line-height:1;box-shadow:0 0 0 2px var(--card);
 }
 .notif-badge[hidden]{display:none}
+/* fixed, not absolute — the sidebar's overflow-y:auto clips horizontal
+   overflow too (a well-known scroll-container gotcha), and at only
+   284–320px wide it's narrower than this panel; position gets computed
+   in JS from the bell's actual on-screen position instead */
 .notif-panel{
-  position:absolute;top:40px;right:0;z-index:120;text-align:left;
+  position:fixed;z-index:120;text-align:left;
   width:300px;max-width:calc(100vw - 40px);max-height:360px;overflow-y:auto;
   background:var(--card);border:1px solid var(--line);border-radius:14px;
   box-shadow:0 20px 50px -20px rgba(20,14,10,.4);
@@ -1976,9 +1980,21 @@ document.getElementById("notifMarkAllBtn").addEventListener("click", () => {
   saveNotifications(list);
   renderNotifications();
 });
+// position:fixed means this has to be placed by hand — clamped so it
+// never runs off either edge of the viewport (the bell sits inside a
+// narrow 284–320px sidebar, so its left edge alone isn't safe to just
+// anchor the panel to)
+function positionNotifPanel(){
+  const rect = notifBellBtn.getBoundingClientRect();
+  const panelWidth = Math.min(300, window.innerWidth - 40);
+  const left = Math.min(Math.max(rect.left, 20), window.innerWidth - panelWidth - 20);
+  notifPanel.style.left = `${left}px`;
+  notifPanel.style.top = `${rect.bottom + 8}px`;
+}
 function toggleNotifPanel(open){
   notifPanel.classList.toggle("open", open);
   notifBellBtn.setAttribute("aria-expanded", String(open));
+  if(open) positionNotifPanel();
 }
 notifBellBtn.addEventListener("click", (e) => {
   e.stopPropagation();
@@ -1989,6 +2005,9 @@ document.addEventListener("click", (e) => {
 });
 document.addEventListener("keydown", (e) => {
   if(e.key === "Escape") toggleNotifPanel(false);
+});
+window.addEventListener("resize", () => {
+  if(notifPanel.classList.contains("open")) positionNotifPanel();
 });
 renderNotifications();
 
