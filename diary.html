@@ -228,29 +228,15 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
 .who-btn[data-who="me"].active{border-color:var(--me);background:var(--me-wash);color:var(--me)}
 .who-btn[data-who="partner"].active{border-color:var(--partner);background:var(--partner-wash);color:var(--partner)}
 
-/* ── per-person diary privacy lock — soft, session-scoped ── */
+/* ── nhật ký riêng lock control — soft, session-scoped ── */
 .relock-btn{
   display:block;margin:0 0 16px;width:100%;background:none;border:1px dashed var(--line-2);
   color:var(--faint);font-size:.78rem;font-weight:600;padding:8px;border-radius:10px;
 }
 .relock-btn:hover{color:var(--stamp);border-color:var(--stamp-wash)}
 .relock-btn[hidden]{display:none}
-.journal-locked{
-  text-align:center;padding:32px 16px;color:var(--faint);
-  font-size:.86rem;font-family:var(--serif);font-style:italic;line-height:1.6;
-  border:1.5px dashed var(--line-2);border-radius:12px;
-}
-.journal-locked button{margin-top:14px;width:auto;padding:9px 20px;font-size:.82rem}
-.locked-banner{
-  font-size:.82rem;color:var(--faint);text-align:center;padding:10px 14px;
-  background:var(--paper);border:1px dashed var(--line-2);border-radius:10px;margin-bottom:12px;
-  line-height:1.5;
-}
-.locked-banner[hidden]{display:none}
-.locked-banner button{background:none;border:none;color:var(--accent-deep);font-weight:700;text-decoration:underline;padding:0;font-size:inherit}
 
-/* ── "new entries since last visit" nudge — same pill shape as
-   locked-banner but accent-colored since it's good news, not a wall ── */
+/* ── "new entries since last visit" nudge ── */
 .new-entries-banner{
   font-size:.84rem;font-weight:600;color:var(--accent-deep);text-align:center;
   padding:10px 14px;background:var(--accent-wash);border:1px dashed var(--accent);
@@ -265,6 +251,10 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
   font-size:.84rem;color:var(--faint);line-height:1.55;margin-bottom:16px;
   font-family:var(--serif);font-style:italic;
 }
+.private-active-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.private-active-row .private-intro{margin-bottom:0;flex:1;min-width:200px}
+.private-active-row .relock-btn{width:auto;margin-bottom:0;flex:none;padding:8px 14px}
+@media(max-width:480px){.private-active-row{flex-direction:column;align-items:stretch}.private-active-row .relock-btn{width:100%}}
 
 /* ── mood picker ── */
 .mood-row{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:16px}
@@ -491,7 +481,6 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
         <button type="button" class="who-btn" data-who="me" id="whoMeBtn">Đăng</button>
         <button type="button" class="who-btn" data-who="partner" id="whoPartnerBtn">Vy</button>
       </div>
-      <button type="button" class="relock-btn" id="relockAllBtn" hidden>🔒 Khoá lại nhật ký riêng</button>
 
       <form id="entryForm">
         <div class="mood-row" id="moodRow">
@@ -545,7 +534,6 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
       </div>
     </div>
     <div class="journals-mobile">
-      <p class="locked-banner" id="mobileLockedBanner" hidden></p>
       <div class="entry-list" id="combinedEntryList"><p class="empty-note">Đang tải…</p></div>
     </div>
 
@@ -599,38 +587,51 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
   </div>
 
   <div class="tab-panel" data-tab-panel="private" hidden>
-    <p class="private-intro">Góc riêng chỉ mình bạn thấy — viết gì ở đây thì chỉ bạn đọc lại được thôi, không hiện cho người kia đâu.</p>
-    <button type="button" class="write-toggle" id="privateWriteToggle" aria-expanded="false">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-      <span id="privateWriteToggleLabel">Viết nhật ký riêng</span>
-    </button>
-    <div class="write-panel-wrap" id="privateWritePanel">
-    <section class="panel write-panel">
-      <form id="privateEntryForm">
-        <div class="mood-row" id="privateMoodRow">
-          <button type="button" class="mood-pill" data-mood="vui">Vui</button>
-          <button type="button" class="mood-pill" data-mood="buon">Buồn</button>
-          <button type="button" class="mood-pill" data-mood="nho">Nhớ</button>
-          <button type="button" class="mood-pill" data-mood="yeu">Yêu</button>
-          <button type="button" class="mood-pill" data-mood="gian">Giận dỗi</button>
-          <button type="button" class="mood-pill" data-mood="binh-yen">Bình yên</button>
-        </div>
-        <div class="field">
-          <label for="privateEntryTitle">Tiêu đề <span style="font-weight:400;color:var(--faint)">(không bắt buộc)</span></label>
-          <input id="privateEntryTitle" name="title" placeholder="Hôm nay…" />
-        </div>
-        <div class="field">
-          <label for="privateEntryContent">Viết gì đó</label>
-          <textarea id="privateEntryContent" name="content" placeholder="Chỉ mình bạn đọc được thôi…" required></textarea>
-        </div>
-        <button class="btn-primary" type="submit" id="privateEntrySubmit">Viết vào nhật ký riêng</button>
-      </form>
-    </section>
+    <div id="privatePicker">
+      <p class="private-intro">Góc riêng chỉ mình bạn thấy — chọn bạn là ai để mở khoá nhé. Nhật ký riêng của mỗi người tách biệt hoàn toàn, người kia không xem được.</p>
+      <div class="who-row" id="privateWhoRow">
+        <button type="button" class="who-btn" data-who="me" id="privateWhoMeBtn">Đăng</button>
+        <button type="button" class="who-btn" data-who="partner" id="privateWhoPartnerBtn">Vy</button>
+      </div>
     </div>
 
-    <div class="entry-list" id="privateEntryList"><p class="empty-note">Đang tải…</p></div>
-    <div style="text-align:center;margin-top:6px">
-      <button type="button" class="btn-secondary" id="privateLoadMoreBtn" style="display:none">Tải thêm nhật ký cũ hơn</button>
+    <div id="privateContent" hidden>
+      <div class="private-active-row">
+        <p class="private-intro">Nhật ký riêng của <strong id="privateActiveWhoName"></strong> — chỉ mình bạn đọc được thôi.</p>
+        <button type="button" class="relock-btn" id="privateSwitchBtn">🔒 Khoá lại / đổi người</button>
+      </div>
+      <button type="button" class="write-toggle" id="privateWriteToggle" aria-expanded="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+        <span id="privateWriteToggleLabel">Viết nhật ký riêng</span>
+      </button>
+      <div class="write-panel-wrap" id="privateWritePanel">
+      <section class="panel write-panel">
+        <form id="privateEntryForm">
+          <div class="mood-row" id="privateMoodRow">
+            <button type="button" class="mood-pill" data-mood="vui">Vui</button>
+            <button type="button" class="mood-pill" data-mood="buon">Buồn</button>
+            <button type="button" class="mood-pill" data-mood="nho">Nhớ</button>
+            <button type="button" class="mood-pill" data-mood="yeu">Yêu</button>
+            <button type="button" class="mood-pill" data-mood="gian">Giận dỗi</button>
+            <button type="button" class="mood-pill" data-mood="binh-yen">Bình yên</button>
+          </div>
+          <div class="field">
+            <label for="privateEntryTitle">Tiêu đề <span style="font-weight:400;color:var(--faint)">(không bắt buộc)</span></label>
+            <input id="privateEntryTitle" name="title" placeholder="Hôm nay…" />
+          </div>
+          <div class="field">
+            <label for="privateEntryContent">Viết gì đó</label>
+            <textarea id="privateEntryContent" name="content" placeholder="Chỉ mình bạn đọc được thôi…" required></textarea>
+          </div>
+          <button class="btn-primary" type="submit" id="privateEntrySubmit">Viết vào nhật ký riêng</button>
+        </form>
+      </section>
+      </div>
+
+      <div class="entry-list" id="privateEntryList"><p class="empty-note">Đang tải…</p></div>
+      <div style="text-align:center;margin-top:6px">
+        <button type="button" class="btn-secondary" id="privateLoadMoreBtn" style="display:none">Tải thêm nhật ký cũ hơn</button>
+      </div>
     </div>
   </div>
 </div>
@@ -812,14 +813,15 @@ function setWho(who, opts){
   if(!opts || !opts.silent){
     renderEntries();
     loadMemories();
-    loadPrivateEntries().catch(() => {});
   }
 }
-// ── per-person diary privacy lock — a password each person can set up
-// the first time they switch into their own name here, independent of
-// the shared site PIN. Soft privacy only: it deters a casual glance on a
-// shared device, not a determined partner — anyone already past the site
-// PIN can reset a forgotten one from admin.html's "cài đặt nâng cao" ──
+// ── per-person private-diary lock — a password each person can set up
+// the first time they pick their name in the "Nhật Ký Riêng" tab,
+// independent of the shared site PIN. Only gates the private tab — the
+// shared "Nhật Ký" tab has no lock at all, since both people already see
+// it together. Soft privacy only: it deters a casual glance on a shared
+// device, not a determined partner — anyone already past the site PIN
+// can reset a forgotten one from admin.html's "cài đặt nâng cao" ──
 const UNLOCKED_KEY = "tb_unlocked_authors";
 const SKIPPED_SETUP_KEY = "tb_lock_setup_skipped";
 let authorLockConfigured = { me: false, partner: false };
@@ -831,9 +833,6 @@ function isAuthorLocked(author){
 }
 function saveUnlockedAuthors(){
   sessionStorage.setItem(UNLOCKED_KEY, JSON.stringify([...unlockedAuthors]));
-}
-function updateRelockButton(){
-  document.getElementById("relockAllBtn").hidden = unlockedAuthors.size === 0;
 }
 
 async function loadAuthorLockStatus(){
@@ -921,9 +920,7 @@ async function submitAuthorLockPrompt(){
     if(mode === "setup") authorLockConfigured[author] = true;
     unlockedAuthors.add(author);
     saveUnlockedAuthors();
-    updateRelockButton();
     closeAuthorLockPrompt();
-    renderEntries();
     if(onSuccess) onSuccess();
   }catch(err){
     if(err.message === "unauthorized") return;
@@ -939,28 +936,49 @@ authorLockSubmitBtn.addEventListener("click", submitAuthorLockPrompt);
   });
 });
 
-document.getElementById("relockAllBtn").addEventListener("click", () => {
-  unlockedAuthors.clear();
-  saveUnlockedAuthors();
-  updateRelockButton();
-  renderEntries();
-});
-document.getElementById("mobileLockedBanner").addEventListener("click", (e) => {
-  const unlockBtn = e.target.closest("[data-unlock-column]");
-  if(unlockBtn) openAuthorLockPrompt(unlockBtn.dataset.unlockColumn, "verify", () => renderEntries());
-});
+// shared diary: free identity switch, no password — the lock only
+// applies to the separate "Nhật Ký Riêng" tab below
+whoMeBtn.addEventListener("click", () => setWho("me"));
+whoPartnerBtn.addEventListener("click", () => setWho("partner"));
 
-function attemptSwitchWho(author){
+// ── "Nhật Ký Riêng" — its own person picker + lock, entirely decoupled
+// from currentWho (the shared diary/memories identity) ──
+let privateWho = null;
+const privatePickerEl = document.getElementById("privatePicker");
+const privateContentPanelEl = document.getElementById("privateContent");
+const privateActiveWhoNameEl = document.getElementById("privateActiveWhoName");
+
+function showPrivatePicker(){
+  privateWho = null;
+  privatePickerEl.hidden = false;
+  privateContentPanelEl.hidden = true;
+}
+function showPrivateContent(author){
+  privateWho = author;
+  privatePickerEl.hidden = true;
+  privateContentPanelEl.hidden = false;
+  privateActiveWhoNameEl.textContent = authorNames[author] || author;
+  loadPrivateEntries().catch(() => {});
+}
+function attemptSelectPrivateWho(author){
   if(!authorLockConfigured[author]){
-    if(skippedSetup.has(author)){ setWho(author); return; }
-    openAuthorLockPrompt(author, "setup", () => setWho(author));
+    if(skippedSetup.has(author)){ showPrivateContent(author); return; }
+    openAuthorLockPrompt(author, "setup", () => showPrivateContent(author));
     return;
   }
-  if(unlockedAuthors.has(author)){ setWho(author); return; }
-  openAuthorLockPrompt(author, "verify", () => setWho(author));
+  if(isAuthorLocked(author)){
+    openAuthorLockPrompt(author, "verify", () => showPrivateContent(author));
+    return;
+  }
+  showPrivateContent(author);
 }
-whoMeBtn.addEventListener("click", () => attemptSwitchWho("me"));
-whoPartnerBtn.addEventListener("click", () => attemptSwitchWho("partner"));
+document.getElementById("privateWhoMeBtn").addEventListener("click", () => attemptSelectPrivateWho("me"));
+document.getElementById("privateWhoPartnerBtn").addEventListener("click", () => attemptSelectPrivateWho("partner"));
+document.getElementById("privateSwitchBtn").addEventListener("click", () => {
+  unlockedAuthors.clear();
+  saveUnlockedAuthors();
+  showPrivatePicker();
+});
 
 // ── collapsible "write new" panels — closed on load so each tab opens
 // straight onto the entries/memories instead of a tall form ──
@@ -1111,7 +1129,10 @@ function likeButtonHTML(id, likedBy, dataAttr){
 }
 
 function entryHTML(entry, opts){
-  const canEdit = entry.author === currentWho;
+  // private entries are viewed under privateWho, not currentWho — pass
+  // viewerWho explicitly rather than assuming which identity applies
+  const viewerWho = (opts && opts.viewerWho) || currentWho;
+  const canEdit = entry.author === viewerWho;
   const showAuthor = opts && opts.showAuthor;
   const hideLike = opts && opts.hideLike;
   const { full, preview, isLong } = truncateText(entry.content, ENTRY_PREVIEW_LEN);
@@ -1178,50 +1199,23 @@ const loadMoreBtn = document.getElementById("loadMoreBtn");
 const dateFilterToggle = document.getElementById("dateFilterToggle");
 const dateFilterFields = document.getElementById("dateFilterFields");
 
-function lockedColumnHTML(author){
-  const name = escapeHTML(authorNames[author] || author);
-  return `
-    <div class="journal-locked">
-      🔒 Nhật ký riêng của ${name}<br />nhập mật khẩu để xem
-      <div><button type="button" class="btn-secondary" data-unlock-column="${author}">Mở khoá</button></div>
-    </div>
-  `;
-}
-
 function renderEntries(){
   const meList = document.getElementById("meEntryList");
   const partnerList = document.getElementById("partnerEntryList");
   const combinedList = document.getElementById("combinedEntryList");
-  const mobileLockedBanner = document.getElementById("mobileLockedBanner");
-  const meLocked = isAuthorLocked("me");
-  const partnerLocked = isAuthorLocked("partner");
   const meEntries = allEntries.filter(e => e.author === "me");
   const partnerEntries = allEntries.filter(e => e.author === "partner");
   const isFiltered = Boolean(entrySearchEl.value.trim() || filterStartDateEl.value || filterEndDateEl.value);
   const emptyNote = `<p class="empty-note">${isFiltered ? "Không tìm thấy gì khớp cả." : "Chưa có gì ở đây — viết vài dòng đầu tiên đi."}</p>`;
-  meList.innerHTML = meLocked ? lockedColumnHTML("me") : (meEntries.length ? meEntries.map(e => entryHTML(e)).join("") : emptyNote);
-  partnerList.innerHTML = partnerLocked ? lockedColumnHTML("partner") : (partnerEntries.length ? partnerEntries.map(e => entryHTML(e)).join("") : emptyNote);
+  meList.innerHTML = meEntries.length ? meEntries.map(e => entryHTML(e)).join("") : emptyNote;
+  partnerList.innerHTML = partnerEntries.length ? partnerEntries.map(e => entryHTML(e)).join("") : emptyNote;
   // mobile-only: same entries as one chronological feed instead of two
   // columns, so reading doesn't mean scrolling past all of one person's
   // entries first — each card gets a name tag since there's no column
-  // header to tell them apart anymore. locked authors' entries are left
-  // out of the feed entirely rather than shown as a placeholder card —
-  // a banner up top covers that instead
-  const visibleEntries = allEntries.filter(e => !isAuthorLocked(e.author));
-  combinedList.innerHTML = visibleEntries.length
-    ? visibleEntries.map(e => entryHTML(e, { showAuthor: true })).join("")
+  // header to tell them apart anymore
+  combinedList.innerHTML = allEntries.length
+    ? allEntries.map(e => entryHTML(e, { showAuthor: true })).join("")
     : emptyNote;
-  const lockedAuthorsList = ["me", "partner"].filter(isAuthorLocked);
-  if(lockedAuthorsList.length){
-    const names = lockedAuthorsList.map(a => escapeHTML(authorNames[a] || a)).join(", ");
-    const unlockLinks = lockedAuthorsList
-      .map(a => `<button type="button" data-unlock-column="${a}">Mở khoá ${escapeHTML(authorNames[a] || a)}</button>`)
-      .join(" · ");
-    mobileLockedBanner.innerHTML = `🔒 Nhật ký riêng của ${names} đang khoá — ${unlockLinks}`;
-    mobileLockedBanner.hidden = false;
-  }else{
-    mobileLockedBanner.hidden = true;
-  }
   loadMoreBtn.style.display = allEntries.length < diaryTotal ? "" : "none";
 }
 
@@ -1306,7 +1300,7 @@ function findEntryById(id){
 }
 
 function privateQueryParams(offset){
-  return new URLSearchParams({ limit: String(PRIVATE_PAGE_SIZE), offset: String(offset), author: currentWho }).toString();
+  return new URLSearchParams({ limit: String(PRIVATE_PAGE_SIZE), offset: String(offset), author: privateWho }).toString();
 }
 
 async function loadPrivateEntries(){
@@ -1320,7 +1314,7 @@ async function loadPrivateEntries(){
 
 function renderPrivateEntries(){
   privateEntryListEl.innerHTML = allPrivateEntries.length
-    ? allPrivateEntries.map(e => entryHTML(e, { hideLike: true })).join("")
+    ? allPrivateEntries.map(e => entryHTML(e, { hideLike: true, viewerWho: privateWho })).join("")
     : `<p class="empty-note">Chưa có gì ở đây — viết vài dòng chỉ riêng bạn đọc thôi.</p>`;
   privateLoadMoreBtn.style.display = allPrivateEntries.length < privateTotal ? "" : "none";
 }
@@ -1400,12 +1394,7 @@ document.getElementById("privateEntryForm").addEventListener("submit", async (e)
   const form = e.target;
   const submitBtn = document.getElementById("privateEntrySubmit");
   const content = form.content.value.trim();
-  if(!content) return;
-
-  if(isAuthorLocked(currentWho)){
-    openAuthorLockPrompt(currentWho, "verify", () => setWho(currentWho));
-    return;
-  }
+  if(!content || !privateWho) return;
 
   submitBtn.disabled = true;
   submitBtn.textContent = "Đang lưu…";
@@ -1414,7 +1403,7 @@ document.getElementById("privateEntryForm").addEventListener("submit", async (e)
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        author: currentWho,
+        author: privateWho,
         title: form.title.value.trim() || undefined,
         content,
         mood: currentPrivateMood || undefined,
@@ -1478,9 +1467,6 @@ function toggleEntryMore(toggleEl){
 }
 document.querySelectorAll(".entry-list").forEach(list => {
   list.addEventListener("click", async (e) => {
-    const unlockBtn = e.target.closest("[data-unlock-column]");
-    if(unlockBtn){ openAuthorLockPrompt(unlockBtn.dataset.unlockColumn, "verify", () => renderEntries()); return; }
-
     const moreBtn = e.target.closest("[data-more-entry]");
     if(moreBtn){ toggleEntryMore(moreBtn); return; }
 
@@ -1548,7 +1534,7 @@ document.querySelectorAll(".entry-list").forEach(list => {
       const card = cancelBtn.closest(".entry");
       if(entry && form){
         const wrapper = document.createElement("div");
-        wrapper.innerHTML = entryHTML(entry, { hideLike: entry.isPrivate });
+        wrapper.innerHTML = entryHTML(entry, { hideLike: entry.isPrivate, viewerWho: entry.isPrivate ? privateWho : currentWho });
         form.replaceWith(wrapper.querySelector(".entry-view"));
       }
       if(card){
@@ -1599,14 +1585,6 @@ document.getElementById("entryForm").addEventListener("submit", async (e) => {
   const submitBtn = document.getElementById("entrySubmit");
   const content = form.content.value.trim();
   if(!content) return;
-
-  // defense in depth: currentWho can only be a locked author if both are
-  // locked at boot time (see boot()) — don't let a write slip through
-  // as someone whose password hasn't actually been entered this session
-  if(isAuthorLocked(currentWho)){
-    openAuthorLockPrompt(currentWho, "verify", () => setWho(currentWho));
-    return;
-  }
 
   submitBtn.disabled = true;
   submitBtn.textContent = "Đang lưu…";
@@ -2079,18 +2057,10 @@ async function boot(){
   restoreMemoryDraft();
   restorePrivateDraft();
   try{
-    // names + lock status load first — entries render based on both
-    // (author tags, and whether a column should be hidden behind a lock)
+    // names + private-diary lock status — the lock only gates the
+    // separate "Nhật Ký Riêng" tab, entries here render independent of it
     await Promise.all([loadNames(), loadAuthorLockStatus()]);
-    // the identity restored from localStorage might now be locked in a
-    // fresh session — fall back to the other one if that one's open,
-    // rather than silently sitting on an identity nobody unlocked yet
-    if(isAuthorLocked(currentWho)){
-      const other = currentWho === "me" ? "partner" : "me";
-      if(!isAuthorLocked(other)) setWho(other, { silent: true });
-    }
-    updateRelockButton();
-    await Promise.all([loadEntries(), loadMemories(), loadPrivateEntries()]);
+    await Promise.all([loadEntries(), loadMemories()]);
     // only ever checked against this one unfiltered load — never after a
     // search/date-filter reload, which could see a narrower slice
     checkNewEntriesSinceLastVisit();
