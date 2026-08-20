@@ -116,10 +116,23 @@ button:disabled{opacity:.55;cursor:default}
   :root:not([data-theme="light"]) .theme-toggle .icon-moon{display:block}
 }
 
-.status-msg{font-size:.88rem;padding:12px 14px;border-radius:10px;margin-bottom:16px;font-weight:600}
-.status-msg.ok{background:var(--good-wash);color:var(--good)}
-.status-msg.err{background:var(--stamp-wash);color:var(--stamp)}
-.status-msg[hidden]{display:none}
+/* fixed toast, top-center — doesn't push the page around like an inline
+   banner would every time it appears or disappears */
+.status-msg{
+  position:fixed;top:18px;left:50%;z-index:300;
+  transform:translate(-50%,-16px);
+  min-width:240px;max-width:calc(100vw - 32px);
+  background:var(--card);border:1px solid var(--line);
+  font-size:.88rem;padding:13px 22px;border-radius:14px;font-weight:600;text-align:center;
+  box-shadow:0 20px 40px -18px rgba(20,14,10,.4);
+  opacity:0;pointer-events:none;
+  transition:opacity .2s ease,transform .25s cubic-bezier(.2,.7,.2,1);
+}
+.status-msg.show{opacity:1;transform:translate(-50%,0)}
+.status-msg.ok{color:var(--good);border-color:var(--good-wash)}
+.status-msg.err{color:var(--stamp);border-color:var(--stamp-wash)}
+@media(prefers-reduced-motion:reduce){.status-msg{transition:none}}
+@media(max-width:480px){.status-msg{top:12px;padding:11px 16px;font-size:.84rem}}
 
 .panel{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:24px 22px;margin-bottom:20px;box-shadow:0 16px 40px -28px rgba(80,62,42,.3)}
 .panel h2{font-size:1.2rem;margin-bottom:4px}
@@ -146,6 +159,18 @@ button:disabled{opacity:.55;cursor:default}
 .file-field:has(input:focus){border-color:var(--accent);background:var(--card)}
 .file-field input[type=file]{border:none;background:none;padding:0;font-size:.82rem}
 .file-hint{font-size:.76rem;color:var(--faint);margin-top:6px}
+
+/* upload-vs-link toggle — one input showing at a time instead of two
+   stacked "pick one of these" fields, so a single choice reads as one */
+.mode-switch{display:flex;gap:6px;margin-bottom:10px}
+.mode-switch .mode-btn{
+  flex:1;padding:9px;border-radius:8px;border:1.5px solid var(--line-2);
+  background:var(--paper);color:var(--soft);font-size:.82rem;font-weight:600;
+  transition:all .15s;
+}
+.mode-switch .mode-btn.active{border-color:var(--accent);background:var(--accent-wash);color:var(--accent-deep)}
+.field[data-mode="upload"] .mode-panel-url,
+.field[data-mode="url"] .mode-panel-upload{display:none}
 
 /* Google Books lookup dropdown under the title field */
 .lookup-results{
@@ -220,7 +245,7 @@ details.more .more-body{padding-top:14px}
     <a class="back-link" href="index.html">← Về trang thư viện</a>
   </div>
 
-  <p class="status-msg" id="globalStatus" hidden></p>
+  <p class="status-msg" id="globalStatus" role="status" aria-live="polite"></p>
 
   <!-- ── add a book — the main thing she'll actually use ── -->
   <section class="panel">
@@ -230,7 +255,7 @@ details.more .more-body{padding-top:14px}
       <div class="field">
         <label for="bookCategory">Chủ đề</label>
         <div class="topic-row">
-          <select id="bookCategory" name="categoryId" required></select>
+          <select id="bookCategory" name="categoryId" required><option value="" disabled selected>Đang tải…</option></select>
           <button type="button" class="topic-add-toggle" id="topicToggle">+ Chủ đề mới</button>
         </div>
         <div class="topic-new" id="topicNew">
@@ -246,42 +271,49 @@ details.more .more-body{padding-top:14px}
         <div class="lookup-results" id="lookupResults" hidden></div>
       </div>
 
-      <div class="field">
-        <label for="bookAuthor">Tác giả <span class="opt">(không bắt buộc)</span></label>
-        <input id="bookAuthor" name="author" placeholder="Tên tác giả" />
-      </div>
-
-      <div class="field">
-        <label for="bookNote">Lời nhắn riêng <span class="opt">(không bắt buộc, hiện ngay trên thẻ sách)</span></label>
-        <textarea id="bookNote" name="note" placeholder="Mình chọn cuốn này vì…"></textarea>
-      </div>
-
-      <div class="field">
-        <label for="bookFile">File sách (PDF)</label>
-        <div class="file-field">
-          <input id="bookFile" name="file" type="file" accept="application/pdf" />
-          <p class="file-hint">Hoặc dán link PDF có sẵn bên dưới thay vì tải lên</p>
-          <p class="file-hint" id="bookFileEditHint" hidden>Đang sửa sách — để trống cả 2 ô này nếu không muốn đổi file</p>
+      <div class="field" id="pdfField" data-mode="upload">
+        <label>File sách (PDF)</label>
+        <div class="mode-switch">
+          <button type="button" class="mode-btn active" data-set-mode="upload">Tải file lên</button>
+          <button type="button" class="mode-btn" data-set-mode="url">Dán link có sẵn</button>
         </div>
-        <div class="field" style="margin-top:10px">
-          <input id="bookPdfUrl" name="pdfUrl" type="url" placeholder="https://… (link PDF có sẵn)" />
+        <div class="mode-panel-upload">
+          <div class="file-field">
+            <input id="bookFile" name="file" type="file" accept="application/pdf" />
+          </div>
         </div>
-      </div>
-
-      <div class="field">
-        <label for="bookCoverFile">Ảnh bìa <span class="opt">(không bắt buộc)</span></label>
-        <div class="file-field">
-          <input id="bookCoverFile" name="cover" type="file" accept="image/*" />
-          <p class="file-hint">Hoặc dán link ảnh bìa bên dưới thay vì tải lên</p>
+        <div class="mode-panel-url">
+          <input id="bookPdfUrl" name="pdfUrl" type="url" placeholder="https://…" />
         </div>
-        <div class="field" style="margin-top:10px">
-          <input id="bookCoverUrl" name="coverUrl" type="url" placeholder="https://…" />
-        </div>
+        <p class="file-hint" id="bookFileEditHint" hidden>Đang sửa sách nè — cứ để trống chỗ này nếu chưa muốn đổi file</p>
       </div>
 
       <details class="more">
-        <summary>Thêm chi tiết (không bắt buộc)</summary>
+        <summary id="moreSummary">Thêm chi tiết <span class="opt">(tác giả, ảnh bìa, mô tả…)</span></summary>
         <div class="more-body">
+          <div class="field">
+            <label for="bookAuthor">Tác giả <span class="opt">(không bắt buộc)</span></label>
+            <input id="bookAuthor" name="author" placeholder="Tên tác giả" />
+          </div>
+          <div class="field" id="coverField" data-mode="upload">
+            <label>Ảnh bìa <span class="opt">(không bắt buộc)</span></label>
+            <div class="mode-switch">
+              <button type="button" class="mode-btn active" data-set-mode="upload">Tải ảnh lên</button>
+              <button type="button" class="mode-btn" data-set-mode="url">Dán link ảnh</button>
+            </div>
+            <div class="mode-panel-upload">
+              <div class="file-field">
+                <input id="bookCoverFile" name="cover" type="file" accept="image/*" />
+              </div>
+            </div>
+            <div class="mode-panel-url">
+              <input id="bookCoverUrl" name="coverUrl" type="url" placeholder="https://…" />
+            </div>
+          </div>
+          <div class="field">
+            <label for="bookNote">Lời nhắn riêng <span class="opt">(không bắt buộc, hiện ngay trên thẻ sách)</span></label>
+            <textarea id="bookNote" name="note" placeholder="Mình chọn cuốn này vì…"></textarea>
+          </div>
           <div class="row">
             <div class="field">
               <label for="bookYear">Năm xuất bản</label>
@@ -300,15 +332,15 @@ details.more .more-body{padding-top:14px}
       </details>
 
       <button class="btn-primary" type="submit" id="bookSubmit">Thêm sách vào thư viện</button>
-      <button type="button" class="btn-ghost" id="bookEditCancel" hidden style="display:block;width:100%;text-align:center;margin-top:8px">Huỷ sửa, quay lại thêm sách mới</button>
+      <button type="button" class="btn-ghost" id="bookEditCancel" hidden style="display:block;width:100%;text-align:center;margin-top:8px">Thôi, quay lại thêm sách mới</button>
     </form>
   </section>
 
   <!-- ── what's already there ── -->
   <section class="panel">
     <h2>Sách đã thêm</h2>
-    <p class="panel-sub" id="bookCountLabel">Chưa có cuốn nào</p>
-    <div class="list" id="bookList"></div>
+    <p class="panel-sub" id="bookCountLabel">Đang tải…</p>
+    <div class="list" id="bookList"><p class="empty-note">Đang tải…</p></div>
   </section>
 
   <!-- ── curator info, tucked away — not something she needs day-to-day ── -->
@@ -344,6 +376,12 @@ details.more .more-body{padding-top:14px}
         </div>
         <button class="btn-primary" type="submit">Lưu thông tin</button>
       </form>
+    </section>
+
+    <section class="panel">
+      <h2 style="font-size:1rem">Mật khẩu riêng nhật ký</h2>
+      <p class="panel-sub">Lỡ quên mật khẩu riêng của ai thì xoá ở đây để đặt lại từ đầu — chỉ dùng khi thật sự cần, vì xoá xong là mất luôn mật khẩu cũ.</p>
+      <div class="list" id="authorLockList"><p class="empty-note">Đang tải…</p></div>
     </section>
   </details>
 </div>
@@ -398,6 +436,24 @@ function slugify(s){
   return noDiacritics.replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"") || `chu-de-${Date.now()}`;
 }
 
+// ── upload-vs-link toggle, shared by the PDF and cover fields ──
+function setFieldMode(fieldEl, mode){
+  fieldEl.dataset.mode = mode;
+  fieldEl.querySelectorAll(".mode-btn").forEach(b => b.classList.toggle("active", b.dataset.setMode === mode));
+}
+document.querySelectorAll(".mode-switch").forEach(switchEl => {
+  switchEl.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-set-mode]");
+    if(!btn) return;
+    const field = switchEl.closest(".field");
+    // switching away from a mode clears its input, so a stale value can't
+    // accidentally tag along with whichever mode actually gets submitted
+    if(btn.dataset.setMode === "upload") field.querySelector(".mode-panel-url input").value = "";
+    else field.querySelector(".mode-panel-upload input").value = "";
+    setFieldMode(field, btn.dataset.setMode);
+  });
+});
+
 // ── auto-lookup title/author/year/cover/blurb while typing ──
 // Proxied through our own backend (GET /books/lookup, backed by Open
 // Library — free, no API key, no daily quota) instead of calling a third
@@ -439,9 +495,15 @@ lookupResultsEl.addEventListener("click", (e) => {
   bookTitleEl.value = r.title;
   if(r.author && !bookAuthorEl.value.trim()) bookAuthorEl.value = r.author;
   if(r.year && !bookYearEl.value.trim()) bookYearEl.value = r.year;
-  if(r.cover && !bookCoverFileEl.files[0] && !bookCoverUrlEl.value.trim()) bookCoverUrlEl.value = r.cover;
+  if(r.cover && !bookCoverFileEl.files[0] && !bookCoverUrlEl.value.trim()){
+    bookCoverUrlEl.value = r.cover;
+    setFieldMode(document.getElementById("coverField"), "url");
+  }
   lookupResultsEl.hidden = true;
   lookupStatusEl.hidden = true;
+  // gợi ý vừa điền sẵn tác giả/ảnh bìa nằm trong phần "Thêm chi tiết" đang
+  // gấp lại — mở ra luôn để thấy ngay, đỡ tưởng là chưa tìm được gì
+  document.querySelector(".more").open = true;
   // description needs a second, slower request — fetch it after the fact
   // and drop it in only if nothing's been typed into blurb meanwhile
   if(r.workKey && !bookBlurbEl.value.trim()){
@@ -552,14 +614,15 @@ function flash(message, kind){
   const el = document.getElementById("globalStatus");
   el.textContent = message;
   el.className = `status-msg ${kind}`;
-  el.hidden = false;
+  el.classList.add("show");
   clearTimeout(flash._t);
-  flash._t = setTimeout(() => { el.hidden = true; }, 4000);
-  el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  flash._t = setTimeout(() => { el.classList.remove("show"); }, 4000);
 }
 
 let categories = [];
 let books = [];
+
+let authorLockNames = { me: "Đăng", partner: "Vy" };
 
 async function loadSettings(){
   const s = await api("/settings");
@@ -568,7 +631,49 @@ async function loadSettings(){
   document.getElementById("curatorPhoto").value = s.curatorPhoto || "";
   document.getElementById("updatedLabel").value = s.updatedLabel || "";
   document.getElementById("partnerName").value = s.partnerName || "";
+  authorLockNames = { me: s.curatorName || "Đăng", partner: s.partnerName || "Vy" };
 }
+
+// ── reset a forgotten diary lock password — the shared PIN already lets
+// anyone reach this page, so this is meant for genuine lockouts, not a
+// way around someone else's privacy ──
+async function loadAuthorLocks(){
+  const listEl = document.getElementById("authorLockList");
+  try{
+    const [meStatus, partnerStatus] = await Promise.all([
+      api("/author-locks/me/status"),
+      api("/author-locks/partner/status"),
+    ]);
+    const rows = [
+      { author: "me", configured: meStatus.configured },
+      { author: "partner", configured: partnerStatus.configured },
+    ];
+    listEl.innerHTML = rows.map(r => `
+      <div class="list-item">
+        <div class="meta">
+          <div class="t">${escapeHTML(authorLockNames[r.author])}</div>
+          <div class="s">${r.configured ? "Đã đặt mật khẩu riêng" : "Chưa đặt mật khẩu riêng"}</div>
+        </div>
+        ${r.configured ? `<button class="btn-danger" data-reset-lock="${r.author}">Xoá mật khẩu</button>` : ""}
+      </div>
+    `).join("");
+  }catch{
+    listEl.innerHTML = `<p class="empty-note">Không tải được — thử lại sau.</p>`;
+  }
+}
+document.getElementById("authorLockList").addEventListener("click", async (e) => {
+  const btn = e.target.closest("[data-reset-lock]");
+  if(!btn) return;
+  const author = btn.dataset.resetLock;
+  if(!confirm(`Xoá mật khẩu riêng của ${authorLockNames[author]}? Lần sau vào nhật ký sẽ phải đặt mật khẩu mới.`)) return;
+  try{
+    await api(`/author-locks/${author}`, { method: "DELETE" });
+    flash("Đã xoá mật khẩu riêng rồi nhé.", "ok");
+    await loadAuthorLocks();
+  }catch(err){
+    if(err.message !== "unauthorized") flash(err.message, "err");
+  }
+});
 
 document.getElementById("settingsForm").addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -584,7 +689,7 @@ document.getElementById("settingsForm").addEventListener("submit", async (e) => 
         partnerName: document.getElementById("partnerName").value || undefined,
       }),
     });
-    flash("Đã lưu thông tin trang.", "ok");
+    flash("Đã lưu thông tin trang rồi nhé.", "ok");
   }catch(err){
     if(err.message !== "unauthorized") flash(err.message, "err");
   }
@@ -684,14 +789,17 @@ function startEditBook(book){
   form.file.value = "";
   form.pdfUrl.value = "";
   form.cover.value = "";
+  setFieldMode(document.getElementById("pdfField"), "upload");
   // only worth prefilling if it's a real external link — a local
   // /api/files/... path isn't something you'd resubmit as a "cover URL"
-  form.coverUrl.value = /^https?:\/\//.test(book.coverUrl || "") ? book.coverUrl : "";
-  if(book.year || (book.tags && book.tags.length) || book.blurb){
+  const externalCover = /^https?:\/\//.test(book.coverUrl || "");
+  form.coverUrl.value = externalCover ? book.coverUrl : "";
+  setFieldMode(document.getElementById("coverField"), externalCover ? "url" : "upload");
+  if(book.author || book.note || externalCover || book.year || (book.tags && book.tags.length) || book.blurb){
     document.querySelector(".more").open = true;
   }
   document.getElementById("bookFormTitle").textContent = "Sửa sách";
-  document.getElementById("bookFormSub").textContent = `Đang sửa "${book.title}".`;
+  document.getElementById("bookFormSub").textContent = `Đang chỉnh lại "${book.title}" nè.`;
   document.getElementById("bookFileEditHint").hidden = false;
   document.getElementById("bookSubmit").textContent = "Lưu thay đổi";
   document.getElementById("bookEditCancel").hidden = false;
@@ -701,6 +809,8 @@ function cancelEditBook(){
   editingBookId = null;
   const form = document.getElementById("bookForm");
   form.reset();
+  setFieldMode(document.getElementById("pdfField"), "upload");
+  setFieldMode(document.getElementById("coverField"), "upload");
   document.getElementById("bookFormTitle").textContent = "Sách mới";
   document.getElementById("bookFormSub").textContent = "Chỉ cần chủ đề, tên sách và file PDF là đủ.";
   document.getElementById("bookFileEditHint").hidden = true;
@@ -763,7 +873,7 @@ document.getElementById("bookForm").addEventListener("submit", async (e) => {
   try{
     if(isEdit){
       await api(`/books/${editingBookId}`, { method: "PATCH", body: fd });
-      flash("Đã lưu thay đổi.", "ok");
+      flash("Đã lưu lại rồi nhé.", "ok");
       cancelEditBook(); // also resets the button label back to "add" mode
     }else{
       await api("/books", { method: "POST", body: fd });
@@ -783,7 +893,7 @@ document.getElementById("bookForm").addEventListener("submit", async (e) => {
 async function boot(){
   try{
     await Promise.all([loadSettings(), loadCategories()]);
-    await loadBooks();
+    await Promise.all([loadBooks(), loadAuthorLocks()]);
   }catch(err){
     if(err.message !== "unauthorized" && err.message !== "no-token") flash(err.message, "err");
   }

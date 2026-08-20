@@ -591,18 +591,71 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
 .status-filter-chip:hover{border-color:var(--accent);color:var(--accent-deep)}
 .status-filter-chip.active{background:var(--accent-solid);border-color:var(--accent-solid);color:#fff}
 
-/* "new since your last visit" banner above the catalog */
-.new-since-banner{
-  display:flex;align-items:center;justify-content:space-between;gap:12px;
-  background:var(--accent-wash);border:1px solid var(--line-2);border-radius:8px;
-  padding:11px 14px;margin:-8px 0 4px;
-  font-family:var(--mono);font-size:11.5px;color:var(--accent-deep);
+/* "sách mới kể từ lần trước bạn ghé" — a popup naming what's new,
+   rather than a banner that just says how many */
+.new-books-modal-backdrop{
+  position:fixed;inset:0;z-index:250;display:flex;align-items:center;justify-content:center;
+  padding:20px;background:rgba(20,14,10,.45);
+  opacity:0;visibility:hidden;pointer-events:none;
+  transition:opacity .22s ease,visibility 0s linear .22s;
 }
-.new-since-banner[hidden]{display:none}
-.new-since-banner button{
-  flex:none;font-size:16px;line-height:1;color:var(--faint);padding:0 2px;
+.new-books-modal-backdrop.open{
+  opacity:1;visibility:visible;pointer-events:auto;
+  transition:opacity .22s ease,visibility 0s linear 0s;
 }
-.new-since-banner button:hover{color:var(--stamp)}
+.new-books-modal{
+  width:100%;max-width:420px;max-height:min(560px,80vh);
+  background:var(--card);border:1px solid var(--line);border-radius:16px;
+  box-shadow:var(--shadow);
+  display:flex;flex-direction:column;overflow:hidden;
+  transform:translateY(14px) scale(.97);opacity:0;
+  transition:transform .25s cubic-bezier(.2,.7,.2,1),opacity .22s ease;
+}
+.new-books-modal-backdrop.open .new-books-modal{transform:translateY(0) scale(1);opacity:1}
+@media(prefers-reduced-motion:reduce){.new-books-modal-backdrop,.new-books-modal{transition:none}}
+.new-books-modal-head{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;flex:none;
+  padding:18px 20px 4px 20px;
+}
+.new-books-modal-heading{display:flex;align-items:center;gap:12px;min-width:0}
+.new-books-icon{
+  width:38px;height:38px;flex:none;border-radius:50%;
+  display:grid;place-items:center;background:var(--accent-wash);color:var(--accent-deep);
+}
+.new-books-icon svg{width:18px;height:18px}
+.new-books-modal-head h3{
+  font-family:var(--serif);font-weight:500;font-size:1.25rem;color:var(--ink);
+  font-variation-settings:"opsz" 30;letter-spacing:-.01em;
+}
+.new-books-modal-head button{
+  width:28px;height:28px;padding:0;border-radius:50%;display:grid;place-items:center;flex:none;
+  background:var(--paper);border:1px solid var(--line-2);color:var(--faint);font-size:.85rem;
+}
+.new-books-modal-head button:hover{color:var(--stamp)}
+.new-books-modal-sub{
+  padding:0 20px;margin-top:4px;font-family:var(--serif);font-style:italic;
+  color:var(--soft);font-size:.9rem;
+}
+.new-books-list{flex:1;overflow-y:auto;padding:16px 14px 20px;display:flex;flex-direction:column;gap:6px}
+.new-book-item{
+  display:flex;align-items:center;gap:12px;padding:9px 10px;border-radius:10px;
+  text-decoration:none;color:inherit;border:1px solid transparent;
+  transition:background .15s,border-color .15s;
+}
+.new-book-item:hover{background:var(--paper);border-color:var(--line)}
+.new-book-cover{
+  width:38px;height:52px;flex:none;border-radius:3px;overflow:hidden;
+  background:var(--placeholder-bg);display:grid;place-items:center;
+  box-shadow:0 3px 8px -3px rgba(80,62,42,.4);
+}
+.new-book-cover img{width:100%;height:100%;object-fit:cover;display:block}
+.new-book-cover span{font-family:var(--serif);font-weight:600;color:var(--faint);font-size:.9rem}
+.new-book-meta{min-width:0;flex:1}
+.new-book-title{
+  font-family:var(--serif);font-weight:600;font-size:.92rem;color:var(--ink);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.new-book-sub{font-size:.76rem;color:var(--faint);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 /* clickable tags inside a card's subject line */
 .card-subjects .tag-chip{
@@ -776,6 +829,91 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
   .fab-diary{right:16px;bottom:calc(78px + env(safe-area-inset-bottom));height:50px;padding:0 16px 0 14px}
 }
 
+/* ── library chatbot — a third stacked FAB opening an inline panel
+   rather than navigating away, since it's a live back-and-forth ── */
+.fab-chat{
+  position:fixed;right:22px;bottom:calc(146px + env(safe-area-inset-bottom));z-index:50;
+  display:flex;align-items:center;gap:8px;
+  height:52px;padding:0 18px 0 16px;border-radius:99px;
+  background:#5b8a9e;color:#fff;border:none;cursor:pointer;
+  box-shadow:0 14px 30px -10px rgba(91,138,158,.55);
+  transition:transform .2s cubic-bezier(.2,.7,.2,1),box-shadow .2s,background .2s;
+}
+.fab-chat:hover,.fab-chat.is-open{background:#4a7488}
+.fab-chat:hover{transform:translateY(-2px);box-shadow:0 18px 34px -10px rgba(91,138,158,.65)}
+.fab-chat:active{transform:translateY(0) scale(.97)}
+.fab-chat svg{width:20px;height:20px;flex:none}
+@media(max-width:520px){
+  .fab-chat{right:16px;bottom:calc(140px + env(safe-area-inset-bottom));height:50px;padding:0 16px 0 14px}
+}
+
+.chat-panel{
+  position:fixed;right:22px;bottom:calc(206px + env(safe-area-inset-bottom));z-index:55;
+  width:340px;max-width:calc(100vw - 32px);height:min(480px,calc(100dvh - 220px));
+  background:var(--card);border:1px solid var(--line);border-radius:18px;
+  box-shadow:0 26px 60px -20px rgba(20,14,10,.35);
+  display:flex;flex-direction:column;overflow:hidden;
+  opacity:0;visibility:hidden;pointer-events:none;transform:translateY(12px) scale(.97);
+  transition:opacity .2s ease,transform .22s cubic-bezier(.2,.7,.2,1),visibility 0s linear .22s;
+}
+.chat-panel.open{
+  opacity:1;visibility:visible;pointer-events:auto;transform:translateY(0) scale(1);
+  transition:opacity .2s ease,transform .22s cubic-bezier(.2,.7,.2,1),visibility 0s linear 0s;
+}
+@media(prefers-reduced-motion:reduce){.chat-panel{transition:none}}
+@media(max-width:520px){
+  .chat-panel{right:16px;left:16px;width:auto;bottom:calc(200px + env(safe-area-inset-bottom));height:min(420px,calc(100dvh - 260px))}
+}
+.chat-panel-head{
+  display:flex;align-items:center;justify-content:space-between;flex:none;
+  padding:14px 16px;border-bottom:1px solid var(--line);
+  font-family:var(--serif);font-weight:600;font-size:1rem;color:var(--ink);
+}
+.chat-panel-head button{
+  width:26px;height:26px;padding:0;border-radius:50%;display:grid;place-items:center;
+  background:var(--paper);border:1px solid var(--line-2);color:var(--faint);font-size:.8rem;
+}
+.chat-panel-head button:hover{color:var(--stamp)}
+.chat-messages{flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.chat-empty{font-size:.84rem;color:var(--faint);font-style:italic;font-family:var(--serif);text-align:center;padding:20px 6px}
+.chat-msg{max-width:85%;padding:9px 13px;border-radius:14px;font-size:.86rem;line-height:1.5;white-space:pre-wrap}
+.chat-msg.user{align-self:flex-end;background:var(--accent-solid);color:#fff;border-bottom-right-radius:4px}
+.chat-msg.bot{align-self:flex-start;background:var(--paper);color:var(--ink);border:1px solid var(--line);border-bottom-left-radius:4px}
+.chat-msg.pending{color:var(--faint);font-style:italic}
+.chat-input-row{display:flex;gap:8px;padding:12px;border-top:1px solid var(--line);flex:none}
+.chat-input-row input{
+  flex:1;padding:9px 13px;border:1.5px solid var(--line-2);border-radius:99px;
+  background:var(--paper);color:var(--ink);font-size:.86rem;outline:none;
+  transition:border-color .2s;
+}
+.chat-input-row input:focus{border-color:var(--accent)}
+.chat-input-row button{
+  width:36px;height:36px;flex:none;border-radius:50%;padding:0;display:grid;place-items:center;
+  background:var(--accent-solid);color:#fff;border:none;
+}
+.chat-input-row button:hover{background:var(--stamp-solid)}
+.chat-input-row button:disabled{opacity:.5;cursor:default}
+
+/* fixed toast, top-center — used when a favorite/status click fails to
+   save, so it doesn't just silently snap back with no explanation */
+.status-msg{
+  position:fixed;top:18px;left:50%;z-index:300;
+  transform:translate(-50%,-16px);
+  min-width:240px;max-width:calc(100vw - 32px);
+  background:var(--card);border:1px solid var(--line);
+  font-size:.88rem;padding:13px 22px;border-radius:14px;font-weight:600;text-align:center;
+  box-shadow:0 20px 40px -18px rgba(20,14,10,.4);
+  opacity:0;pointer-events:none;
+  transition:opacity .2s ease,transform .25s cubic-bezier(.2,.7,.2,1);
+}
+.status-msg.show{opacity:1;transform:translate(-50%,0)}
+.status-msg.ok{color:var(--good,#6f9166);border-color:var(--accent-wash)}
+.status-msg.err{color:var(--stamp);border-color:var(--stamp-wash)}
+@media(prefers-reduced-motion:reduce){.status-msg{transition:none}}
+/* clears the sticky mobile top bar instead of sitting under it */
+@media(max-width:900px){.status-msg{top:calc(var(--topbar-h) + 10px)}}
+@media(max-width:480px){.status-msg{padding:11px 16px;font-size:.84rem}}
+
 ::selection{background:var(--accent-wash-2);color:var(--ink)}
 ::-webkit-scrollbar{width:11px}
 ::-webkit-scrollbar-track{background:var(--bg)}
@@ -785,7 +923,7 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
 /* ── print: a clean card-catalog listing instead of the web chrome ── */
 @media print{
   .sidebar,.mobile-top,.backdrop,.pin-gate,.progress-rail,.grain,.amb,
-  .fab-add,.fab-diary,.new-since-banner,.blurb-toggle,.card-new-ribbon,
+  .fab-add,.fab-diary,.fab-chat,.chat-panel,.status-msg,.new-books-modal-backdrop,.blurb-toggle,.card-new-ribbon,
   .fav-toggle,.card-status,.stamp{display:none!important}
   body{background:#fff;color:#000}
   .shell{display:block}
@@ -826,6 +964,8 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
     <p class="pin-foot">Gợi ý: ngày mình gặp nhau lần đầu</p>
   </div>
 </div>
+
+<p class="status-msg" id="globalStatus" role="status" aria-live="polite"></p>
 
 <div class="progress-rail" aria-hidden="true"><div class="progress-fill" id="progressFill"></div></div>
 <div class="amb"></div>
@@ -923,10 +1063,6 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
     </header>
 
     <div class="content">
-      <div class="new-since-banner" id="newSinceBanner" hidden>
-        <span id="newSinceText"></span>
-        <button type="button" id="newSinceDismiss" aria-label="Đóng thông báo">×</button>
-      </div>
       <div id="catalog"></div>
       <footer class="foot">
         <div class="sig">© <span id="year"></span> · DANG-PH · THƯ VIỆN</div>
@@ -945,6 +1081,42 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
   <span class="fab-label">Thêm sách</span>
 </a>
+<button type="button" class="fab-chat" id="chatFabBtn" aria-label="Hỏi thư viện" aria-expanded="false">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+  <span class="fab-label">Hỏi thư viện</span>
+</button>
+
+<div class="chat-panel" id="chatPanel">
+  <div class="chat-panel-head">
+    <span>Hỏi thư viện</span>
+    <button type="button" id="chatCloseBtn" aria-label="Đóng">✕</button>
+  </div>
+  <div class="chat-messages" id="chatMessages">
+    <p class="chat-empty">Hỏi gì cũng được — mình sẽ tìm trong các sách đang có ở đây để trả lời.</p>
+  </div>
+  <form class="chat-input-row" id="chatForm">
+    <input type="text" id="chatInput" placeholder="Nhắn gì đó…" autocomplete="off" maxlength="1000" />
+    <button type="submit" aria-label="Gửi">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+    </button>
+  </form>
+</div>
+
+<div class="new-books-modal-backdrop" id="newBooksModalBackdrop">
+  <div class="new-books-modal">
+    <div class="new-books-modal-head">
+      <div class="new-books-modal-heading">
+        <span class="new-books-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M18.4 5.6l-2.8 2.8M8.4 15.6l-2.8 2.8"/></svg>
+        </span>
+        <h3 id="newBooksModalTitle">Có sách mới!</h3>
+      </div>
+      <button type="button" id="newBooksModalClose" aria-label="Đóng">✕</button>
+    </div>
+    <p class="new-books-modal-sub" id="newBooksModalSub"></p>
+    <div class="new-books-list" id="newBooksList"></div>
+  </div>
+</div>
 
 <script>
 // ── backend API base — change this once the API is deployed ──
@@ -1026,9 +1198,11 @@ const randomBtnEl = document.getElementById("randomBtn");
 const tagFilterStatusEl = document.getElementById("tagFilterStatus");
 const tagFilterLabelEl = document.getElementById("tagFilterLabel");
 const tagFilterClearEl = document.getElementById("tagFilterClear");
-const newSinceBannerEl = document.getElementById("newSinceBanner");
-const newSinceTextEl = document.getElementById("newSinceText");
-const newSinceDismissEl = document.getElementById("newSinceDismiss");
+const newBooksModalBackdrop = document.getElementById("newBooksModalBackdrop");
+const newBooksModalTitle = document.getElementById("newBooksModalTitle");
+const newBooksModalSub = document.getElementById("newBooksModalSub");
+const newBooksList = document.getElementById("newBooksList");
+const newBooksModalClose = document.getElementById("newBooksModalClose");
 const activityPanelEl = document.getElementById("activityPanel");
 const activityFeedEl = document.getElementById("activityFeed");
 const statusFilterRowEl = document.getElementById("statusFilterRow");
@@ -1103,14 +1277,26 @@ async function patchBookStatus(id, body){
   return res.json();
 }
 
+// small fixed toast — used so a failed save doesn't just silently snap
+// the heart/status pill back with no explanation of why
+function flash(message, kind){
+  const el = document.getElementById("globalStatus");
+  el.textContent = message;
+  el.className = `status-msg ${kind}`;
+  el.classList.add("show");
+  clearTimeout(flash._t);
+  flash._t = setTimeout(() => { el.classList.remove("show"); }, 4000);
+}
+
 function toggleFavorite(favBtn){
   const wasActive = favBtn.classList.contains("active");
   favBtn.classList.toggle("active", !wasActive);
   favBtn.setAttribute("aria-label", wasActive ? "Đánh dấu yêu thích" : "Bỏ yêu thích");
   patchBookStatus(favBtn.dataset.bookId, { isFavorite: !wasActive })
-    .catch(() => {
+    .catch((err) => {
       favBtn.classList.toggle("active", wasActive);
       favBtn.setAttribute("aria-label", wasActive ? "Bỏ yêu thích" : "Đánh dấu yêu thích");
+      if(err.message !== "unauthorized") flash("Không lưu được, thử lại nhé.", "err");
     });
 }
 
@@ -1123,9 +1309,10 @@ function toggleReadStatus(statusBtn){
   if(!wasActive) statusBtn.classList.add("active");
   const nextValue = wasActive ? null : statusBtn.dataset.statusToggle;
   patchBookStatus(statusBtn.dataset.bookId, { readStatus: nextValue })
-    .catch(() => {
+    .catch((err) => {
       group.querySelectorAll(".status-pill").forEach(p => p.classList.remove("active"));
       if(prevValue) group.querySelector(`[data-status-toggle="${prevValue}"]`)?.classList.add("active");
+      if(err.message !== "unauthorized") flash("Không lưu được, thử lại nhé.", "err");
     });
 }
 
@@ -1181,7 +1368,7 @@ function cardHTML(b, cat){
     <span class="status-pill${b.readStatus === value ? " active" : ""}" role="button" tabindex="0" data-status-toggle="${value}" data-book-id="${b.id}">${label}</span>
   `).join("");
   return `
-    <a class="card" href="${href}" target="_blank" rel="noopener" data-search="${escapeHTML(searchKey)}" aria-label="${escapeHTML(b.title)}${b.author ? ", tác giả "+escapeHTML(b.author) : ""}${isNew ? ", sách mới thêm" : ""} (mở trong tab mới)">
+    <a class="card" href="${href}" target="_blank" rel="noopener" data-search="${escapeHTML(searchKey)}" data-book-id="${b.id}" aria-label="${escapeHTML(b.title)}${b.author ? ", tác giả "+escapeHTML(b.author) : ""}${isNew ? ", sách mới thêm" : ""} (mở trong tab mới)">
       ${newRibbon}
       <div class="card-tab">
         <span class="call">${escapeHTML(cat.dewey||"")}.${escapeHTML(b.num||"")}</span>
@@ -1586,24 +1773,77 @@ catalogEl.addEventListener("keydown", (e) => {
 });
 tagFilterClearEl.addEventListener("click", () => setTagFilter(null));
 
-// ── "sách mới kể từ lần trước bạn ghé" banner — compares against a
+// ── "sách mới kể từ lần trước bạn ghé" — a popup naming what's new
+// instead of a banner that just says how many, compares against a
 // last-visit timestamp in localStorage instead of a server-side job ──
 const LAST_VISIT_KEY = "tb_last_visit";
+
+function closeNewBooksModal(){
+  newBooksModalBackdrop.classList.remove("open");
+}
+newBooksModalClose.addEventListener("click", closeNewBooksModal);
+newBooksModalBackdrop.addEventListener("click", (e) => {
+  if(e.target === newBooksModalBackdrop) closeNewBooksModal();
+});
+document.addEventListener("keydown", (e) => {
+  if(e.key === "Escape" && newBooksModalBackdrop.classList.contains("open")) closeNewBooksModal();
+});
+
+function newBookItemHTML(b, cat){
+  const coverSrc = b.cover ? encodeURI(resolvePath(cat, b.cover)) : "";
+  const letter = escapeHTML((b.title || "?").trim().charAt(0).toUpperCase());
+  const coverHTML = coverSrc
+    ? `<img src="${coverSrc}" alt="" loading="lazy" onerror="this.outerHTML='<span>${letter}</span>'" />`
+    : `<span>${letter}</span>`;
+  return `
+    <a class="new-book-item" href="#" data-jump-book="${b.id}">
+      <div class="new-book-cover">${coverHTML}</div>
+      <div class="new-book-meta">
+        <div class="new-book-title">${escapeHTML(b.title)}</div>
+        <div class="new-book-sub">${escapeHTML(b.author || cat.title || "")}</div>
+      </div>
+    </a>
+  `;
+}
+
 function checkNewSinceLastVisit(data){
   const lastVisit = Number(localStorage.getItem(LAST_VISIT_KEY) || 0);
   localStorage.setItem(LAST_VISIT_KEY, String(Date.now()));
   if(!lastVisit) return; // first visit ever — nothing to compare against
 
-  const allBooks = (data.categories || []).flatMap(c => c.books || []);
-  const newCount = allBooks.filter(b => b.createdAt && new Date(b.createdAt).getTime() > lastVisit).length;
-  if(newCount === 0) return;
+  const newEntries = [];
+  (data.categories || []).forEach(cat => {
+    (cat.books || []).forEach(b => {
+      if(b.createdAt && new Date(b.createdAt).getTime() > lastVisit) newEntries.push({ book: b, cat });
+    });
+  });
+  if(newEntries.length === 0) return;
+  newEntries.sort((a, b) => new Date(b.book.createdAt) - new Date(a.book.createdAt));
 
-  newSinceTextEl.textContent = newCount === 1
-    ? "Có 1 cuốn sách mới kể từ lần trước bạn ghé."
-    : `Có ${newCount} cuốn sách mới kể từ lần trước bạn ghé.`;
-  newSinceBannerEl.hidden = false;
+  newBooksModalTitle.textContent = newEntries.length === 1
+    ? "Có 1 cuốn sách mới!"
+    : `Có ${newEntries.length} cuốn sách mới!`;
+  newBooksModalSub.textContent = "Thêm vào kể từ lần trước bạn ghé — bấm vào cuốn nào để xem ngay.";
+  newBooksList.innerHTML = newEntries.map(({ book, cat }) => newBookItemHTML(book, cat)).join("");
+  newBooksModalBackdrop.classList.add("open");
 }
-newSinceDismissEl.addEventListener("click", () => { newSinceBannerEl.hidden = true; });
+
+newBooksList.addEventListener("click", (e) => {
+  const item = e.target.closest("[data-jump-book]");
+  if(!item) return;
+  e.preventDefault();
+  const target = document.querySelector(`a.card[data-book-id="${item.dataset.jumpBook}"]`);
+  closeNewBooksModal();
+  if(!target) return;
+  // wait for the modal's own close transition so the scroll isn't
+  // fighting layout that's still settling
+  setTimeout(() => {
+    target.scrollIntoView({ behavior: "smooth", block: "center" });
+    document.querySelectorAll(".card.picked").forEach(c => c.classList.remove("picked"));
+    target.classList.add("picked");
+    setTimeout(() => target.classList.remove("picked"), 2000);
+  }, 250);
+});
 
 // ── PIN gate ──
 const pinGateEl = document.getElementById("pinGate");
@@ -1694,6 +1934,78 @@ function loadCatalog(){
 }
 
 loadCatalog();
+
+// ── library chatbot — RAG over whatever PDFs are actually in the
+// library right now, answered by the backend at POST /ai/ask ──
+const chatFabBtn = document.getElementById("chatFabBtn");
+const chatPanel = document.getElementById("chatPanel");
+const chatCloseBtn = document.getElementById("chatCloseBtn");
+const chatMessagesEl = document.getElementById("chatMessages");
+const chatForm = document.getElementById("chatForm");
+const chatInput = document.getElementById("chatInput");
+
+function toggleChatPanel(open){
+  chatPanel.classList.toggle("open", open);
+  chatFabBtn.classList.toggle("is-open", open);
+  chatFabBtn.setAttribute("aria-expanded", String(open));
+  if(open) setTimeout(() => chatInput.focus(), 220);
+}
+chatFabBtn.addEventListener("click", () => toggleChatPanel(!chatPanel.classList.contains("open")));
+chatCloseBtn.addEventListener("click", () => toggleChatPanel(false));
+document.addEventListener("keydown", (e) => {
+  if(e.key === "Escape" && chatPanel.classList.contains("open")) toggleChatPanel(false);
+});
+
+function appendChatMessage(roleClass, text){
+  const emptyNote = chatMessagesEl.querySelector(".chat-empty");
+  if(emptyNote) emptyNote.remove();
+  const el = document.createElement("div");
+  el.className = `chat-msg ${roleClass}`;
+  el.textContent = text;
+  chatMessagesEl.appendChild(el);
+  chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+  return el;
+}
+
+chatForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const message = chatInput.value.trim();
+  if(!message) return;
+  const token = getStoredToken();
+  if(!token){ showGate(); return; }
+
+  appendChatMessage("user", message);
+  chatInput.value = "";
+  chatInput.disabled = true;
+  const pendingEl = appendChatMessage("bot pending", "Đang tìm trong sách…");
+
+  try{
+    const res = await fetch(`${API_BASE}/ai/ask`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ message }),
+    });
+    if(res.status === 401){
+      clearToken();
+      pendingEl.remove();
+      showGate("Phiên đã hết hạn, nhập lại mã PIN nhé.");
+      return;
+    }
+    if(!res.ok) throw new Error("HTTP " + res.status);
+    const data = await res.json();
+    pendingEl.textContent = data.message || "Không có phản hồi.";
+    pendingEl.classList.remove("pending");
+  }catch(err){
+    pendingEl.textContent = `Có lỗi xảy ra, thử lại nhé (${err.message}).`;
+    pendingEl.classList.remove("pending");
+  }finally{
+    chatInput.disabled = false;
+    chatInput.focus();
+  }
+});
 </script>
 </body>
 </html>

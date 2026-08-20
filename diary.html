@@ -117,10 +117,23 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
 .back-link:hover{color:var(--accent-deep)}
 .back-link:disabled{opacity:.6;cursor:default}
 
-.status-msg{font-size:.88rem;padding:12px 14px;border-radius:10px;margin-bottom:16px;font-weight:600;text-align:center}
-.status-msg.ok{background:var(--good-wash);color:var(--good)}
-.status-msg.err{background:var(--stamp-wash);color:var(--stamp)}
-.status-msg[hidden]{display:none}
+/* fixed toast, top-center — doesn't push the page around like an inline
+   banner would every time it appears or disappears */
+.status-msg{
+  position:fixed;top:18px;left:50%;z-index:300;
+  transform:translate(-50%,-16px);
+  min-width:240px;max-width:calc(100vw - 32px);
+  background:var(--card);border:1px solid var(--line);
+  font-size:.88rem;padding:13px 22px;border-radius:14px;font-weight:600;text-align:center;
+  box-shadow:0 20px 40px -18px rgba(20,14,10,.4);
+  opacity:0;pointer-events:none;
+  transition:opacity .2s ease,transform .25s cubic-bezier(.2,.7,.2,1);
+}
+.status-msg.show{opacity:1;transform:translate(-50%,0)}
+.status-msg.ok{color:var(--good);border-color:var(--good-wash)}
+.status-msg.err{color:var(--stamp);border-color:var(--stamp-wash)}
+@media(prefers-reduced-motion:reduce){.status-msg{transition:none}}
+@media(max-width:480px){.status-msg{top:12px;padding:11px 16px;font-size:.84rem}}
 
 .panel{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:24px 22px;margin-bottom:24px;box-shadow:0 16px 40px -28px rgba(80,62,42,.3)}
 
@@ -214,6 +227,27 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
 }
 .who-btn[data-who="me"].active{border-color:var(--me);background:var(--me-wash);color:var(--me)}
 .who-btn[data-who="partner"].active{border-color:var(--partner);background:var(--partner-wash);color:var(--partner)}
+
+/* ── per-person diary privacy lock — soft, session-scoped ── */
+.relock-btn{
+  display:block;margin:0 0 16px;width:100%;background:none;border:1px dashed var(--line-2);
+  color:var(--faint);font-size:.78rem;font-weight:600;padding:8px;border-radius:10px;
+}
+.relock-btn:hover{color:var(--stamp);border-color:var(--stamp-wash)}
+.relock-btn[hidden]{display:none}
+.journal-locked{
+  text-align:center;padding:32px 16px;color:var(--faint);
+  font-size:.86rem;font-family:var(--serif);font-style:italic;line-height:1.6;
+  border:1.5px dashed var(--line-2);border-radius:12px;
+}
+.journal-locked button{margin-top:14px;width:auto;padding:9px 20px;font-size:.82rem}
+.locked-banner{
+  font-size:.82rem;color:var(--faint);text-align:center;padding:10px 14px;
+  background:var(--paper);border:1px dashed var(--line-2);border-radius:10px;margin-bottom:12px;
+  line-height:1.5;
+}
+.locked-banner[hidden]{display:none}
+.locked-banner button{background:none;border:none;color:var(--accent-deep);font-weight:700;text-decoration:underline;padding:0;font-size:inherit}
 
 /* ── mood picker ── */
 .mood-row{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:16px}
@@ -342,15 +376,26 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
 }
 .memory-media iframe{width:100%;height:100%;border:0;display:block}
 
-/* ── "tải về" format picker ── */
+/* ── "tải về" format picker — fades and eases in rather than snapping ── */
 .export-modal-backdrop{
   position:fixed;inset:0;z-index:250;display:flex;align-items:center;justify-content:center;
   padding:20px;background:rgba(20,14,10,.45);
+  opacity:0;visibility:hidden;pointer-events:none;
+  transition:opacity .22s ease,visibility 0s linear .22s;
 }
-.export-modal-backdrop[hidden]{display:none}
+.export-modal-backdrop.open{
+  opacity:1;visibility:visible;pointer-events:auto;
+  transition:opacity .22s ease,visibility 0s linear 0s;
+}
 .export-modal{
   width:100%;max-width:320px;background:var(--card);border:1px solid var(--line);border-radius:16px;
   box-shadow:0 26px 60px -30px rgba(80,62,42,.5);padding:26px 24px;text-align:center;
+  transform:translateY(10px) scale(.97);opacity:0;
+  transition:transform .25s cubic-bezier(.2,.7,.2,1),opacity .22s ease;
+}
+.export-modal-backdrop.open .export-modal{transform:translateY(0) scale(1);opacity:1}
+@media(prefers-reduced-motion:reduce){
+  .export-modal-backdrop,.export-modal-backdrop.open,.export-modal{transition:none}
 }
 .export-modal h3{font-family:var(--serif);font-size:1.15rem;font-weight:600;margin-bottom:6px}
 .export-modal p{font-size:.84rem;color:var(--faint);margin-bottom:18px;line-height:1.5}
@@ -409,7 +454,7 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
     </div>
   </div>
 
-  <p class="status-msg" id="globalStatus" hidden></p>
+  <p class="status-msg" id="globalStatus" role="status" aria-live="polite"></p>
 
   <div class="tab-bar" id="tabBar">
     <button type="button" class="tab-btn active" data-tab="diary">Nhật Ký</button>
@@ -427,6 +472,7 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
         <button type="button" class="who-btn" data-who="me" id="whoMeBtn">Đăng</button>
         <button type="button" class="who-btn" data-who="partner" id="whoPartnerBtn">Vy</button>
       </div>
+      <button type="button" class="relock-btn" id="relockAllBtn" hidden>🔒 Khoá lại nhật ký riêng</button>
 
       <form id="entryForm">
         <div class="mood-row" id="moodRow">
@@ -470,15 +516,16 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
     <div class="journals">
       <div class="journal-col" data-who="me">
         <h2 id="meColTitle">Đăng</h2>
-        <div class="entry-list" id="meEntryList"></div>
+        <div class="entry-list" id="meEntryList"><p class="empty-note">Đang tải…</p></div>
       </div>
       <div class="journal-col" data-who="partner">
         <h2 id="partnerColTitle">Vy</h2>
-        <div class="entry-list" id="partnerEntryList"></div>
+        <div class="entry-list" id="partnerEntryList"><p class="empty-note">Đang tải…</p></div>
       </div>
     </div>
     <div class="journals-mobile">
-      <div class="entry-list" id="combinedEntryList"></div>
+      <p class="locked-banner" id="mobileLockedBanner" hidden></p>
+      <div class="entry-list" id="combinedEntryList"><p class="empty-note">Đang tải…</p></div>
     </div>
 
     <div style="text-align:center;margin-top:6px">
@@ -527,17 +574,34 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
       <input type="search" id="memorySearchInput" placeholder="Tìm trong kỷ niệm…" aria-label="Tìm trong kỷ niệm" autocomplete="off" />
     </label>
-    <div class="memory-timeline" id="memoryTimeline"></div>
+    <div class="memory-timeline" id="memoryTimeline"><p class="empty-note">Đang tải…</p></div>
   </div>
 </div>
 
-<div class="export-modal-backdrop" id="exportModalBackdrop" hidden>
+<div class="export-modal-backdrop" id="exportModalBackdrop">
   <div class="export-modal">
-    <h3>Tải về dưới dạng nào?</h3>
-    <p>Gồm toàn bộ nhật ký và kỷ niệm chung, không thiếu dòng nào.</p>
+    <h3>Mang những dòng này theo cùng nhé?</h3>
+    <p>Gói ghém đầy đủ — từng dòng nhật ký, từng kỷ niệm, không thiếu gì cả.</p>
     <button type="button" class="btn-primary" id="exportAsPdfBtn">In ra PDF</button>
     <button type="button" class="btn-secondary" id="exportAsTxtBtn">Tải file văn bản (.txt)</button>
-    <button type="button" class="export-modal-cancel" id="exportModalCancel">Huỷ</button>
+    <button type="button" class="export-modal-cancel" id="exportModalCancel">Thôi, để lúc khác</button>
+  </div>
+</div>
+
+<div class="export-modal-backdrop" id="authorLockModalBackdrop">
+  <div class="export-modal">
+    <h3 id="authorLockModalTitle">Nhật ký riêng</h3>
+    <p id="authorLockModalDesc"></p>
+    <div class="field" style="text-align:left">
+      <input type="password" id="authorLockPasswordInput" placeholder="Mật khẩu riêng" autocomplete="off" />
+    </div>
+    <div class="field" id="authorLockConfirmField" hidden style="text-align:left">
+      <input type="password" id="authorLockConfirmInput" placeholder="Nhập lại mật khẩu" autocomplete="off" />
+    </div>
+    <p class="pin-error" id="authorLockError"></p>
+    <button type="button" class="btn-primary" id="authorLockSubmitBtn">Tiếp tục</button>
+    <button type="button" class="export-modal-cancel" id="authorLockSkipBtn" hidden>Bỏ qua, không cần mật khẩu</button>
+    <button type="button" class="export-modal-cancel" id="authorLockCancelBtn">Thôi</button>
   </div>
 </div>
 
@@ -671,9 +735,9 @@ function flash(message, kind){
   const el = document.getElementById("globalStatus");
   el.textContent = message;
   el.className = `status-msg ${kind}`;
-  el.hidden = false;
+  el.classList.add("show");
   clearTimeout(flash._t);
-  flash._t = setTimeout(() => { el.hidden = true; }, 4000);
+  flash._t = setTimeout(() => { el.classList.remove("show"); }, 4000);
 }
 
 // ── who's writing right now ──
@@ -693,8 +757,152 @@ function setWho(who, opts){
     loadMemories();
   }
 }
-whoMeBtn.addEventListener("click", () => setWho("me"));
-whoPartnerBtn.addEventListener("click", () => setWho("partner"));
+// ── per-person diary privacy lock — a password each person can set up
+// the first time they switch into their own name here, independent of
+// the shared site PIN. Soft privacy only: it deters a casual glance on a
+// shared device, not a determined partner — anyone already past the site
+// PIN can reset a forgotten one from admin.html's "cài đặt nâng cao" ──
+const UNLOCKED_KEY = "tb_unlocked_authors";
+const SKIPPED_SETUP_KEY = "tb_lock_setup_skipped";
+let authorLockConfigured = { me: false, partner: false };
+let unlockedAuthors = new Set(JSON.parse(sessionStorage.getItem(UNLOCKED_KEY) || "[]"));
+let skippedSetup = new Set(JSON.parse(localStorage.getItem(SKIPPED_SETUP_KEY) || "[]"));
+
+function isAuthorLocked(author){
+  return authorLockConfigured[author] && !unlockedAuthors.has(author);
+}
+function saveUnlockedAuthors(){
+  sessionStorage.setItem(UNLOCKED_KEY, JSON.stringify([...unlockedAuthors]));
+}
+function updateRelockButton(){
+  document.getElementById("relockAllBtn").hidden = unlockedAuthors.size === 0;
+}
+
+async function loadAuthorLockStatus(){
+  try{
+    const [meStatus, partnerStatus] = await Promise.all([
+      api("/author-locks/me/status"),
+      api("/author-locks/partner/status"),
+    ]);
+    authorLockConfigured = { me: meStatus.configured, partner: partnerStatus.configured };
+  }catch{
+    // a hiccup here shouldn't block the rest of the page — worst case,
+    // the lock just doesn't show up until the next successful load
+  }
+}
+
+const authorLockModalBackdrop = document.getElementById("authorLockModalBackdrop");
+const authorLockModalTitle = document.getElementById("authorLockModalTitle");
+const authorLockModalDesc = document.getElementById("authorLockModalDesc");
+const authorLockPasswordInput = document.getElementById("authorLockPasswordInput");
+const authorLockConfirmField = document.getElementById("authorLockConfirmField");
+const authorLockConfirmInput = document.getElementById("authorLockConfirmInput");
+const authorLockError = document.getElementById("authorLockError");
+const authorLockSubmitBtn = document.getElementById("authorLockSubmitBtn");
+const authorLockSkipBtn = document.getElementById("authorLockSkipBtn");
+const authorLockCancelBtn = document.getElementById("authorLockCancelBtn");
+let authorLockPromptContext = null;
+
+function openAuthorLockPrompt(author, mode, onSuccess){
+  authorLockPromptContext = { author, mode, onSuccess };
+  const name = authorNames[author] || author;
+  authorLockError.textContent = "";
+  authorLockPasswordInput.value = "";
+  authorLockConfirmInput.value = "";
+  if(mode === "setup"){
+    authorLockModalTitle.textContent = `Đặt mật khẩu riêng cho ${name}`;
+    authorLockModalDesc.textContent = "Lần đầu vào đây — đặt một mật khẩu để chỉ mình bạn xem được nhật ký này nhé.";
+    authorLockConfirmField.hidden = false;
+    authorLockSubmitBtn.textContent = "Đặt mật khẩu";
+    authorLockSkipBtn.hidden = false;
+  }else{
+    authorLockModalTitle.textContent = `Nhật ký riêng của ${name}`;
+    authorLockModalDesc.textContent = "Nhập mật khẩu để mở khoá nhé.";
+    authorLockConfirmField.hidden = true;
+    authorLockSubmitBtn.textContent = "Mở khoá";
+    authorLockSkipBtn.hidden = true;
+  }
+  authorLockModalBackdrop.classList.add("open");
+  setTimeout(() => authorLockPasswordInput.focus(), 50);
+}
+function closeAuthorLockPrompt(){
+  authorLockModalBackdrop.classList.remove("open");
+  authorLockPromptContext = null;
+}
+authorLockCancelBtn.addEventListener("click", closeAuthorLockPrompt);
+authorLockModalBackdrop.addEventListener("click", (e) => {
+  if(e.target === authorLockModalBackdrop) closeAuthorLockPrompt();
+});
+authorLockSkipBtn.addEventListener("click", () => {
+  if(!authorLockPromptContext) return;
+  const { author, onSuccess } = authorLockPromptContext;
+  skippedSetup.add(author);
+  localStorage.setItem(SKIPPED_SETUP_KEY, JSON.stringify([...skippedSetup]));
+  closeAuthorLockPrompt();
+  if(onSuccess) onSuccess();
+});
+async function submitAuthorLockPrompt(){
+  if(!authorLockPromptContext) return;
+  const { author, mode, onSuccess } = authorLockPromptContext;
+  const password = authorLockPasswordInput.value;
+  if(!password || password.length < 4){
+    authorLockError.textContent = "Mật khẩu cần ít nhất 4 ký tự.";
+    return;
+  }
+  if(mode === "setup" && password !== authorLockConfirmInput.value){
+    authorLockError.textContent = "Hai mật khẩu chưa khớp nhau.";
+    return;
+  }
+  authorLockSubmitBtn.disabled = true;
+  try{
+    await api(`/author-locks/${author}/${mode}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password }),
+    });
+    if(mode === "setup") authorLockConfigured[author] = true;
+    unlockedAuthors.add(author);
+    saveUnlockedAuthors();
+    updateRelockButton();
+    closeAuthorLockPrompt();
+    renderEntries();
+    if(onSuccess) onSuccess();
+  }catch(err){
+    if(err.message === "unauthorized") return;
+    authorLockError.textContent = mode === "verify" ? "Sai mật khẩu rồi." : (err.message || "Có lỗi xảy ra, thử lại nhé.");
+  }finally{
+    authorLockSubmitBtn.disabled = false;
+  }
+}
+authorLockSubmitBtn.addEventListener("click", submitAuthorLockPrompt);
+[authorLockPasswordInput, authorLockConfirmInput].forEach(input => {
+  input.addEventListener("keydown", (e) => {
+    if(e.key === "Enter"){ e.preventDefault(); submitAuthorLockPrompt(); }
+  });
+});
+
+document.getElementById("relockAllBtn").addEventListener("click", () => {
+  unlockedAuthors.clear();
+  saveUnlockedAuthors();
+  updateRelockButton();
+  renderEntries();
+});
+document.getElementById("mobileLockedBanner").addEventListener("click", (e) => {
+  const unlockBtn = e.target.closest("[data-unlock-column]");
+  if(unlockBtn) openAuthorLockPrompt(unlockBtn.dataset.unlockColumn, "verify", () => renderEntries());
+});
+
+function attemptSwitchWho(author){
+  if(!authorLockConfigured[author]){
+    if(skippedSetup.has(author)){ setWho(author); return; }
+    openAuthorLockPrompt(author, "setup", () => setWho(author));
+    return;
+  }
+  if(unlockedAuthors.has(author)){ setWho(author); return; }
+  openAuthorLockPrompt(author, "verify", () => setWho(author));
+}
+whoMeBtn.addEventListener("click", () => attemptSwitchWho("me"));
+whoPartnerBtn.addEventListener("click", () => attemptSwitchWho("partner"));
 
 // ── collapsible "write new" panels — closed on load so each tab opens
 // straight onto the entries/memories instead of a tall form ──
@@ -776,7 +984,7 @@ function restoreEntryDraft(){
       moodRowEl.querySelectorAll(".mood-pill").forEach(p => p.classList.toggle("active", p.dataset.mood === currentMood));
     }
     if(draft.title || draft.content){
-      flash("Đã khôi phục bản nháp nhật ký chưa gửi.", "ok");
+      flash("Nãy viết dở, mình giữ lại cho bạn rồi nè.", "ok");
       openWritePanelIfClosed("entryWriteToggle", "entryWritePanel");
     }
   }catch{
@@ -812,7 +1020,7 @@ function restoreMemoryDraft(){
       if(draft[id]){ document.getElementById(id).value = draft[id]; restoredAny = true; }
     });
     if(restoredAny){
-      flash("Đã khôi phục bản nháp kỷ niệm chưa gửi.", "ok");
+      flash("Kỷ niệm viết dở lúc nãy vẫn còn nguyên đây nè.", "ok");
       openWritePanelIfClosed("memoryWriteToggle", "memoryWritePanel");
     }
   }catch{
@@ -911,23 +1119,50 @@ const loadMoreBtn = document.getElementById("loadMoreBtn");
 const dateFilterToggle = document.getElementById("dateFilterToggle");
 const dateFilterFields = document.getElementById("dateFilterFields");
 
+function lockedColumnHTML(author){
+  const name = escapeHTML(authorNames[author] || author);
+  return `
+    <div class="journal-locked">
+      🔒 Nhật ký riêng của ${name}<br />nhập mật khẩu để xem
+      <div><button type="button" class="btn-secondary" data-unlock-column="${author}">Mở khoá</button></div>
+    </div>
+  `;
+}
+
 function renderEntries(){
   const meList = document.getElementById("meEntryList");
   const partnerList = document.getElementById("partnerEntryList");
   const combinedList = document.getElementById("combinedEntryList");
+  const mobileLockedBanner = document.getElementById("mobileLockedBanner");
+  const meLocked = isAuthorLocked("me");
+  const partnerLocked = isAuthorLocked("partner");
   const meEntries = allEntries.filter(e => e.author === "me");
   const partnerEntries = allEntries.filter(e => e.author === "partner");
   const isFiltered = Boolean(entrySearchEl.value.trim() || filterStartDateEl.value || filterEndDateEl.value);
   const emptyNote = `<p class="empty-note">${isFiltered ? "Không tìm thấy gì khớp cả." : "Chưa có gì ở đây — viết vài dòng đầu tiên đi."}</p>`;
-  meList.innerHTML = meEntries.length ? meEntries.map(e => entryHTML(e)).join("") : emptyNote;
-  partnerList.innerHTML = partnerEntries.length ? partnerEntries.map(e => entryHTML(e)).join("") : emptyNote;
+  meList.innerHTML = meLocked ? lockedColumnHTML("me") : (meEntries.length ? meEntries.map(e => entryHTML(e)).join("") : emptyNote);
+  partnerList.innerHTML = partnerLocked ? lockedColumnHTML("partner") : (partnerEntries.length ? partnerEntries.map(e => entryHTML(e)).join("") : emptyNote);
   // mobile-only: same entries as one chronological feed instead of two
   // columns, so reading doesn't mean scrolling past all of one person's
   // entries first — each card gets a name tag since there's no column
-  // header to tell them apart anymore
-  combinedList.innerHTML = allEntries.length
-    ? allEntries.map(e => entryHTML(e, { showAuthor: true })).join("")
+  // header to tell them apart anymore. locked authors' entries are left
+  // out of the feed entirely rather than shown as a placeholder card —
+  // a banner up top covers that instead
+  const visibleEntries = allEntries.filter(e => !isAuthorLocked(e.author));
+  combinedList.innerHTML = visibleEntries.length
+    ? visibleEntries.map(e => entryHTML(e, { showAuthor: true })).join("")
     : emptyNote;
+  const lockedAuthorsList = ["me", "partner"].filter(isAuthorLocked);
+  if(lockedAuthorsList.length){
+    const names = lockedAuthorsList.map(a => escapeHTML(authorNames[a] || a)).join(", ");
+    const unlockLinks = lockedAuthorsList
+      .map(a => `<button type="button" data-unlock-column="${a}">Mở khoá ${escapeHTML(authorNames[a] || a)}</button>`)
+      .join(" · ");
+    mobileLockedBanner.innerHTML = `🔒 Nhật ký riêng của ${names} đang khoá — ${unlockLinks}`;
+    mobileLockedBanner.hidden = false;
+  }else{
+    mobileLockedBanner.hidden = true;
+  }
   loadMoreBtn.style.display = allEntries.length < diaryTotal ? "" : "none";
 }
 
@@ -1017,6 +1252,9 @@ function toggleEntryMore(toggleEl){
 }
 document.querySelectorAll(".entry-list").forEach(list => {
   list.addEventListener("click", async (e) => {
+    const unlockBtn = e.target.closest("[data-unlock-column]");
+    if(unlockBtn){ openAuthorLockPrompt(unlockBtn.dataset.unlockColumn, "verify", () => renderEntries()); return; }
+
     const moreBtn = e.target.closest("[data-more-entry]");
     if(moreBtn){ toggleEntryMore(moreBtn); return; }
 
@@ -1096,7 +1334,7 @@ document.querySelectorAll(".entry-list").forEach(list => {
     if(saveBtn){
       const form = saveBtn.closest(".entry-edit-form");
       const content = form.querySelector(".edit-content").value.trim();
-      if(!content){ flash("Nội dung không được để trống.", "err"); return; }
+      if(!content){ flash("Viết gì đó rồi hẵng gửi nhé.", "err"); return; }
       saveBtn.disabled = true;
       saveBtn.textContent = "Đang lưu…";
       try{
@@ -1134,6 +1372,14 @@ document.getElementById("entryForm").addEventListener("submit", async (e) => {
   const content = form.content.value.trim();
   if(!content) return;
 
+  // defense in depth: currentWho can only be a locked author if both are
+  // locked at boot time (see boot()) — don't let a write slip through
+  // as someone whose password hasn't actually been entered this session
+  if(isAuthorLocked(currentWho)){
+    openAuthorLockPrompt(currentWho, "verify", () => setWho(currentWho));
+    return;
+  }
+
   submitBtn.disabled = true;
   submitBtn.textContent = "Đang lưu…";
   try{
@@ -1151,7 +1397,7 @@ document.getElementById("entryForm").addEventListener("submit", async (e) => {
     currentMood = null;
     moodRowEl.querySelectorAll(".mood-pill").forEach(p => p.classList.remove("active"));
     localStorage.removeItem(ENTRY_DRAFT_KEY);
-    flash("Đã viết vào nhật ký rồi.", "ok");
+    flash("Đã cất vào nhật ký rồi nhé.", "ok");
     await loadEntries();
   }catch(err){
     if(err.message !== "unauthorized") flash(err.message, "err");
@@ -1358,7 +1604,7 @@ document.getElementById("memoryTimeline").addEventListener("click", async (e) =>
   if(saveEditBtn){
     const form = saveEditBtn.closest(".memory-edit-form");
     const title = form.querySelector(".edit-memory-title").value.trim();
-    if(!title){ flash("Tên khoảnh khắc không được để trống.", "err"); return; }
+    if(!title){ flash("Đặt tên cho khoảnh khắc này đã nhé.", "err"); return; }
     saveEditBtn.disabled = true;
     saveEditBtn.textContent = "Đang lưu…";
     try{
@@ -1373,7 +1619,7 @@ document.getElementById("memoryTimeline").addEventListener("click", async (e) =>
           youtubeUrl: form.querySelector(".edit-memory-youtube").value.trim() || null,
         }),
       });
-      flash("Đã lưu thay đổi.", "ok");
+      flash("Đã lưu lại rồi nhé.", "ok");
       await loadMemories();
     }catch(err){
       if(err.message !== "unauthorized") flash(err.message, "err");
@@ -1418,7 +1664,7 @@ document.getElementById("memoryForm").addEventListener("submit", async (e) => {
     });
     form.reset();
     localStorage.removeItem(MEMORY_DRAFT_KEY);
-    flash("Đã thêm vào kỷ niệm chung.", "ok");
+    flash("Đã cất vào kỷ niệm chung rồi nhé.", "ok");
     await loadMemories();
   }catch(err){
     if(err.message !== "unauthorized") flash(err.message, "err");
@@ -1538,15 +1784,15 @@ const exportAsTxtBtn = document.getElementById("exportAsTxtBtn");
 const exportModalCancel = document.getElementById("exportModalCancel");
 
 function closeExportModal(){
-  exportModalBackdrop.hidden = true;
+  exportModalBackdrop.classList.remove("open");
 }
-exportBtnEl.addEventListener("click", () => { exportModalBackdrop.hidden = false; });
+exportBtnEl.addEventListener("click", () => { exportModalBackdrop.classList.add("open"); });
 exportModalCancel.addEventListener("click", closeExportModal);
 exportModalBackdrop.addEventListener("click", (e) => {
   if(e.target === exportModalBackdrop) closeExportModal();
 });
 document.addEventListener("keydown", (e) => {
-  if(e.key === "Escape" && !exportModalBackdrop.hidden) closeExportModal();
+  if(e.key === "Escape" && exportModalBackdrop.classList.contains("open")) closeExportModal();
 });
 
 async function withExportData(btn, run){
@@ -1586,7 +1832,7 @@ exportAsPdfBtn.addEventListener("click", async () => {
   // after the data finishes loading would get blocked as a popup
   const printWin = window.open("", "_blank");
   if(!printWin){
-    flash("Trình duyệt đã chặn cửa sổ mới — cho phép popup cho trang này rồi thử lại.", "err");
+    flash("Trình duyệt chặn mất cửa sổ mới rồi — cho phép popup ở đây rồi thử lại giúp mình nhé.", "err");
     return;
   }
   printWin.document.write("<p style=\"font-family:sans-serif;padding:40px;color:#888\">Đang chuẩn bị nội dung…</p>");
@@ -1604,9 +1850,17 @@ async function boot(){
   restoreEntryDraft();
   restoreMemoryDraft();
   try{
-    // names load first so the mobile combined feed's author tags are
-    // correct on first paint, not the "Đăng/Vy" placeholder defaults
-    await loadNames();
+    // names + lock status load first — entries render based on both
+    // (author tags, and whether a column should be hidden behind a lock)
+    await Promise.all([loadNames(), loadAuthorLockStatus()]);
+    // the identity restored from localStorage might now be locked in a
+    // fresh session — fall back to the other one if that one's open,
+    // rather than silently sitting on an identity nobody unlocked yet
+    if(isAuthorLocked(currentWho)){
+      const other = currentWho === "me" ? "partner" : "me";
+      if(!isAuthorLocked(other)) setWho(other, { silent: true });
+    }
+    updateRelockButton();
     await Promise.all([loadEntries(), loadMemories()]);
   }catch(err){
     if(err.message !== "unauthorized" && err.message !== "no-token") flash(err.message, "err");
