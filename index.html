@@ -559,6 +559,26 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
 .status-pill:hover{border-color:var(--cat,var(--accent));color:var(--cat,var(--accent-deep))}
 .status-pill.active{background:var(--cat,var(--accent-solid));border-color:var(--cat,var(--accent-solid));color:#fff}
 
+/* rating + personal review — only shown once a book is marked "Đã đọc" */
+.rating-review{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line-2);position:relative;z-index:1}
+.rating-row{display:flex;gap:2px;margin-bottom:6px}
+.rating-star{font-size:1.05rem;line-height:1;color:var(--line-2);cursor:pointer;transition:color .15s,transform .1s}
+.rating-star:hover{transform:scale(1.15);color:#e0a94a}
+.rating-star.active{color:#e0a94a}
+.review-view{font-size:.78rem}
+.review-text{font-family:var(--serif);font-style:italic;color:var(--soft);line-height:1.5;margin-bottom:4px;white-space:pre-wrap}
+.review-edit-toggle{color:var(--accent-deep);text-decoration:underline;text-underline-offset:2px;cursor:pointer;font-weight:600;font-size:.76rem}
+.review-edit-toggle:hover{color:var(--stamp)}
+.review-edit textarea{
+  width:100%;min-height:60px;padding:8px 10px;border:1.5px solid var(--line-2);border-radius:8px;
+  background:var(--paper);color:var(--ink);font-family:var(--serif);font-size:.82rem;resize:vertical;
+}
+.review-edit-actions{display:flex;gap:6px;margin-top:6px}
+.review-edit-actions button{flex:1;padding:6px;font-size:.76rem;border-radius:8px;font-weight:600;border:none}
+.review-edit-actions button[data-cancel-review]{background:none;border:1px solid var(--line-2);color:var(--faint)}
+.review-edit-actions button[data-save-review]{background:var(--accent-solid);color:#fff}
+.review-edit-actions button:disabled{opacity:.6}
+
 .card-foot{
   display:flex;align-items:center;justify-content:space-between;gap:10px;
   margin-top:14px;padding-top:12px;border-top:1px dashed var(--line-2);
@@ -993,6 +1013,25 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
 }
 .chat-input-row button:hover{background:var(--stamp-solid)}
 .chat-input-row button:disabled{opacity:.5;cursor:default}
+.chat-input-row button.chat-recommend-btn{background:var(--paper);color:var(--soft);border:1px solid var(--line-2)}
+.chat-input-row button.chat-recommend-btn:hover{background:var(--accent-wash);color:var(--accent-deep)}
+
+/* site-wide search extras (nhật ký/kỷ niệm matches, alongside the book
+   cards already filtered in place) — position:fixed like the notif
+   panel, and for the exact same reason: the desktop search box lives
+   inside .sidebar, whose overflow-y:auto clips absolutely-positioned
+   children that extend past its own edges */
+.search-extra-results{
+  position:fixed;z-index:130;
+  width:320px;max-width:calc(100vw - 40px);max-height:360px;overflow-y:auto;
+  background:var(--card);border:1px solid var(--line);border-radius:14px;
+  box-shadow:0 20px 50px -20px rgba(20,14,10,.4);padding:6px;
+}
+.search-extra-results[hidden]{display:none}
+.search-extra-group-title{font-family:var(--mono);font-size:9.5px;color:var(--faint);text-transform:uppercase;letter-spacing:.05em;padding:8px 8px 4px}
+.search-extra-item{display:block;padding:8px;border-radius:10px;font-size:.84rem;color:var(--ink);text-decoration:none}
+.search-extra-item:hover{background:var(--paper)}
+.search-extra-item .sei-sub{font-size:.74rem;color:var(--faint);margin-top:2px}
 
 /* fixed toast, top-center — used when a favorite/status click fails to
    save, so it doesn't just silently snap back with no explanation */
@@ -1217,12 +1256,17 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
     <p class="chat-empty">Hỏi gì cũng được — mình sẽ tìm trong các sách đang có ở đây để trả lời.</p>
   </div>
   <form class="chat-input-row" id="chatForm">
+    <button type="button" class="chat-recommend-btn" id="chatRecommendBtn" aria-label="Gợi ý sách cho tôi" title="Gợi ý sách cho tôi">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M18.4 5.6l-2.8 2.8M8.4 15.6l-2.8 2.8"/></svg>
+    </button>
     <input type="text" id="chatInput" placeholder="Nhắn gì đó…" autocomplete="off" maxlength="1000" />
     <button type="submit" id="chatSendBtn" aria-label="Gửi">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
     </button>
   </form>
 </div>
+
+<div class="search-extra-results" id="searchExtraResults" hidden></div>
 
 <div class="new-books-modal-backdrop" id="newBooksModalBackdrop">
   <div class="new-books-modal">
@@ -1284,6 +1328,71 @@ function normalize(s){
   return String(s||"").toLowerCase().normalize("NFD")
     .replace(/[\u0300-\u036f]/g,"").replace(/đ/g,"d");
 }
+
+// ── site-wide search — books are already filtered in place by
+// applyFilter(); this adds nhật ký/kỷ niệm matches (GET /search, which
+// never includes private diary entries) as a small dropdown under
+// whichever search box is actually being typed in ──
+const SEARCH_EXTRA_MIN_LEN = 2;
+const searchExtraResultsEl = document.getElementById("searchExtraResults");
+
+function snippetText(text, maxLen){
+  const t = (text || "").trim();
+  return t.length > maxLen ? t.slice(0, maxLen).replace(/\s+\S*$/, "") + "…" : t;
+}
+function positionSearchExtraResults(inputEl){
+  const rect = inputEl.getBoundingClientRect();
+  const panelWidth = Math.min(320, window.innerWidth - 40);
+  const left = Math.min(Math.max(rect.left, 20), window.innerWidth - panelWidth - 20);
+  searchExtraResultsEl.style.left = `${left}px`;
+  searchExtraResultsEl.style.top = `${rect.bottom + 6}px`;
+}
+async function loadSearchExtras(q, inputEl){
+  if(q.length < SEARCH_EXTRA_MIN_LEN){ searchExtraResultsEl.hidden = true; return; }
+  const token = getStoredToken();
+  if(!token) return;
+  try{
+    const res = await fetch(`${API_BASE}/search?q=${encodeURIComponent(q)}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if(!res.ok) return;
+    const data = await res.json();
+    const diaryItems = data.diary || [];
+    const memoryItems = data.memories || [];
+    if(!diaryItems.length && !memoryItems.length){ searchExtraResultsEl.hidden = true; return; }
+
+    const diaryHTML = diaryItems.length ? `
+      <div class="search-extra-group-title">Nhật ký</div>
+      ${diaryItems.map(e => `
+        <a class="search-extra-item" href="diary.html?tab=diary&highlight=${e.id}">
+          ${escapeHTML(e.title || snippetText(e.content, 70))}
+        </a>
+      `).join("")}
+    ` : "";
+    const memoryHTML = memoryItems.length ? `
+      <div class="search-extra-group-title">Kỷ niệm chung</div>
+      ${memoryItems.map(m => `
+        <a class="search-extra-item" href="diary.html?tab=memories&highlight=${m.id}">
+          ${escapeHTML(m.title)}
+        </a>
+      `).join("")}
+    ` : "";
+    searchExtraResultsEl.innerHTML = diaryHTML + memoryHTML;
+    positionSearchExtraResults(inputEl);
+    searchExtraResultsEl.hidden = false;
+  }catch{
+    // best-effort — never disrupts the in-page book filtering
+  }
+}
+document.addEventListener("click", (e) => {
+  if(searchExtraResultsEl.hidden) return;
+  if(e.target.closest("#searchExtraResults,#searchInput,#searchInputMobile")) return;
+  searchExtraResultsEl.hidden = true;
+});
+document.addEventListener("keydown", (e) => {
+  if(e.key === "Escape") searchExtraResultsEl.hidden = true;
+});
+window.addEventListener("resize", () => { searchExtraResultsEl.hidden = true; });
 
 const SPINE_COLORS = ["var(--spine-1)","var(--spine-2)","var(--spine-3)","var(--spine-4)","var(--spine-5)","var(--spine-6)"];
 
@@ -1467,7 +1576,7 @@ function bumpBookView(card){
 catalogEl.addEventListener("click", (e) => {
   const card = e.target.closest("a.card");
   if(!card) return;
-  if(e.target.closest("[data-fav-toggle],[data-status-toggle],[data-tag-filter],[data-blurb-toggle]")) return;
+  if(e.target.closest("[data-fav-toggle],[data-status-toggle],[data-tag-filter],[data-blurb-toggle],.rating-review")) return;
   bumpBookView(card);
 });
 catalogEl.addEventListener("keydown", (e) => {
@@ -1479,6 +1588,124 @@ catalogEl.addEventListener("keydown", (e) => {
 });
 
 const READ_STATUS_LABELS = { want: "Muốn đọc", reading: "Đang đọc", done: "Đã đọc" };
+
+// ── star rating + personal review, only shown once a book is "Đã đọc" —
+// set the same way favorite/readStatus are, by whoever's browsing ──
+function ratingReviewBlockHTML(b){
+  return `
+    <div class="rating-review" data-book-id="${b.id}">
+      <div class="rating-row" data-book-id="${b.id}">${ratingStarsHTML(b)}</div>
+      ${reviewViewHTML(b)}
+    </div>
+  `;
+}
+function ratingStarsHTML(b){
+  return [1, 2, 3, 4, 5].map(n => `
+    <span class="rating-star${(b.rating || 0) >= n ? " active" : ""}" role="button" tabindex="0" data-rating-star="${n}" data-book-id="${b.id}" aria-label="${n} sao">★</span>
+  `).join("");
+}
+function reviewViewHTML(b){
+  return `
+    <div class="review-view" data-book-id="${b.id}">
+      ${b.review ? `<p class="review-text">${escapeHTML(b.review)}</p>` : ""}
+      <span class="review-edit-toggle" role="button" tabindex="0" data-review-edit="${b.id}">${b.review ? "Sửa cảm nhận" : "+ Viết cảm nhận"}</span>
+    </div>
+  `;
+}
+function reviewEditFormHTML(b){
+  return `
+    <div class="review-edit" data-book-id="${b.id}">
+      <textarea class="review-edit-input" placeholder="Cảm nhận của bạn về cuốn này…">${escapeHTML(b.review || "")}</textarea>
+      <div class="review-edit-actions">
+        <button type="button" data-cancel-review="${b.id}">Huỷ</button>
+        <button type="button" data-save-review="${b.id}">Lưu</button>
+      </div>
+    </div>
+  `;
+}
+function findBookInCatalog(id){
+  if(!lastCatalogData) return null;
+  for(const cat of lastCatalogData.categories || []){
+    const found = (cat.books || []).find(b => b.id === id);
+    if(found) return found;
+  }
+  return null;
+}
+function updateBookInCatalog(updated){
+  if(!lastCatalogData) return;
+  for(const cat of lastCatalogData.categories || []){
+    const idx = (cat.books || []).findIndex(b => b.id === updated.id);
+    if(idx !== -1){ cat.books[idx] = updated; return; }
+  }
+}
+function refreshRatingReviewBlock(book){
+  const card = document.querySelector(`a.card[data-book-id="${book.id}"]`);
+  const block = card && card.querySelector(".rating-review");
+  if(block) block.outerHTML = ratingReviewBlockHTML(book);
+}
+async function setBookRating(bookId, rating){
+  try{
+    const updated = await patchBookStatus(bookId, { rating });
+    updateBookInCatalog(updated);
+    refreshRatingReviewBlock(updated);
+  }catch(err){
+    if(err.message !== "unauthorized") flash("Không lưu được, thử lại nhé.", "err");
+  }
+}
+async function saveBookReview(bookId, review, formEl){
+  const saveBtn = formEl.querySelector("[data-save-review]");
+  saveBtn.disabled = true;
+  saveBtn.textContent = "Đang lưu…";
+  try{
+    const updated = await patchBookStatus(bookId, { review });
+    updateBookInCatalog(updated);
+    refreshRatingReviewBlock(updated);
+  }catch(err){
+    if(err.message !== "unauthorized") flash("Không lưu được, thử lại nhé.", "err");
+    saveBtn.disabled = false;
+    saveBtn.textContent = "Lưu";
+  }
+}
+catalogEl.addEventListener("click", (e) => {
+  const block = e.target.closest(".rating-review");
+  if(!block) return;
+  e.preventDefault();
+  e.stopPropagation();
+
+  const starEl = e.target.closest("[data-rating-star]");
+  if(starEl){
+    const book = findBookInCatalog(starEl.dataset.bookId);
+    const clicked = Number(starEl.dataset.ratingStar);
+    const nextRating = book && book.rating === clicked ? null : clicked;
+    setBookRating(starEl.dataset.bookId, nextRating);
+    return;
+  }
+  const editBtn = e.target.closest("[data-review-edit]");
+  if(editBtn){
+    const book = findBookInCatalog(editBtn.dataset.reviewEdit);
+    if(book) editBtn.closest(".review-view").outerHTML = reviewEditFormHTML(book);
+    return;
+  }
+  const cancelBtn = e.target.closest("[data-cancel-review]");
+  if(cancelBtn){
+    const book = findBookInCatalog(cancelBtn.dataset.cancelReview);
+    if(book) cancelBtn.closest(".review-edit").outerHTML = reviewViewHTML(book);
+    return;
+  }
+  const saveBtn = e.target.closest("[data-save-review]");
+  if(saveBtn){
+    const form = saveBtn.closest(".review-edit");
+    const text = form.querySelector(".review-edit-input").value.trim();
+    saveBookReview(saveBtn.dataset.saveReview, text || null, form);
+  }
+});
+catalogEl.addEventListener("keydown", (e) => {
+  if(e.key !== "Enter" && e.key !== " ") return;
+  const starEl = e.target.closest("[data-rating-star]");
+  if(!starEl) return;
+  e.preventDefault();
+  starEl.click();
+});
 
 function cardHTML(b, cat){
   const tagList = b.tags || [];
@@ -1537,6 +1764,7 @@ function cardHTML(b, cat){
         ${blurbLong ? `<span class="blurb-toggle" role="button" tabindex="0" data-blurb-toggle data-expanded="0">Xem thêm</span>` : ""}
       </div>
       <div class="card-status">${statusPills}</div>
+      ${b.readStatus === "done" ? ratingReviewBlockHTML(b) : ""}
       <div class="card-foot">
         <div class="card-subjects">${tagsHTML ? `<b>Chủ đề</b><br>${tagsHTML}` : ""}</div>
         <div class="stamp" aria-hidden="true">Đọc<br>ngay</div>
@@ -1793,18 +2021,21 @@ function render(data){
     }
   }
   currentApplyFilter = applyFilter;
-  let debounce;
-  function onSearchInput(){
+  let debounce, searchExtraDebounce;
+  function onSearchInput(activeInputEl){
     clearTimeout(debounce);
     debounce = setTimeout(applyFilter, 100);
+    clearTimeout(searchExtraDebounce);
+    const raw = (searchInputEl.value || searchInputMobileEl.value || "").trim();
+    searchExtraDebounce = setTimeout(() => loadSearchExtras(raw, activeInputEl), 250);
   }
   searchInputEl.addEventListener("input", () => {
     if(document.activeElement === searchInputEl) searchInputMobileEl.value = searchInputEl.value;
-    onSearchInput();
+    onSearchInput(searchInputEl);
   });
   searchInputMobileEl.addEventListener("input", () => {
     if(document.activeElement === searchInputMobileEl) searchInputEl.value = searchInputMobileEl.value;
-    onSearchInput();
+    onSearchInput(searchInputMobileEl);
   });
 
   // ── meta ──
@@ -2406,6 +2637,50 @@ chatForm.addEventListener("submit", async (e) => {
     chatInput.disabled = false;
     chatSendBtn.disabled = false;
     chatInput.focus();
+  }
+});
+
+// ── "✨ gợi ý sách cho tôi" — same session/history plumbing as a typed
+// question, just with a synthetic prompt built server-side from
+// favorited/finished/highly-rated books instead ──
+const chatRecommendBtn = document.getElementById("chatRecommendBtn");
+chatRecommendBtn.addEventListener("click", async () => {
+  const token = getStoredToken();
+  if(!token){ showGate(); return; }
+
+  appendChatMessage("user", "Gợi ý sách cho tôi dựa trên sách tôi đã thích/đọc xong");
+  chatRecommendBtn.disabled = true;
+  chatInput.disabled = true;
+  chatSendBtn.disabled = true;
+  const pendingEl = appendChatTyping();
+
+  try{
+    const res = await fetch(`${API_BASE}/ai/recommend`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ sessionId: currentSessionId || undefined }),
+    });
+    if(res.status === 401){
+      clearToken();
+      pendingEl.remove();
+      showGate("Phiên đã hết hạn, nhập lại mã PIN nhé.");
+      return;
+    }
+    if(!res.ok) throw new Error("HTTP " + res.status);
+    const data = await res.json();
+    const replyText = data.message || "Không có phản hồi.";
+    pendingEl.innerHTML = renderChatMarkdown(replyText);
+    chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+    if(data.sessionId) setCurrentSessionId(data.sessionId);
+  }catch(err){
+    pendingEl.textContent = `Có lỗi xảy ra, thử lại nhé (${err.message}).`;
+  }finally{
+    chatRecommendBtn.disabled = false;
+    chatInput.disabled = false;
+    chatSendBtn.disabled = false;
   }
 });
 </script>

@@ -2218,9 +2218,34 @@ async function boot(){
     await Promise.all([loadNames(), loadAuthorLockStatus()]);
     await Promise.all([loadEntries(), loadMemories()]);
     loadOnThisDay();
+    applyDeepLinkHighlight();
   }catch(err){
     if(err.message !== "unauthorized" && err.message !== "no-token") flash(err.message, "err");
   }
+}
+
+// ── ?tab=diary|memories&highlight=<id> — used by the site-wide search
+// on trang chính to jump straight to a matching entry/memory. Switching
+// tab always works; the scroll+highlight is best-effort only, since
+// both lists load a limited recent window by default and the target
+// might not actually be in the currently-loaded page ──
+function applyDeepLinkHighlight(){
+  const params = new URLSearchParams(window.location.search);
+  const tab = params.get("tab");
+  const highlightId = params.get("highlight");
+  if(!tab && !highlightId) return;
+  if(tab === "diary" || tab === "memories"){
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.toggle("active", b.dataset.tab === tab));
+    document.querySelectorAll("[data-tab-panel]").forEach(p => { p.hidden = p.dataset.tabPanel !== tab; });
+  }
+  if(!highlightId) return;
+  setTimeout(() => {
+    const target = document.querySelector(`[data-entry-id="${highlightId}"], [data-memory-id="${highlightId}"]`);
+    if(!target) return;
+    target.scrollIntoView({ behavior: "smooth", block: "center" });
+    target.classList.add("picked");
+    setTimeout(() => target.classList.remove("picked"), 2000);
+  }, 300);
 }
 
 // ── "ngày này, những năm trước" — shared entries + memories only
