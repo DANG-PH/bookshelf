@@ -934,6 +934,26 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
 .chat-panel-head button:hover{color:var(--stamp)}
 .chat-panel-head-actions{display:flex;align-items:center;gap:6px}
 .chat-panel-head-actions svg{width:13px;height:13px}
+
+/* ── conversation list — real sessions like ChatGPT/Claude, not one
+   thread reused forever. Swaps in place of chat-messages/chat-input-row
+   rather than sitting alongside them, so the panel doesn't need to grow ── */
+.chat-session-list{flex:1;overflow-y:auto;padding:8px}
+.chat-session-item{
+  display:flex;align-items:center;gap:8px;padding:10px;border-radius:10px;cursor:pointer;
+}
+.chat-session-item:hover{background:var(--paper)}
+.chat-session-item.active{background:var(--accent-wash)}
+.chat-session-info{flex:1;min-width:0}
+.chat-session-title{font-size:.86rem;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chat-session-time{font-family:var(--mono);font-size:9.5px;color:var(--faint);margin-top:2px}
+.chat-session-delete{
+  flex:none;width:26px;height:26px;padding:0;border-radius:50%;display:grid;place-items:center;
+  color:var(--faint);background:none;border:none;
+}
+.chat-session-delete:hover{color:var(--stamp);background:var(--stamp-wash)}
+.chat-session-delete svg{width:13px;height:13px}
+
 .chat-messages{flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
 .chat-empty{font-size:.84rem;color:var(--faint);font-style:italic;font-family:var(--serif);text-align:center;padding:20px 6px}
 .chat-msg{
@@ -1179,12 +1199,16 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
   <div class="chat-panel-head">
     <span>Hỏi thư viện</span>
     <div class="chat-panel-head-actions">
-      <button type="button" id="chatClearBtn" aria-label="Xoá lịch sử trò chuyện" title="Xoá lịch sử">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+      <button type="button" id="chatHistoryBtn" aria-label="Lịch sử trò chuyện" title="Lịch sử trò chuyện">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+      </button>
+      <button type="button" id="chatNewBtn" aria-label="Trò chuyện mới" title="Trò chuyện mới">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
       </button>
       <button type="button" id="chatCloseBtn" aria-label="Đóng">✕</button>
     </div>
   </div>
+  <div class="chat-session-list" id="chatSessionList" hidden></div>
   <div class="chat-messages" id="chatMessages">
     <p class="chat-empty">Hỏi gì cũng được — mình sẽ tìm trong các sách đang có ở đây để trả lời.</p>
   </div>
@@ -2169,32 +2193,54 @@ loadCatalog();
 const chatFabBtn = document.getElementById("chatFabBtn");
 const chatPanel = document.getElementById("chatPanel");
 const chatCloseBtn = document.getElementById("chatCloseBtn");
-const chatClearBtn = document.getElementById("chatClearBtn");
+const chatHistoryBtn = document.getElementById("chatHistoryBtn");
+const chatNewBtn = document.getElementById("chatNewBtn");
+const chatSessionListEl = document.getElementById("chatSessionList");
 const chatMessagesEl = document.getElementById("chatMessages");
 const chatForm = document.getElementById("chatForm");
 const chatInput = document.getElementById("chatInput");
 const chatSendBtn = document.getElementById("chatSendBtn");
 // captured before anything touches the DOM — the exact markup to restore
-// the panel to once history's cleared or on a first-ever visit
+// the panel to for a first-ever visit or a fresh "trò chuyện mới"
 const CHAT_EMPTY_HTML = chatMessagesEl.innerHTML;
 
-// ── chat history — session-scoped, not a permanent log: sessionStorage
-// instead of localStorage, so closing/reopening the panel (or the FAB)
-// keeps context, but closing the tab or coming back later starts fresh.
-// (Note: a plain page reload/F5 in the same tab does NOT clear
-// sessionStorage by browser design — only closing the tab/window, or
-// opening the site in a new tab, does.) Also doubles as short-term
-// conversation memory: the last few turns are sent back to /ai/ask so a
-// follow-up question can resolve against what was just discussed ──
-const CHAT_HISTORY_KEY = "tb_chat_history";
-const CHAT_HISTORY_MAX = 40;
-const CHAT_HISTORY_SEND_TURNS = 8;
+// ── real conversation sessions, like ChatGPT/Claude — not one thread
+// reused forever. Backed by GET/POST/DELETE /ai/sessions and
+// GET /ai/sessions/:id/messages on the server (a real DB table, not
+// localStorage — see NotificationsService for why: this is a 2-person
+// site, and per-device storage meant neither person reliably saw the
+// same thing). sessionStorage here only remembers *which* session this
+// tab is on, not the conversation content itself — the content always
+// comes fresh from the DB ──
+const CHAT_SESSION_ID_KEY = "tb_chat_current_session_id";
+let currentSessionId = sessionStorage.getItem(CHAT_SESSION_ID_KEY) || null;
 
-function loadChatHistory(){
-  try{ return JSON.parse(sessionStorage.getItem(CHAT_HISTORY_KEY) || "[]"); }catch{ return []; }
+function setCurrentSessionId(id){
+  currentSessionId = id;
+  if(id) sessionStorage.setItem(CHAT_SESSION_ID_KEY, id);
+  else sessionStorage.removeItem(CHAT_SESSION_ID_KEY);
 }
-function saveChatHistory(list){
-  sessionStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(list.slice(-CHAT_HISTORY_MAX)));
+
+async function fetchSessions(){
+  const token = getStoredToken();
+  if(!token) return [];
+  try{
+    const res = await fetch(`${API_BASE}/ai/sessions`, { headers: { Authorization: `Bearer ${token}` } });
+    return res.ok ? await res.json() : [];
+  }catch{ return []; }
+}
+async function fetchSessionMessages(id){
+  const token = getStoredToken();
+  if(!token) return [];
+  try{
+    const res = await fetch(`${API_BASE}/ai/sessions/${id}/messages`, { headers: { Authorization: `Bearer ${token}` } });
+    return res.ok ? await res.json() : [];
+  }catch{ return []; }
+}
+async function deleteSessionApi(id){
+  const token = getStoredToken();
+  if(!token) return;
+  await fetch(`${API_BASE}/ai/sessions/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } }).catch(() => {});
 }
 
 // minimal, safe markdown for chat replies — escapes everything first, then
@@ -2213,18 +2259,6 @@ function renderChatMarkdown(text){
   return html.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
 }
 
-function toggleChatPanel(open){
-  chatPanel.classList.toggle("open", open);
-  chatFabBtn.classList.toggle("is-open", open);
-  chatFabBtn.setAttribute("aria-expanded", String(open));
-  if(open) setTimeout(() => chatInput.focus(), 220);
-}
-chatFabBtn.addEventListener("click", () => toggleChatPanel(!chatPanel.classList.contains("open")));
-chatCloseBtn.addEventListener("click", () => toggleChatPanel(false));
-document.addEventListener("keydown", (e) => {
-  if(e.key === "Escape" && chatPanel.classList.contains("open")) toggleChatPanel(false);
-});
-
 function appendChatMessage(roleClass, text, opts){
   const emptyNote = chatMessagesEl.querySelector(".chat-empty");
   if(emptyNote) emptyNote.remove();
@@ -2236,22 +2270,6 @@ function appendChatMessage(roleClass, text, opts){
   chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
   return el;
 }
-
-function restoreChatHistory(){
-  const history = loadChatHistory();
-  history.forEach(turn => {
-    appendChatMessage(turn.role === "user" ? "user" : "bot", turn.text, turn.role === "model" ? { markdown: true } : undefined);
-  });
-}
-restoreChatHistory();
-
-chatClearBtn.addEventListener("click", () => {
-  if(!loadChatHistory().length) return;
-  if(!confirm("Xoá toàn bộ lịch sử trò chuyện?")) return;
-  sessionStorage.removeItem(CHAT_HISTORY_KEY);
-  chatMessagesEl.innerHTML = CHAT_EMPTY_HTML;
-});
-
 function appendChatTyping(){
   const emptyNote = chatMessagesEl.querySelector(".chat-empty");
   if(emptyNote) emptyNote.remove();
@@ -2263,16 +2281,93 @@ function appendChatTyping(){
   return el;
 }
 
+// ── switching between the conversation view and the session list —
+// swaps in place rather than opening a second panel, so the widget
+// doesn't need to resize ──
+function showChatView(){
+  chatSessionListEl.hidden = true;
+  chatMessagesEl.hidden = false;
+  chatForm.hidden = false;
+}
+async function showSessionListView(){
+  chatMessagesEl.hidden = true;
+  chatForm.hidden = true;
+  chatSessionListEl.hidden = false;
+  await renderSessionList();
+}
+async function renderSessionList(){
+  const sessions = await fetchSessions();
+  chatSessionListEl.innerHTML = sessions.length
+    ? sessions.map(s => `
+        <div class="chat-session-item${s.id === currentSessionId ? " active" : ""}" data-session-id="${s.id}">
+          <div class="chat-session-info">
+            <div class="chat-session-title">${escapeHTML(s.title || "Trò chuyện mới")}</div>
+            <div class="chat-session-time">${timeAgo(s.updatedAt)}</div>
+          </div>
+          <button type="button" class="chat-session-delete" data-delete-session="${s.id}" aria-label="Xoá cuộc trò chuyện này">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+          </button>
+        </div>
+      `).join("")
+    : `<p class="chat-empty">Chưa có cuộc trò chuyện nào.</p>`;
+}
+async function openSession(id){
+  setCurrentSessionId(id);
+  const messages = await fetchSessionMessages(id);
+  chatMessagesEl.innerHTML = CHAT_EMPTY_HTML;
+  messages.forEach(m => appendChatMessage(m.role === "user" ? "user" : "bot", m.text, m.role === "model" ? { markdown: true } : undefined));
+  showChatView();
+}
+chatSessionListEl.addEventListener("click", async (e) => {
+  const delBtn = e.target.closest("[data-delete-session]");
+  if(delBtn){
+    e.stopPropagation();
+    if(!confirm("Xoá cuộc trò chuyện này?")) return;
+    await deleteSessionApi(delBtn.dataset.deleteSession);
+    if(delBtn.dataset.deleteSession === currentSessionId){
+      setCurrentSessionId(null);
+      chatMessagesEl.innerHTML = CHAT_EMPTY_HTML;
+    }
+    renderSessionList();
+    return;
+  }
+  const item = e.target.closest("[data-session-id]");
+  if(item) openSession(item.dataset.sessionId);
+});
+chatHistoryBtn.addEventListener("click", () => {
+  if(chatSessionListEl.hidden) showSessionListView();
+  else showChatView();
+});
+chatNewBtn.addEventListener("click", () => {
+  setCurrentSessionId(null);
+  chatMessagesEl.innerHTML = CHAT_EMPTY_HTML;
+  showChatView();
+});
+
+function toggleChatPanel(open){
+  chatPanel.classList.toggle("open", open);
+  chatFabBtn.classList.toggle("is-open", open);
+  chatFabBtn.setAttribute("aria-expanded", String(open));
+  if(open){
+    setTimeout(() => chatInput.focus(), 220);
+    // fetched fresh every time the panel opens — the other person may
+    // have continued this same conversation from another device
+    if(currentSessionId) openSession(currentSessionId);
+    else showChatView();
+  }
+}
+chatFabBtn.addEventListener("click", () => toggleChatPanel(!chatPanel.classList.contains("open")));
+chatCloseBtn.addEventListener("click", () => toggleChatPanel(false));
+document.addEventListener("keydown", (e) => {
+  if(e.key === "Escape" && chatPanel.classList.contains("open")) toggleChatPanel(false);
+});
+
 chatForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   const message = chatInput.value.trim();
   if(!message) return;
   const token = getStoredToken();
   if(!token){ showGate(); return; }
-
-  // snapshot before this turn joins history — what gets sent is
-  // "everything before the question being asked right now"
-  const historyForRequest = loadChatHistory().slice(-CHAT_HISTORY_SEND_TURNS);
 
   appendChatMessage("user", message);
   chatInput.value = "";
@@ -2287,7 +2382,7 @@ chatForm.addEventListener("submit", async (e) => {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ message, history: historyForRequest }),
+      body: JSON.stringify({ message, sessionId: currentSessionId || undefined }),
     });
     if(res.status === 401){
       clearToken();
@@ -2300,10 +2395,7 @@ chatForm.addEventListener("submit", async (e) => {
     const replyText = data.message || "Không có phản hồi.";
     pendingEl.innerHTML = renderChatMarkdown(replyText);
     chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
-
-    const history = loadChatHistory();
-    history.push({ role: "user", text: message }, { role: "model", text: replyText });
-    saveChatHistory(history);
+    if(data.sessionId) setCurrentSessionId(data.sessionId);
   }catch(err){
     pendingEl.textContent = `Có lỗi xảy ra, thử lại nhé (${err.message}).`;
   }finally{
