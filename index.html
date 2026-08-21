@@ -2512,7 +2512,7 @@ async function renderNotifications(){
   notifBadge.hidden = unread === 0;
   notifPanelBody.innerHTML = list.length
     ? list.map(n => `
-        <div class="notif-item${n.read ? "" : " unread"}" data-notif-id="${n.id}">
+        <div class="notif-item${n.read ? "" : " unread"}" data-notif-id="${n.id}" role="button" tabindex="0">
           <span class="notif-dot"></span>
           <div>
             <p class="notif-text">${escapeHTML(n.text)}</p>
@@ -2522,9 +2522,7 @@ async function renderNotifications(){
       `).join("")
     : `<p class="empty-note">Chưa có thông báo nào.</p>`;
 }
-notifPanelBody.addEventListener("click", async (e) => {
-  const item = e.target.closest("[data-notif-id]");
-  if(!item) return;
+async function markNotifRead(item){
   const token = getStoredToken();
   if(!token) return;
   await fetch(`${API_BASE}/notifications/${item.dataset.notifId}/read`, {
@@ -2532,6 +2530,17 @@ notifPanelBody.addEventListener("click", async (e) => {
     headers: { Authorization: `Bearer ${token}` },
   }).catch(() => {});
   renderNotifications();
+}
+notifPanelBody.addEventListener("click", (e) => {
+  const item = e.target.closest("[data-notif-id]");
+  if(item) markNotifRead(item);
+});
+notifPanelBody.addEventListener("keydown", (e) => {
+  if(e.key !== "Enter" && e.key !== " ") return;
+  const item = e.target.closest("[data-notif-id]");
+  if(!item) return;
+  e.preventDefault();
+  markNotifRead(item);
 });
 document.getElementById("notifMarkAllBtn").addEventListener("click", async () => {
   const token = getStoredToken();

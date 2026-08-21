@@ -80,7 +80,11 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
 .btn-primary:disabled{opacity:.55;cursor:default}
 .btn-del{background:transparent;color:var(--faint);padding:3px 8px;font-size:.72rem;border:1px solid var(--line-2);border-radius:7px}
 .btn-del:hover{background:var(--stamp-wash);color:var(--stamp);border-color:var(--stamp-wash)}
-@media(max-width:480px){.btn-del{padding:7px 11px;font-size:.78rem}}
+/* same shape as .btn-del but hovers toward accent instead of red — "Sửa"
+   isn't destructive, it shouldn't turn the same warning color "Xoá" does */
+.btn-edit{background:transparent;color:var(--faint);padding:3px 8px;font-size:.72rem;border:1px solid var(--line-2);border-radius:7px}
+.btn-edit:hover{background:var(--accent-wash);color:var(--accent-deep);border-color:var(--accent-wash)}
+@media(max-width:480px){.btn-del,.btn-edit{padding:7px 11px;font-size:.78rem}}
 .btn-secondary{background:var(--paper);color:var(--soft);padding:9px 16px;font-size:.82rem;border:1.5px solid var(--line-2);border-radius:10px}
 .btn-secondary:hover{border-color:var(--accent);color:var(--accent-deep)}
 .btn-secondary:disabled{opacity:.6;cursor:default}
@@ -1280,7 +1284,7 @@ function entryHTML(entry, opts){
           <span class="entry-when">${timeAgo(entry.createdAt)}</span>
           ${canEdit ? `
             <div class="entry-actions">
-              <button type="button" class="btn-del" data-edit-entry="${entry.id}">Sửa</button>
+              <button type="button" class="btn-edit" data-edit-entry="${entry.id}">Sửa</button>
               <button type="button" class="btn-del" data-del-entry="${entry.id}">Xoá</button>
             </div>
           ` : "<span></span>"}
@@ -1592,7 +1596,7 @@ async function renderNotifications(){
   notifBadge.hidden = unread === 0;
   notifPanelBody.innerHTML = list.length
     ? list.map(n => `
-        <div class="notif-item${n.read ? "" : " unread"}" data-notif-id="${n.id}">
+        <div class="notif-item${n.read ? "" : " unread"}" data-notif-id="${n.id}" role="button" tabindex="0">
           <span class="notif-dot"></span>
           <div>
             <p class="notif-text">${escapeHTML(n.text)}</p>
@@ -1602,11 +1606,20 @@ async function renderNotifications(){
       `).join("")
     : `<p class="empty-note">Chưa có thông báo nào.</p>`;
 }
-notifPanelBody.addEventListener("click", async (e) => {
-  const item = e.target.closest("[data-notif-id]");
-  if(!item) return;
+async function markNotifRead(item){
   try{ await api(`/notifications/${item.dataset.notifId}/read`, { method: "PATCH" }); }catch{}
   renderNotifications();
+}
+notifPanelBody.addEventListener("click", (e) => {
+  const item = e.target.closest("[data-notif-id]");
+  if(item) markNotifRead(item);
+});
+notifPanelBody.addEventListener("keydown", (e) => {
+  if(e.key !== "Enter" && e.key !== " ") return;
+  const item = e.target.closest("[data-notif-id]");
+  if(!item) return;
+  e.preventDefault();
+  markNotifRead(item);
 });
 document.getElementById("notifMarkAllBtn").addEventListener("click", async () => {
   try{ await api("/notifications/read-all", { method: "PATCH" }); }catch{}
@@ -1867,7 +1880,7 @@ function memoryHTML(m){
       ${desc.isLong ? `<span class="entry-more" role="button" tabindex="0" data-more-memory-desc data-expanded="0">Xem thêm</span>` : ""}
       <div class="memory-foot">
         ${likeButtonHTML(m.id, m.likedBy, "data-like-memory")}
-        <button type="button" class="btn-del" data-edit-memory="${m.id}">Sửa</button>
+        <button type="button" class="btn-edit" data-edit-memory="${m.id}">Sửa</button>
         <button type="button" class="btn-del" data-del-memory="${m.id}">Xoá</button>
       </div>
     </div>

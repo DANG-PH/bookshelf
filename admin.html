@@ -69,7 +69,13 @@ button{cursor:pointer;border:none;border-radius:10px;padding:12px 18px;font-weig
 .btn-ghost{background:transparent;color:var(--accent-deep);padding:8px 4px;font-size:.86rem;text-decoration:underline;text-underline-offset:3px}
 .btn-danger{background:transparent;color:var(--faint);padding:6px 10px;font-size:.78rem;border:1px solid var(--line-2);border-radius:8px}
 .btn-danger:hover{background:var(--stamp-wash);color:var(--stamp);border-color:var(--stamp-wash)}
-@media(max-width:480px){.btn-danger{padding:9px 13px;font-size:.82rem}}
+/* same shape as .btn-danger but hovers toward accent instead of red —
+   "Sửa" isn't destructive, it shouldn't turn the same warning color "Xoá" does */
+.btn-edit{background:transparent;color:var(--faint);padding:6px 10px;font-size:.78rem;border:1px solid var(--line-2);border-radius:8px}
+.btn-edit:hover{background:var(--accent-wash);color:var(--accent-deep);border-color:var(--accent-wash)}
+.btn-save{background:var(--accent-solid);color:#fff;padding:6px 12px;font-size:.78rem;border-radius:8px}
+.btn-cancel{background:none;border:1px solid var(--line-2);color:var(--faint);padding:6px 12px;font-size:.78rem;border-radius:8px}
+@media(max-width:480px){.btn-danger,.btn-edit{padding:9px 13px;font-size:.82rem}}
 button:disabled{opacity:.55;cursor:default}
 
 /* pin gate */
@@ -116,8 +122,9 @@ button:disabled{opacity:.55;cursor:default}
   :root:not([data-theme="light"]) .theme-toggle .icon-moon{display:block}
 }
 
-/* ── notification bell — same tb_notifications localStorage key as
-   index.html/diary.html, so history is consistent across all 3 pages ── */
+/* ── notification bell — backed by GET/PATCH /notifications on the
+   server (see the JS below), so history is consistent across devices
+   and both people, not just this browser ── */
 .notif-bell-wrap{position:absolute;top:0;left:0}
 .notif-bell{
   position:relative;flex:none;width:36px;height:36px;padding:0;border-radius:50%;
@@ -462,6 +469,12 @@ details.more .more-body{padding-top:14px}
     </section>
 
     <section class="panel">
+      <h2 style="font-size:1rem">Quản lý chủ đề</h2>
+      <p class="panel-sub">Sửa tên hoặc xoá chủ đề — chỉ xoá được khi chủ đề đó đang trống, để không lỡ tay mất sách.</p>
+      <div class="list" id="categoryManageList"><p class="empty-note">Đang tải…</p></div>
+    </section>
+
+    <section class="panel">
       <h2 style="font-size:1rem">Mật khẩu riêng nhật ký</h2>
       <p class="panel-sub">Lỡ quên mật khẩu riêng của ai thì xoá ở đây để đặt lại từ đầu — chỉ dùng khi thật sự cần, vì xoá xong là mất luôn mật khẩu cũ.</p>
       <div class="list" id="authorLockList"><p class="empty-note">Đang tải…</p></div>
@@ -552,7 +565,7 @@ async function renderNotifications(){
   notifBadge.hidden = unread === 0;
   notifPanelBody.innerHTML = list.length
     ? list.map(n => `
-        <div class="notif-item${n.read ? "" : " unread"}" data-notif-id="${n.id}">
+        <div class="notif-item${n.read ? "" : " unread"}" data-notif-id="${n.id}" role="button" tabindex="0">
           <span class="notif-dot"></span>
           <div>
             <p class="notif-text">${escapeHTML(n.text)}</p>
@@ -562,11 +575,20 @@ async function renderNotifications(){
       `).join("")
     : `<p class="empty-note">Chưa có thông báo nào.</p>`;
 }
-notifPanelBody.addEventListener("click", async (e) => {
-  const item = e.target.closest("[data-notif-id]");
-  if(!item) return;
+async function markNotifRead(item){
   try{ await api(`/notifications/${item.dataset.notifId}/read`, { method: "PATCH" }); }catch{}
   renderNotifications();
+}
+notifPanelBody.addEventListener("click", (e) => {
+  const item = e.target.closest("[data-notif-id]");
+  if(item) markNotifRead(item);
+});
+notifPanelBody.addEventListener("keydown", (e) => {
+  if(e.key !== "Enter" && e.key !== " ") return;
+  const item = e.target.closest("[data-notif-id]");
+  if(!item) return;
+  e.preventDefault();
+  markNotifRead(item);
 });
 document.getElementById("notifMarkAllBtn").addEventListener("click", async () => {
   try{ await api("/notifications/read-all", { method: "PATCH" }); }catch{}
@@ -860,6 +882,7 @@ document.getElementById("settingsForm").addEventListener("submit", async (e) => 
 async function loadCategories(){
   categories = await api("/categories");
   renderCategorySelect();
+  renderCategoryManageList();
 }
 
 function renderCategorySelect(){
@@ -872,6 +895,95 @@ function renderCategorySelect(){
   sel.innerHTML = categories.map(c => `<option value="${c.id}">${escapeHTML(c.title)}</option>`).join("");
   if(categories.some(c => c.id === prevValue)) sel.value = prevValue;
 }
+
+// ── rename/delete a topic — the backend already supports both (PATCH /
+// DELETE /categories/:id), this was just never wired up on this page.
+// Delete stays blocked client-side while the topic still has books in
+// it: categoryId is ON DELETE CASCADE at the DB level, so deleting a
+// non-empty topic would silently take every book in it down too ──
+function categoryManageRowHTML(c){
+  const count = books.filter(b => b.categoryId === c.id).length;
+  const canDelete = count === 0;
+  return `
+    <div class="list-item" data-category-row="${c.id}">
+      <div class="meta">
+        <div class="t">${escapeHTML(c.title)}</div>
+        <div class="s">${count} cuốn sách</div>
+      </div>
+      <div style="display:flex;gap:6px;flex:none">
+        <button type="button" class="btn-edit" data-rename-category="${c.id}">Sửa tên</button>
+        <button type="button" class="btn-danger" data-delete-category="${c.id}"${canDelete ? "" : ` disabled title="Xoá được khi chủ đề này trống"`}>Xoá</button>
+      </div>
+    </div>
+  `;
+}
+function categoryRenameFormHTML(c){
+  return `
+    <div class="meta" style="flex:1">
+      <input type="text" class="category-rename-input" value="${escapeHTML(c.title)}" />
+    </div>
+    <div style="display:flex;gap:6px;flex:none">
+      <button type="button" class="btn-cancel" data-cancel-rename-category="${c.id}">Huỷ</button>
+      <button type="button" class="btn-save" data-save-rename-category="${c.id}">Lưu</button>
+    </div>
+  `;
+}
+function renderCategoryManageList(){
+  const listEl = document.getElementById("categoryManageList");
+  if(!listEl) return;
+  listEl.innerHTML = categories.length
+    ? categories.map(c => categoryManageRowHTML(c)).join("")
+    : `<p class="empty-note">Chưa có chủ đề nào.</p>`;
+}
+document.getElementById("categoryManageList").addEventListener("click", async (e) => {
+  const renameBtn = e.target.closest("[data-rename-category]");
+  if(renameBtn){
+    const c = categories.find(x => x.id === renameBtn.dataset.renameCategory);
+    const row = renameBtn.closest("[data-category-row]");
+    if(!c || !row) return;
+    row.innerHTML = categoryRenameFormHTML(c);
+    row.querySelector(".category-rename-input").focus();
+    return;
+  }
+  const cancelBtn = e.target.closest("[data-cancel-rename-category]");
+  if(cancelBtn){ renderCategoryManageList(); return; }
+  const saveBtn = e.target.closest("[data-save-rename-category]");
+  if(saveBtn){
+    const row = saveBtn.closest("[data-category-row]");
+    const title = row.querySelector(".category-rename-input").value.trim();
+    if(!title) return;
+    saveBtn.disabled = true;
+    try{
+      await api(`/categories/${saveBtn.dataset.saveRenameCategory}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title }),
+      });
+      flash("Đã đổi tên chủ đề.", "ok");
+      await loadCategories();
+    }catch(err){
+      if(err.message !== "unauthorized") flash(err.message, "err");
+      saveBtn.disabled = false;
+    }
+    return;
+  }
+  const delBtn = e.target.closest("[data-delete-category]");
+  if(delBtn){
+    if(delBtn.disabled) return;
+    const c = categories.find(x => x.id === delBtn.dataset.deleteCategory);
+    if(!c) return;
+    if(!confirm(`Xoá chủ đề "${c.title}"? Chủ đề này đang trống nên không mất sách nào.`)) return;
+    delBtn.disabled = true;
+    try{
+      await api(`/categories/${c.id}`, { method: "DELETE" });
+      flash("Đã xoá chủ đề.", "ok");
+      await loadCategories();
+    }catch(err){
+      if(err.message !== "unauthorized") flash(err.message, "err");
+      delBtn.disabled = false;
+    }
+  }
+});
 
 // ── inline "+ chủ đề mới" ──
 const topicToggleEl = document.getElementById("topicToggle");
@@ -919,6 +1031,7 @@ function renderBooks(){
   const listEl = document.getElementById("bookList");
   document.getElementById("bookCountLabel").textContent =
     books.length === 0 ? "Chưa có cuốn nào" : `${books.length} cuốn đã có trong thư viện`;
+  renderCategoryManageList(); // book counts per topic depend on this list too
   if(books.length === 0){
     listEl.innerHTML = `<p class="empty-note">Thêm cuốn đầu tiên ở form bên trên nhé.</p>`;
     return;
@@ -930,7 +1043,7 @@ function renderBooks(){
         <div class="s">${escapeHTML(b.author || "—")} · ${escapeHTML(b.category?.title || "")}</div>
       </div>
       <div style="display:flex;gap:6px;flex:none">
-        <button class="btn-danger" data-edit-book="${b.id}">Sửa</button>
+        <button class="btn-edit" data-edit-book="${b.id}">Sửa</button>
         <button class="btn-danger" data-del-book="${b.id}">Xoá</button>
       </div>
     </div>
