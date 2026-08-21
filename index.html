@@ -548,6 +548,19 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
 .fav-toggle.active{color:var(--stamp)}
 .fav-toggle.active svg{fill:currentColor}
 .fav-toggle:active{transform:scale(.82)}
+.fav-count{font-family:var(--mono);font-size:10px;color:var(--faint);letter-spacing:.02em}
+
+/* "bạn là ai" — index.html has no per-user login, just this same
+   localStorage-persisted choice diary.html already uses (tb_diary_who),
+   so favoriting/reviewing a book can be attributed per-person instead
+   of one shared value either person silently overwrites */
+.who-toggle-row{display:flex;gap:6px;margin-bottom:14px}
+.who-toggle-btn{
+  flex:1;padding:7px;border-radius:8px;border:1.5px solid var(--line-2);background:var(--paper);
+  font-family:var(--serif);font-size:.86rem;font-weight:600;color:var(--soft);transition:all .15s;
+}
+.who-toggle-btn.active{border-color:var(--accent);background:var(--accent-wash);color:var(--accent-deep)}
+.who-toggle-btn:hover{border-color:var(--accent)}
 
 /* reading-status pills */
 .card-status{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
@@ -580,6 +593,11 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
 .review-edit-actions button[data-cancel-review]{background:none;border:1px solid var(--line-2);color:var(--faint)}
 .review-edit-actions button[data-save-review]{background:var(--accent-solid);color:#fff}
 .review-edit-actions button:disabled{opacity:.6}
+.review-person + .review-person{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line-2)}
+.review-person-label{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--faint);display:block;margin-bottom:4px}
+.rating-row.readonly .rating-star{cursor:default}
+.rating-row.readonly .rating-star:hover{transform:none;color:var(--line-2)}
+.rating-row.readonly .rating-star.active:hover{color:#e0a94a}
 
 .card-foot{
   display:flex;align-items:center;justify-content:space-between;gap:10px;
@@ -1146,6 +1164,11 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
         </button>
       </div>
 
+      <div class="who-toggle-row" id="whoToggleRow">
+        <button type="button" class="who-toggle-btn" data-who="me" id="whoToggleMeBtn">Đăng</button>
+        <button type="button" class="who-toggle-btn" data-who="partner" id="whoTogglePartnerBtn">Vy</button>
+      </div>
+
       <label class="search-box" for="searchInput">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
         <input type="search" id="searchInput" placeholder="Tìm sách, tác giả…" aria-label="Tìm sách" autocomplete="off" />
@@ -1292,6 +1315,38 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
 const API_BASE = "https://book-api.dangpham.id.vn/api";
 const AUTH_TOKEN_KEY = "tb_token";
 const AUTH_EXP_KEY = "tb_token_exp";
+
+// ── "bạn là ai" — same tb_diary_who key diary.html already persists,
+// so favoriting/rating a book attributes to whichever identity you're
+// already using there, no separate switch to keep in sync ──
+const WHO_KEY = "tb_diary_who";
+let currentWho = localStorage.getItem(WHO_KEY) || "me";
+let authorNames = { me: "Đăng", partner: "Vy" };
+function setCurrentWho(who){
+  currentWho = who;
+  localStorage.setItem(WHO_KEY, who);
+  document.getElementById("whoToggleMeBtn").classList.toggle("active", who === "me");
+  document.getElementById("whoTogglePartnerBtn").classList.toggle("active", who === "partner");
+  if(lastCatalogData) render(lastCatalogData);
+}
+document.getElementById("whoToggleMeBtn").classList.toggle("active", currentWho === "me");
+document.getElementById("whoTogglePartnerBtn").classList.toggle("active", currentWho === "partner");
+document.getElementById("whoToggleMeBtn").addEventListener("click", () => setCurrentWho("me"));
+document.getElementById("whoTogglePartnerBtn").addEventListener("click", () => setCurrentWho("partner"));
+async function loadAuthorNames(){
+  try{
+    const token = getStoredToken();
+    if(!token) return;
+    const res = await fetch(`${API_BASE}/settings`, { headers: { Authorization: `Bearer ${token}` } });
+    if(!res.ok) return;
+    const s = await res.json();
+    authorNames = { me: s.curatorName || "Đăng", partner: s.partnerName || "Vy" };
+    document.getElementById("whoToggleMeBtn").textContent = authorNames.me;
+    document.getElementById("whoTogglePartnerBtn").textContent = authorNames.partner;
+  }catch{
+    // falls back to the defaults already in the markup
+  }
+}
 
 function getStoredToken(){
   const token = localStorage.getItem(AUTH_TOKEN_KEY);
@@ -1521,14 +1576,59 @@ function flash(message, kind){
   flash._t = setTimeout(() => { el.classList.remove("show"); }, 4000);
 }
 
+// favoriting is per-author now (favoritedBy: ["me","partner"]) — this
+// toggles only currentWho's own membership in that array, same as
+// diary.html's like buttons
+async function toggleBookFavorite(id, author){
+  const token = getStoredToken();
+  if(!token){ showGate(); throw new Error("no-token"); }
+  const res = await fetch(`${API_BASE}/books/${id}/favorite`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ author }),
+  });
+  if(res.status === 401){
+    clearToken();
+    showGate("Phiên đã hết hạn, nhập lại mã PIN nhé.");
+    throw new Error("unauthorized");
+  }
+  if(!res.ok) throw new Error("HTTP " + res.status);
+  return res.json();
+}
+function updateFavCountDisplay(favBtn, count){
+  const wrap = favBtn.parentElement;
+  let countEl = wrap.querySelector(".fav-count");
+  if(count > 0){
+    if(!countEl){
+      countEl = document.createElement("span");
+      countEl.className = "fav-count";
+      wrap.insertBefore(countEl, favBtn.nextSibling);
+    }
+    countEl.textContent = String(count);
+  }else if(countEl){
+    countEl.remove();
+  }
+}
 function toggleFavorite(favBtn){
+  const bookId = favBtn.dataset.bookId;
   const wasActive = favBtn.classList.contains("active");
+  const countEl = favBtn.parentElement.querySelector(".fav-count");
+  const prevCount = countEl ? Number(countEl.textContent) : 0;
+  const nextCount = wasActive ? Math.max(0, prevCount - 1) : prevCount + 1;
+
   favBtn.classList.toggle("active", !wasActive);
   favBtn.setAttribute("aria-label", wasActive ? "Đánh dấu yêu thích" : "Bỏ yêu thích");
-  patchBookStatus(favBtn.dataset.bookId, { isFavorite: !wasActive })
+  updateFavCountDisplay(favBtn, nextCount);
+
+  toggleBookFavorite(bookId, currentWho)
+    .then((updated) => {
+      const book = findBookInCatalog(bookId);
+      if(book) book.favoritedBy = updated.favoritedBy || [];
+    })
     .catch((err) => {
       favBtn.classList.toggle("active", wasActive);
       favBtn.setAttribute("aria-label", wasActive ? "Bỏ yêu thích" : "Đánh dấu yêu thích");
+      updateFavCountDisplay(favBtn, prevCount);
       if(err.message !== "unauthorized") flash("Không lưu được, thử lại nhé.", "err");
     });
 }
@@ -1591,36 +1691,51 @@ catalogEl.addEventListener("keydown", (e) => {
 
 const READ_STATUS_LABELS = { want: "Muốn đọc", reading: "Đang đọc", done: "Đã đọc" };
 
-// ── star rating + personal review, always visible on every card —
-// set the same way favorite/readStatus are, by whoever's browsing ──
+// ── star rating + personal review, per-author (BookReview rows) instead
+// of one shared value — currentWho's own row is editable, the other
+// person's (if any) shows read-only underneath ──
 function ratingReviewBlockHTML(b){
+  const otherAuthor = currentWho === "me" ? "partner" : "me";
+  const reviews = b.reviews || [];
+  const mine = reviews.find(r => r.author === currentWho);
+  const other = reviews.find(r => r.author === otherAuthor);
+  const otherHasContent = other && (other.rating || other.review);
   return `
     <div class="rating-review" data-book-id="${b.id}">
-      <div class="rating-row" data-book-id="${b.id}">${ratingStarsHTML(b)}</div>
-      ${reviewViewHTML(b)}
+      <div class="review-person">
+        <div class="rating-row" data-book-id="${b.id}">${ratingStarsHTML(b.id, mine ? mine.rating : 0, true)}</div>
+        ${reviewViewHTML(b.id, mine)}
+      </div>
+      ${otherHasContent ? `
+        <div class="review-person">
+          <span class="review-person-label">${escapeHTML(authorNames[otherAuthor] || otherAuthor)}</span>
+          <div class="rating-row readonly">${ratingStarsHTML(b.id, other.rating, false)}</div>
+          ${other.review ? `<p class="review-text">${escapeHTML(other.review)}</p>` : ""}
+        </div>
+      ` : ""}
     </div>
   `;
 }
-function ratingStarsHTML(b){
+function ratingStarsHTML(bookId, rating, interactive){
   return [1, 2, 3, 4, 5].map(n => `
-    <span class="rating-star${(b.rating || 0) >= n ? " active" : ""}" role="button" tabindex="0" data-rating-star="${n}" data-book-id="${b.id}" aria-label="${n} sao">★</span>
+    <span class="rating-star${(rating || 0) >= n ? " active" : ""}"${interactive ? ` role="button" tabindex="0" data-rating-star="${n}" data-book-id="${bookId}" aria-label="${n} sao"` : ""}>★</span>
   `).join("");
 }
-function reviewViewHTML(b){
+function reviewViewHTML(bookId, mine){
   return `
-    <div class="review-view" data-book-id="${b.id}">
-      ${b.review ? `<p class="review-text">${escapeHTML(b.review)}</p>` : ""}
-      <span class="review-edit-toggle" role="button" tabindex="0" data-review-edit="${b.id}">${b.review ? "Sửa cảm nhận" : "+ Viết cảm nhận"}</span>
+    <div class="review-view" data-book-id="${bookId}">
+      ${mine && mine.review ? `<p class="review-text">${escapeHTML(mine.review)}</p>` : ""}
+      <span class="review-edit-toggle" role="button" tabindex="0" data-review-edit="${bookId}">${mine && mine.review ? "Sửa cảm nhận" : "+ Viết cảm nhận"}</span>
     </div>
   `;
 }
-function reviewEditFormHTML(b){
+function reviewEditFormHTML(bookId, mine){
   return `
-    <div class="review-edit" data-book-id="${b.id}">
-      <textarea class="review-edit-input" placeholder="Cảm nhận của bạn về cuốn này…">${escapeHTML(b.review || "")}</textarea>
+    <div class="review-edit" data-book-id="${bookId}">
+      <textarea class="review-edit-input" placeholder="Cảm nhận của bạn về cuốn này…">${escapeHTML((mine && mine.review) || "")}</textarea>
       <div class="review-edit-actions">
-        <button type="button" data-cancel-review="${b.id}">Huỷ</button>
-        <button type="button" data-save-review="${b.id}">Lưu</button>
+        <button type="button" data-cancel-review="${bookId}">Huỷ</button>
+        <button type="button" data-save-review="${bookId}">Lưu</button>
       </div>
     </div>
   `;
@@ -1633,23 +1748,55 @@ function findBookInCatalog(id){
   }
   return null;
 }
+// merges instead of replacing wholesale — a favorite-toggle response is
+// a full Book but without a loaded "reviews" relation, and vice versa
+// isn't even a Book at all (see updateBookReviewInCatalog) — either way,
+// a field that's absent from the response must never blank out what's
+// already cached locally
 function updateBookInCatalog(updated){
   if(!lastCatalogData) return;
   for(const cat of lastCatalogData.categories || []){
     const idx = (cat.books || []).findIndex(b => b.id === updated.id);
-    if(idx !== -1){ cat.books[idx] = updated; return; }
+    if(idx !== -1){ cat.books[idx] = { ...cat.books[idx], ...updated }; return; }
   }
+}
+function updateBookReviewInCatalog(bookId, author, reviewRow){
+  const book = findBookInCatalog(bookId);
+  if(!book) return;
+  const others = (book.reviews || []).filter(r => r.author !== author);
+  book.reviews = reviewRow
+    ? [...others, { author, rating: reviewRow.rating, review: reviewRow.review }]
+    : others;
 }
 function refreshRatingReviewBlock(book){
   const card = document.querySelector(`a.card[data-book-id="${book.id}"]`);
   const block = card && card.querySelector(".rating-review");
   if(block) block.outerHTML = ratingReviewBlockHTML(book);
 }
+async function upsertBookReview(id, author, rating, review){
+  const token = getStoredToken();
+  if(!token){ showGate(); throw new Error("no-token"); }
+  const res = await fetch(`${API_BASE}/books/${id}/reviews`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ author, rating, review }),
+  });
+  if(res.status === 401){
+    clearToken();
+    showGate("Phiên đã hết hạn, nhập lại mã PIN nhé.");
+    throw new Error("unauthorized");
+  }
+  if(!res.ok) throw new Error("HTTP " + res.status);
+  return res.json();
+}
 async function setBookRating(bookId, rating){
   try{
-    const updated = await patchBookStatus(bookId, { rating });
-    updateBookInCatalog(updated);
-    refreshRatingReviewBlock(updated);
+    const book = findBookInCatalog(bookId);
+    const mine = book && (book.reviews||[]).find(r => r.author === currentWho);
+    const updated = await upsertBookReview(bookId, currentWho, rating, mine ? mine.review : null);
+    updateBookReviewInCatalog(bookId, currentWho, updated);
+    const fresh = findBookInCatalog(bookId);
+    if(fresh) refreshRatingReviewBlock(fresh);
   }catch(err){
     if(err.message !== "unauthorized") flash("Không lưu được, thử lại nhé.", "err");
   }
@@ -1659,9 +1806,12 @@ async function saveBookReview(bookId, review, formEl){
   saveBtn.disabled = true;
   saveBtn.textContent = "Đang lưu…";
   try{
-    const updated = await patchBookStatus(bookId, { review });
-    updateBookInCatalog(updated);
-    refreshRatingReviewBlock(updated);
+    const book = findBookInCatalog(bookId);
+    const mine = book && (book.reviews||[]).find(r => r.author === currentWho);
+    const updated = await upsertBookReview(bookId, currentWho, mine ? mine.rating : null, review);
+    updateBookReviewInCatalog(bookId, currentWho, updated);
+    const fresh = findBookInCatalog(bookId);
+    if(fresh) refreshRatingReviewBlock(fresh);
   }catch(err){
     if(err.message !== "unauthorized") flash("Không lưu được, thử lại nhé.", "err");
     saveBtn.disabled = false;
@@ -1677,21 +1827,24 @@ catalogEl.addEventListener("click", (e) => {
   const starEl = e.target.closest("[data-rating-star]");
   if(starEl){
     const book = findBookInCatalog(starEl.dataset.bookId);
+    const mine = book && (book.reviews||[]).find(r => r.author === currentWho);
     const clicked = Number(starEl.dataset.ratingStar);
-    const nextRating = book && book.rating === clicked ? null : clicked;
+    const nextRating = mine && mine.rating === clicked ? null : clicked;
     setBookRating(starEl.dataset.bookId, nextRating);
     return;
   }
   const editBtn = e.target.closest("[data-review-edit]");
   if(editBtn){
     const book = findBookInCatalog(editBtn.dataset.reviewEdit);
-    if(book) editBtn.closest(".review-view").outerHTML = reviewEditFormHTML(book);
+    const mine = book && (book.reviews||[]).find(r => r.author === currentWho);
+    if(book) editBtn.closest(".review-view").outerHTML = reviewEditFormHTML(book.id, mine);
     return;
   }
   const cancelBtn = e.target.closest("[data-cancel-review]");
   if(cancelBtn){
     const book = findBookInCatalog(cancelBtn.dataset.cancelReview);
-    if(book) cancelBtn.closest(".review-edit").outerHTML = reviewViewHTML(book);
+    const mine = book && (book.reviews||[]).find(r => r.author === currentWho);
+    if(book) cancelBtn.closest(".review-edit").outerHTML = reviewViewHTML(book.id, mine);
     return;
   }
   const saveBtn = e.target.closest("[data-save-review]");
@@ -1752,9 +1905,10 @@ function cardHTML(b, cat){
         <span class="card-tab-right">
           <span>${escapeHTML(String(b.year||""))}</span>
           <span class="view-count" data-view-count title="Đã xem ${b.viewCount||0} lần"${b.viewCount ? "" : " hidden"}>👁 ${b.viewCount||0}</span>
-          <span class="fav-toggle${b.isFavorite ? " active" : ""}" role="button" tabindex="0" data-fav-toggle data-book-id="${b.id}" aria-label="${b.isFavorite ? "Bỏ yêu thích" : "Đánh dấu yêu thích"}">
+          <span class="fav-toggle${(b.favoritedBy||[]).includes(currentWho) ? " active" : ""}" role="button" tabindex="0" data-fav-toggle data-book-id="${b.id}" aria-label="${(b.favoritedBy||[]).includes(currentWho) ? "Bỏ yêu thích" : "Đánh dấu yêu thích"}">
             <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.8Z"/></svg>
           </span>
+          ${(b.favoritedBy||[]).length > 0 ? `<span class="fav-count">${(b.favoritedBy||[]).length}</span>` : ""}
         </span>
       </div>
       <div class="card-body">
@@ -2062,7 +2216,7 @@ function render(data){
   updateLastActivityStat(data);
   renderTopViewed(data);
 
-  const favoriteCount = categories.reduce((sum, c) => sum + (c.books||[]).filter(b => b.isFavorite).length, 0);
+  const favoriteCount = categories.reduce((sum, c) => sum + (c.books||[]).filter(b => (b.favoritedBy||[]).includes(currentWho)).length, 0);
   countUp(document.getElementById("statFavorites"), favoriteCount, 2);
 
   // "Bên nhau" — days since the date the PIN itself is built from (01/08/2026).
@@ -2388,6 +2542,7 @@ function loadCatalog(){
     return;
   }
   hideGate();
+  loadAuthorNames();
 
   catalogEl.innerHTML = `
     <section class="section">
