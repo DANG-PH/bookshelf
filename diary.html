@@ -190,6 +190,32 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
 @media(prefers-reduced-motion:reduce){.status-msg{transition:none}}
 @media(max-width:480px){.status-msg{top:12px;padding:11px 16px;font-size:.84rem}}
 
+/* ── "ngày này, những năm trước" — a little throwback nudge, dismissible
+   for the current visit (no persistence — harmless to see it again) ── */
+.on-this-day{
+  background:var(--accent-wash);border:1px solid var(--accent);border-radius:14px;
+  padding:14px 16px;margin-bottom:20px;
+}
+.on-this-day[hidden]{display:none}
+.on-this-day-head{
+  display:flex;align-items:center;justify-content:space-between;
+  font-family:var(--serif);font-weight:600;color:var(--accent-deep);margin-bottom:8px;
+}
+.on-this-day-head button{background:none;border:none;color:var(--faint);font-size:.8rem;padding:2px}
+.on-this-day-head button:hover{color:var(--stamp)}
+.on-this-day-item{
+  padding:9px 0;border-top:1px dashed var(--line-2);font-size:.86rem;
+  cursor:pointer;line-height:1.5;color:var(--ink);
+}
+.on-this-day-item:first-child{border-top:none;padding-top:0}
+.on-this-day-item:hover{color:var(--accent-deep)}
+.on-this-day-item .otd-when{
+  font-family:var(--mono);font-size:9.5px;color:var(--faint);
+  text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:3px;
+}
+@keyframes otdGlow{0%,100%{box-shadow:0 0 0 0 var(--accent-wash)}50%{box-shadow:0 0 0 8px transparent}}
+.entry.picked,.memory-card.picked{animation:otdGlow 1s ease-out 2;border-color:var(--accent)}
+
 .panel{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:24px 22px;margin-bottom:24px;box-shadow:0 16px 40px -28px rgba(80,62,42,.3)}
 
 /* ── collapsible "write new" panel — closed by default so the tab opens
@@ -529,6 +555,14 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
 
   <p class="status-msg" id="globalStatus" role="status" aria-live="polite"></p>
 
+  <div class="on-this-day" id="onThisDayCard" hidden>
+    <div class="on-this-day-head">
+      <span>✨ Ngày này, những năm trước</span>
+      <button type="button" id="onThisDayClose" aria-label="Đóng">✕</button>
+    </div>
+    <div class="on-this-day-body" id="onThisDayBody"></div>
+  </div>
+
   <div class="tab-bar" id="tabBar">
     <button type="button" class="tab-btn active" data-tab="diary">Nhật Ký</button>
     <button type="button" class="tab-btn" data-tab="memories">Kỷ Niệm Chung</button>
@@ -563,6 +597,10 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
         <div class="field">
           <label for="entryContent">Viết gì đó</label>
           <textarea id="entryContent" name="content" placeholder="Hôm nay bạn thấy thế nào?" required></textarea>
+        </div>
+        <div class="field">
+          <label for="entryPhoto">Ảnh <span style="font-weight:400;color:var(--faint)">(dán link, không bắt buộc)</span></label>
+          <input id="entryPhoto" name="photoUrl" type="url" placeholder="https://…" />
         </div>
         <button class="btn-primary" type="submit" id="entrySubmit">Viết vào nhật ký</button>
       </form>
@@ -685,6 +723,10 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
           <div class="field">
             <label for="privateEntryContent">Viết gì đó</label>
             <textarea id="privateEntryContent" name="content" placeholder="Chỉ mình bạn đọc được thôi…" required></textarea>
+          </div>
+          <div class="field">
+            <label for="privateEntryPhoto">Ảnh <span style="font-weight:400;color:var(--faint)">(dán link, không bắt buộc)</span></label>
+            <input id="privateEntryPhoto" name="photoUrl" type="url" placeholder="https://…" />
           </div>
           <button class="btn-primary" type="submit" id="privateEntrySubmit">Viết vào nhật ký riêng</button>
         </form>
@@ -1209,6 +1251,7 @@ function entryHTML(entry, opts){
         ${hideLike ? "" : likeButtonHTML(entry.id, entry.likedBy, "data-like-entry")}
       </div>
       <div class="entry-view">
+        ${entry.photoUrl ? `<div class="memory-media"><img src="${escapeHTML(entry.photoUrl)}" alt="" loading="lazy" onerror="this.parentElement.remove()" /></div>` : ""}
         ${entry.title ? `<div class="entry-title">${escapeHTML(entry.title)}</div>` : ""}
         <div class="entry-content" data-preview="${escapeHTML(preview)}" data-full="${escapeHTML(full)}">${escapeHTML(preview)}</div>
         ${isLong ? `<span class="entry-more" role="button" tabindex="0" data-more-entry data-expanded="0">Xem thêm</span>` : ""}
@@ -1237,6 +1280,9 @@ function entryEditFormHTML(entry){
       </div>
       <div class="field">
         <textarea class="edit-content" required>${escapeHTML(entry.content)}</textarea>
+      </div>
+      <div class="field">
+        <input type="url" class="edit-photo" placeholder="Ảnh — dán link, không bắt buộc" value="${escapeHTML(entry.photoUrl || "")}" />
       </div>
       <div class="mood-row">
         ${moodPills}
@@ -1470,6 +1516,7 @@ document.getElementById("privateEntryForm").addEventListener("submit", async (e)
         title: form.title.value.trim() || undefined,
         content,
         mood: currentPrivateMood || undefined,
+        photoUrl: form.photoUrl.value.trim() || undefined,
       }),
     });
     form.reset();
@@ -1666,6 +1713,7 @@ document.querySelectorAll(".entry-list").forEach(list => {
             title: form.querySelector(".edit-title").value.trim() || null,
             content,
             mood: form.dataset.editMood || null,
+            photoUrl: form.querySelector(".edit-photo").value.trim() || null,
           }),
         });
         await Promise.all([loadEntries(), loadPrivateEntries()]);
@@ -1704,6 +1752,7 @@ document.getElementById("entryForm").addEventListener("submit", async (e) => {
         title: form.title.value.trim() || undefined,
         content,
         mood: currentMood || undefined,
+        photoUrl: form.photoUrl.value.trim() || undefined,
       }),
     });
     form.reset();
@@ -2168,10 +2217,65 @@ async function boot(){
     // separate "Nhật Ký Riêng" tab, entries here render independent of it
     await Promise.all([loadNames(), loadAuthorLockStatus()]);
     await Promise.all([loadEntries(), loadMemories()]);
+    loadOnThisDay();
   }catch(err){
     if(err.message !== "unauthorized" && err.message !== "no-token") flash(err.message, "err");
   }
 }
+
+// ── "ngày này, những năm trước" — shared entries + memories only
+// (never private diary), best-effort and non-blocking so a failure here
+// never disrupts the rest of the page ──
+async function loadOnThisDay(){
+  try{
+    const [diaryItems, memoryItems] = await Promise.all([
+      api("/diary/on-this-day"),
+      api("/memories/on-this-day"),
+    ]);
+    const combined = [
+      ...diaryItems.map(e => ({ type: "diary", id: e.id, when: e.createdAt, author: e.author, title: e.title, text: e.content })),
+      ...memoryItems.map(m => ({ type: "memory", id: m.id, when: m.memoryDate || m.createdAt, title: m.title, text: m.description || "" })),
+    ];
+    const card = document.getElementById("onThisDayCard");
+    if(!combined.length){ card.hidden = true; return; }
+
+    const thisYear = new Date().getFullYear();
+    document.getElementById("onThisDayBody").innerHTML = combined.slice(0, 4).map(item => {
+      const yearsAgo = thisYear - new Date(item.when).getFullYear();
+      const who = item.type === "diary" ? (authorNames[item.author] || item.author) : "Kỷ niệm chung";
+      const label = item.title || truncateText(item.text, 90).preview;
+      return `
+        <div class="on-this-day-item" data-otd-type="${item.type}" data-otd-id="${item.id}">
+          <span class="otd-when">${yearsAgo} năm trước · ${escapeHTML(who)}</span>
+          ${escapeHTML(label)}
+        </div>
+      `;
+    }).join("");
+    card.hidden = false;
+  }catch{
+    // best-effort — a failed check here shouldn't disrupt the rest of the page
+  }
+}
+document.getElementById("onThisDayClose").addEventListener("click", () => {
+  document.getElementById("onThisDayCard").hidden = true;
+});
+document.getElementById("onThisDayBody").addEventListener("click", (e) => {
+  const item = e.target.closest("[data-otd-id]");
+  if(!item) return;
+  const tab = item.dataset.otdType === "diary" ? "diary" : "memories";
+  document.querySelectorAll(".tab-btn").forEach(b => b.classList.toggle("active", b.dataset.tab === tab));
+  document.querySelectorAll("[data-tab-panel]").forEach(p => { p.hidden = p.dataset.tabPanel !== tab; });
+  // best-effort — the item might not be in the currently-loaded page
+  // (diary/memories both load a limited recent window), so this quietly
+  // no-ops if the card isn't actually on screen to scroll to
+  setTimeout(() => {
+    const target = document.querySelector(`[data-entry-id="${item.dataset.otdId}"], [data-memory-id="${item.dataset.otdId}"]`);
+    if(!target) return;
+    target.scrollIntoView({ behavior: "smooth", block: "center" });
+    target.classList.add("picked");
+    setTimeout(() => target.classList.remove("picked"), 2000);
+  }, 100);
+});
 
 // print should show everything, not whatever's currently truncated behind
 // a "Xem thêm" — expand it all beforehand, put it back after so the
