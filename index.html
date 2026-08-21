@@ -587,9 +587,8 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
 }
 .review-summary .rating-row{margin-bottom:0}
 .review-summary .rating-star{font-size:.92rem}
-.review-summary-avg{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--soft)}
 .review-summary-count{font-size:.76rem;color:var(--faint);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.review-summary-cta{font-size:.74rem;color:var(--accent-deep);font-weight:600;white-space:nowrap}
+.review-summary-cta{font-size:.9rem;color:var(--accent-deep);font-weight:600;flex:none;line-height:1}
 .review-summary:hover .review-summary-cta{color:var(--stamp)}
 .quote-count-btn{
   flex:none;display:flex;align-items:center;gap:3px;padding:5px 9px;border-radius:8px;border:1px solid var(--line-2);
@@ -1856,19 +1855,21 @@ function quoteCountBtnHTML(b){
     </button>
   `;
 }
+// compact on purpose — stars already encode the number, the exact average
+// and full "Xem/Viết đánh giá" wording live in the modal (reviewModalSubText)
+// instead. Cramming both a numeric average AND a verbose CTA in here on top
+// of the stars was what clipped "Chưa có đánh giá" down to "Chư…" on a
+// narrow card, especially once the quote-count button joined this row.
 function reviewSummaryHTML(b){
   const reviews = b.reviews || [];
   const rated = reviews.filter(r => r.rating != null);
   const avg = rated.length ? rated.reduce((s, r) => s + r.rating, 0) / rated.length : 0;
-  const avgDisplay = rated.length ? (Math.round(avg * 10) / 10).toString().replace(".", ",") : null;
   const countLabel = reviews.length ? `${reviews.length} đánh giá` : "Chưa có đánh giá";
-  const cta = reviews.length ? "Xem ›" : "Viết đánh giá ›";
   return `
-    <div class="review-summary" role="button" tabindex="0" data-open-reviews="${b.id}" aria-label="Xem đánh giá">
+    <div class="review-summary" role="button" tabindex="0" data-open-reviews="${b.id}" aria-label="${reviews.length ? "Xem đánh giá" : "Viết đánh giá"}">
       <div class="rating-row readonly">${rated.length ? avgStarsHTML(avg) : ratingStarsHTML(b.id, 0, false)}</div>
-      ${avgDisplay ? `<span class="review-summary-avg">${avgDisplay}</span>` : ""}
       <span class="review-summary-count">${countLabel}</span>
-      <span class="review-summary-cta">${cta}</span>
+      <span class="review-summary-cta" aria-hidden="true">›</span>
     </div>
   `;
 }
