@@ -932,6 +932,8 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
   background:var(--paper);border:1px solid var(--line-2);color:var(--faint);font-size:.8rem;
 }
 .chat-panel-head button:hover{color:var(--stamp)}
+.chat-panel-head-actions{display:flex;align-items:center;gap:6px}
+.chat-panel-head-actions svg{width:13px;height:13px}
 .chat-messages{flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
 .chat-empty{font-size:.84rem;color:var(--faint);font-style:italic;font-family:var(--serif);text-align:center;padding:20px 6px}
 .chat-msg{
@@ -1176,7 +1178,12 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
 <div class="chat-panel" id="chatPanel">
   <div class="chat-panel-head">
     <span>Hỏi thư viện</span>
-    <button type="button" id="chatCloseBtn" aria-label="Đóng">✕</button>
+    <div class="chat-panel-head-actions">
+      <button type="button" id="chatClearBtn" aria-label="Xoá lịch sử trò chuyện" title="Xoá lịch sử">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+      </button>
+      <button type="button" id="chatCloseBtn" aria-label="Đóng">✕</button>
+    </div>
   </div>
   <div class="chat-messages" id="chatMessages">
     <p class="chat-empty">Hỏi gì cũng được — mình sẽ tìm trong các sách đang có ở đây để trả lời.</p>
@@ -2207,10 +2214,31 @@ loadCatalog();
 const chatFabBtn = document.getElementById("chatFabBtn");
 const chatPanel = document.getElementById("chatPanel");
 const chatCloseBtn = document.getElementById("chatCloseBtn");
+const chatClearBtn = document.getElementById("chatClearBtn");
 const chatMessagesEl = document.getElementById("chatMessages");
 const chatForm = document.getElementById("chatForm");
 const chatInput = document.getElementById("chatInput");
 const chatSendBtn = document.getElementById("chatSendBtn");
+// captured before anything touches the DOM — the exact markup to restore
+// the panel to once history's cleared or on a first-ever visit
+const CHAT_EMPTY_HTML = chatMessagesEl.innerHTML;
+
+// ── chat history — persisted like a real chat app, so it survives a
+// reload/reopen instead of resetting every time. Same localStorage
+// pattern used everywhere else on this static, per-device, no-backend-
+// accounts site. Also doubles as short-term conversation memory: the
+// last few turns are sent back to /ai/ask so a follow-up question can
+// resolve against what was just discussed ──
+const CHAT_HISTORY_KEY = "tb_chat_history";
+const CHAT_HISTORY_MAX = 40;
+const CHAT_HISTORY_SEND_TURNS = 8;
+
+function loadChatHistory(){
+  try{ return JSON.parse(localStorage.getItem(CHAT_HISTORY_KEY) || "[]"); }catch{ return []; }
+}
+function saveChatHistory(list){
+  localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(list.slice(-CHAT_HISTORY_MAX)));
+}
 
 // minimal, safe markdown for chat replies — escapes everything first, then
 // only turns **bold**, "- " bullet lines, and blank-line paragraph breaks
@@ -2240,16 +2268,32 @@ document.addEventListener("keydown", (e) => {
   if(e.key === "Escape" && chatPanel.classList.contains("open")) toggleChatPanel(false);
 });
 
-function appendChatMessage(roleClass, text){
+function appendChatMessage(roleClass, text, opts){
   const emptyNote = chatMessagesEl.querySelector(".chat-empty");
   if(emptyNote) emptyNote.remove();
   const el = document.createElement("div");
   el.className = `chat-msg ${roleClass}`;
-  el.textContent = text;
+  if(opts && opts.markdown) el.innerHTML = renderChatMarkdown(text);
+  else el.textContent = text;
   chatMessagesEl.appendChild(el);
   chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
   return el;
 }
+
+function restoreChatHistory(){
+  const history = loadChatHistory();
+  history.forEach(turn => {
+    appendChatMessage(turn.role === "user" ? "user" : "bot", turn.text, turn.role === "model" ? { markdown: true } : undefined);
+  });
+}
+restoreChatHistory();
+
+chatClearBtn.addEventListener("click", () => {
+  if(!loadChatHistory().length) return;
+  if(!confirm("Xoá toàn bộ lịch sử trò chuyện?")) return;
+  localStorage.removeItem(CHAT_HISTORY_KEY);
+  chatMessagesEl.innerHTML = CHAT_EMPTY_HTML;
+});
 
 function appendChatTyping(){
   const emptyNote = chatMessagesEl.querySelector(".chat-empty");
@@ -2269,6 +2313,10 @@ chatForm.addEventListener("submit", async (e) => {
   const token = getStoredToken();
   if(!token){ showGate(); return; }
 
+  // snapshot before this turn joins history — what gets sent is
+  // "everything before the question being asked right now"
+  const historyForRequest = loadChatHistory().slice(-CHAT_HISTORY_SEND_TURNS);
+
   appendChatMessage("user", message);
   chatInput.value = "";
   chatInput.disabled = true;
@@ -2282,7 +2330,7 @@ chatForm.addEventListener("submit", async (e) => {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ message }),
+      body: JSON.stringify({ message, history: historyForRequest }),
     });
     if(res.status === 401){
       clearToken();
@@ -2292,8 +2340,13 @@ chatForm.addEventListener("submit", async (e) => {
     }
     if(!res.ok) throw new Error("HTTP " + res.status);
     const data = await res.json();
-    pendingEl.innerHTML = renderChatMarkdown(data.message || "Không có phản hồi.");
+    const replyText = data.message || "Không có phản hồi.";
+    pendingEl.innerHTML = renderChatMarkdown(replyText);
     chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+
+    const history = loadChatHistory();
+    history.push({ role: "user", text: message }, { role: "model", text: replyText });
+    saveChatHistory(history);
   }catch(err){
     pendingEl.textContent = `Có lỗi xảy ra, thử lại nhé (${err.message}).`;
   }finally{
