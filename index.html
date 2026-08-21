@@ -2223,21 +2223,23 @@ const chatSendBtn = document.getElementById("chatSendBtn");
 // the panel to once history's cleared or on a first-ever visit
 const CHAT_EMPTY_HTML = chatMessagesEl.innerHTML;
 
-// ── chat history — persisted like a real chat app, so it survives a
-// reload/reopen instead of resetting every time. Same localStorage
-// pattern used everywhere else on this static, per-device, no-backend-
-// accounts site. Also doubles as short-term conversation memory: the
-// last few turns are sent back to /ai/ask so a follow-up question can
-// resolve against what was just discussed ──
+// ── chat history — session-scoped, not a permanent log: sessionStorage
+// instead of localStorage, so closing/reopening the panel (or the FAB)
+// keeps context, but closing the tab or coming back later starts fresh.
+// (Note: a plain page reload/F5 in the same tab does NOT clear
+// sessionStorage by browser design — only closing the tab/window, or
+// opening the site in a new tab, does.) Also doubles as short-term
+// conversation memory: the last few turns are sent back to /ai/ask so a
+// follow-up question can resolve against what was just discussed ──
 const CHAT_HISTORY_KEY = "tb_chat_history";
 const CHAT_HISTORY_MAX = 40;
 const CHAT_HISTORY_SEND_TURNS = 8;
 
 function loadChatHistory(){
-  try{ return JSON.parse(localStorage.getItem(CHAT_HISTORY_KEY) || "[]"); }catch{ return []; }
+  try{ return JSON.parse(sessionStorage.getItem(CHAT_HISTORY_KEY) || "[]"); }catch{ return []; }
 }
 function saveChatHistory(list){
-  localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(list.slice(-CHAT_HISTORY_MAX)));
+  sessionStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(list.slice(-CHAT_HISTORY_MAX)));
 }
 
 // minimal, safe markdown for chat replies — escapes everything first, then
@@ -2291,7 +2293,7 @@ restoreChatHistory();
 chatClearBtn.addEventListener("click", () => {
   if(!loadChatHistory().length) return;
   if(!confirm("Xoá toàn bộ lịch sử trò chuyện?")) return;
-  localStorage.removeItem(CHAT_HISTORY_KEY);
+  sessionStorage.removeItem(CHAT_HISTORY_KEY);
   chatMessagesEl.innerHTML = CHAT_EMPTY_HTML;
 });
 
