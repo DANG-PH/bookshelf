@@ -63,6 +63,15 @@ input:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 
 textarea{resize:vertical;min-height:90px;font-family:var(--serif);font-size:1rem;line-height:1.6}
 label{display:block;font-size:.8rem;font-weight:600;color:var(--soft);margin-bottom:6px}
 .field{margin-bottom:14px}
+.file-field{
+  border:1.5px dashed var(--line-2);border-radius:12px;padding:14px;background:var(--paper);
+  text-align:center;transition:border-color .2s,background .2s;
+}
+.file-field:has(input:focus){border-color:var(--accent);background:var(--card)}
+.file-field input[type=file]{border:none;background:none;padding:0;font-size:.82rem;width:100%}
+.edit-photo-current{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.edit-photo-current[hidden]{display:none}
+.edit-photo-current img{width:52px;height:52px;object-fit:cover;border-radius:8px;flex:none}
 .row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 @media(max-width:480px){.row{grid-template-columns:1fr}}
 button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weight:700;font-size:.9rem}
@@ -599,8 +608,8 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
           <textarea id="entryContent" name="content" placeholder="Hôm nay bạn thấy thế nào?" required></textarea>
         </div>
         <div class="field">
-          <label for="entryPhoto">Ảnh <span style="font-weight:400;color:var(--faint)">(dán link, không bắt buộc)</span></label>
-          <input id="entryPhoto" name="photoUrl" type="url" placeholder="https://…" />
+          <label for="entryPhoto">Ảnh <span style="font-weight:400;color:var(--faint)">(không bắt buộc)</span></label>
+          <div class="file-field"><input id="entryPhoto" type="file" accept="image/*" /></div>
         </div>
         <button class="btn-primary" type="submit" id="entrySubmit">Viết vào nhật ký</button>
       </form>
@@ -725,8 +734,8 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
             <textarea id="privateEntryContent" name="content" placeholder="Chỉ mình bạn đọc được thôi…" required></textarea>
           </div>
           <div class="field">
-            <label for="privateEntryPhoto">Ảnh <span style="font-weight:400;color:var(--faint)">(dán link, không bắt buộc)</span></label>
-            <input id="privateEntryPhoto" name="photoUrl" type="url" placeholder="https://…" />
+            <label for="privateEntryPhoto">Ảnh <span style="font-weight:400;color:var(--faint)">(không bắt buộc)</span></label>
+            <div class="file-field"><input id="privateEntryPhoto" type="file" accept="image/*" /></div>
           </div>
           <button class="btn-primary" type="submit" id="privateEntrySubmit">Viết vào nhật ký riêng</button>
         </form>
@@ -892,6 +901,18 @@ async function api(path, options = {}){
     throw new Error(body.message || `HTTP ${res.status}`);
   }
   return res.status === 204 ? null : res.json();
+}
+
+// diary entry photos are uploaded, not pasted links — this just hands
+// back the resolved URL; api() doesn't force a Content-Type header, so
+// FormData's own multipart boundary goes through untouched
+async function uploadDiaryPhoto(fileInput){
+  const file = fileInput.files && fileInput.files[0];
+  if(!file) return undefined;
+  const formData = new FormData();
+  formData.append("photo", file);
+  const result = await api("/diary/upload-photo", { method: "POST", body: formData });
+  return result.photoUrl;
 }
 
 function flash(message, kind){
@@ -1282,7 +1303,13 @@ function entryEditFormHTML(entry){
         <textarea class="edit-content" required>${escapeHTML(entry.content)}</textarea>
       </div>
       <div class="field">
-        <input type="url" class="edit-photo" placeholder="Ảnh — dán link, không bắt buộc" value="${escapeHTML(entry.photoUrl || "")}" />
+        <label style="display:block;font-size:.8rem;font-weight:600;color:var(--soft);margin-bottom:6px">Ảnh</label>
+        <div class="edit-photo-current"${entry.photoUrl ? "" : " hidden"}>
+          <img src="${escapeHTML(entry.photoUrl || "")}" alt="" />
+          <button type="button" class="btn-del" data-remove-photo>Xoá ảnh</button>
+        </div>
+        <div class="file-field"><input type="file" class="edit-photo-file" accept="image/*" /></div>
+        <input type="hidden" class="edit-photo-url" value="${escapeHTML(entry.photoUrl || "")}" />
       </div>
       <div class="mood-row">
         ${moodPills}
@@ -1508,6 +1535,8 @@ document.getElementById("privateEntryForm").addEventListener("submit", async (e)
   submitBtn.disabled = true;
   submitBtn.textContent = "Đang lưu…";
   try{
+    const photoInput = document.getElementById("privateEntryPhoto");
+    const photoUrl = await uploadDiaryPhoto(photoInput);
     await api("/diary/private", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -1516,7 +1545,7 @@ document.getElementById("privateEntryForm").addEventListener("submit", async (e)
         title: form.title.value.trim() || undefined,
         content,
         mood: currentPrivateMood || undefined,
-        photoUrl: form.photoUrl.value.trim() || undefined,
+        photoUrl,
       }),
     });
     form.reset();
@@ -1657,6 +1686,14 @@ document.querySelectorAll(".entry-list").forEach(list => {
       return;
     }
 
+    const removePhotoBtn = e.target.closest("[data-remove-photo]");
+    if(removePhotoBtn){
+      const field = removePhotoBtn.closest(".field");
+      field.querySelector(".edit-photo-url").value = "";
+      field.querySelector(".edit-photo-current").hidden = true;
+      return;
+    }
+
     const editMoodPill = e.target.closest(".entry-edit-form .mood-pill");
     if(editMoodPill){
       const form = editMoodPill.closest(".entry-edit-form");
@@ -1706,6 +1743,12 @@ document.querySelectorAll(".entry-list").forEach(list => {
       saveBtn.disabled = true;
       saveBtn.textContent = "Đang lưu…";
       try{
+        // a newly-chosen file replaces whatever's in .edit-photo-url —
+        // that field already reflects "unchanged" or "removed" (see the
+        // data-remove-photo handler below) when there's no new upload
+        const photoFileInput = form.querySelector(".edit-photo-file");
+        const uploadedUrl = await uploadDiaryPhoto(photoFileInput);
+        const photoUrl = uploadedUrl || form.querySelector(".edit-photo-url").value.trim() || null;
         await api(`/diary/${saveBtn.dataset.saveEdit}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
@@ -1713,7 +1756,7 @@ document.querySelectorAll(".entry-list").forEach(list => {
             title: form.querySelector(".edit-title").value.trim() || null,
             content,
             mood: form.dataset.editMood || null,
-            photoUrl: form.querySelector(".edit-photo").value.trim() || null,
+            photoUrl,
           }),
         });
         await Promise.all([loadEntries(), loadPrivateEntries()]);
@@ -1744,6 +1787,8 @@ document.getElementById("entryForm").addEventListener("submit", async (e) => {
   submitBtn.disabled = true;
   submitBtn.textContent = "Đang lưu…";
   try{
+    const photoInput = document.getElementById("entryPhoto");
+    const photoUrl = await uploadDiaryPhoto(photoInput);
     await api("/diary", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -1752,7 +1797,7 @@ document.getElementById("entryForm").addEventListener("submit", async (e) => {
         title: form.title.value.trim() || undefined,
         content,
         mood: currentMood || undefined,
-        photoUrl: form.photoUrl.value.trim() || undefined,
+        photoUrl,
       }),
     });
     form.reset();
