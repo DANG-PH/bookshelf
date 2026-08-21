@@ -955,6 +955,10 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
 .chat-session-delete svg{width:13px;height:13px}
 
 .chat-messages{flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+/* [hidden]'s default display:none loses to the unconditional display:flex
+   above at equal specificity — without this, toggling .hidden on these
+   two is a no-op and they stay visible underneath the session list */
+.chat-messages[hidden],.chat-input-row[hidden]{display:none}
 .chat-empty{font-size:.84rem;color:var(--faint);font-style:italic;font-family:var(--serif);text-align:center;padding:20px 6px}
 .chat-msg{
   max-width:85%;padding:9px 13px;border-radius:14px;font-size:.86rem;line-height:1.5;

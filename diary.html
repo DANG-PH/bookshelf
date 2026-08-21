@@ -260,6 +260,11 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
 .date-filter-fields{
   display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap;
 }
+/* the explicit display:flex/grid above wins over [hidden]'s default
+   display:none at equal-or-higher specificity — without these, the
+   date filter row (and its "clear" button) never actually hide when
+   .hidden is toggled off, they just... stay there */
+.date-filter-fields[hidden]{display:none}
 .date-filter-fields input{
   width:auto;flex:1;min-width:130px;padding:7px 10px;font-size:.82rem;border-radius:8px;
 }
@@ -270,6 +275,7 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
   display:grid;place-items:center;background:var(--paper);border:1px solid var(--line-2);
   color:var(--faint);font-size:.8rem;
 }
+.date-filter-fields button[hidden]{display:none}
 .date-filter-fields button:hover{color:var(--stamp);border-color:var(--stamp-wash)}
 @media(max-width:480px){.date-filter-fields button{width:36px;height:36px}}
 
