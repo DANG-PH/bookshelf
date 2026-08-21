@@ -1251,7 +1251,7 @@ function likeButtonHTML(id, likedBy, dataAttr){
   return `
     <span class="like-wrap">
       <button type="button" class="entry-like${isLikedByMe ? " active" : ""}" ${dataAttr}="${id}" aria-label="${isLikedByMe ? "Bỏ tym" : "Tym"}">
-        <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.8Z"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.8Z"/></svg>
       </button>
       ${count > 0 ? `<span class="like-count">${count}</span>` : ""}
     </span>

@@ -2326,7 +2326,7 @@ function cardHTML(b, cat){
           <span>${escapeHTML(String(b.year||""))}</span>
           <span class="view-count" data-view-count title="Đã xem ${b.viewCount||0} lần"${b.viewCount ? "" : " hidden"}>👁 ${b.viewCount||0}</span>
           <span class="fav-toggle${(b.favoritedBy||[]).includes(currentWho) ? " active" : ""}" role="button" tabindex="0" data-fav-toggle data-book-id="${b.id}" aria-label="${(b.favoritedBy||[]).includes(currentWho) ? "Bỏ yêu thích" : "Đánh dấu yêu thích"}">
-            <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.8Z"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.8Z"/></svg>
           </span>
           ${(b.favoritedBy||[]).length > 0 ? `<span class="fav-count">${(b.favoritedBy||[]).length}</span>` : ""}
         </span>
