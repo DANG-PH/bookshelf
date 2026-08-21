@@ -572,32 +572,50 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
 .status-pill:hover{border-color:var(--cat,var(--accent));color:var(--cat,var(--accent-deep))}
 .status-pill.active{background:var(--cat,var(--accent-solid));border-color:var(--cat,var(--accent-solid));color:#fff}
 
-/* rating + personal review — always shown, not gated behind readStatus
+/* rating + personal reviews — always shown, not gated behind readStatus
    (that was undiscoverable: nothing hinted you had to mark a book
-   "Đã đọc" first before the stars would even appear) */
+   "Đã đọc" first before the stars would even appear). Each submission is
+   its own log entry (re-reads, updated thoughts, …) rendered as a
+   separate card, not one slot per person merged inline. */
 .rating-review{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line-2);position:relative;z-index:1}
 .rating-row{display:flex;gap:2px;margin-bottom:6px}
 .rating-star{font-size:1.05rem;line-height:1;color:var(--line-2);cursor:pointer;transition:color .15s,transform .1s}
 .rating-star:hover{transform:scale(1.15);color:#e0a94a}
 .rating-star.active{color:#e0a94a}
-.review-view{font-size:.78rem}
-.review-text{font-family:var(--serif);font-style:italic;color:var(--soft);line-height:1.5;margin-bottom:4px;white-space:pre-wrap}
-.review-edit-toggle{color:var(--accent-deep);text-decoration:underline;text-underline-offset:2px;cursor:pointer;font-weight:600;font-size:.76rem}
-.review-edit-toggle:hover{color:var(--stamp)}
-.review-edit textarea{
-  width:100%;min-height:60px;padding:8px 10px;border:1.5px solid var(--line-2);border-radius:8px;
-  background:var(--paper);color:var(--ink);font-family:var(--serif);font-size:.82rem;resize:vertical;
-}
-.review-edit-actions{display:flex;gap:6px;margin-top:6px}
-.review-edit-actions button{flex:1;padding:6px;font-size:.76rem;border-radius:8px;font-weight:600;border:none}
-.review-edit-actions button[data-cancel-review]{background:none;border:1px solid var(--line-2);color:var(--faint)}
-.review-edit-actions button[data-save-review]{background:var(--accent-solid);color:#fff}
-.review-edit-actions button:disabled{opacity:.6}
-.review-person + .review-person{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line-2)}
-.review-person-label{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--faint);display:block;margin-bottom:4px}
 .rating-row.readonly .rating-star{cursor:default}
 .rating-row.readonly .rating-star:hover{transform:none;color:var(--line-2)}
 .rating-row.readonly .rating-star.active:hover{color:#e0a94a}
+
+.review-list{display:flex;flex-direction:column;gap:8px;margin-bottom:8px}
+.review-card{
+  background:var(--paper-2,var(--paper));border:1px solid var(--line-2);border-radius:10px;
+  padding:8px 10px;position:relative;
+}
+.review-card-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px}
+.review-card-who{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--faint)}
+.review-card-date{font-family:var(--mono);font-size:8.5px;color:var(--faint);opacity:.75}
+.review-card .rating-row{margin-bottom:4px}
+.review-card .review-text{margin-bottom:0}
+.review-card-del{
+  position:absolute;top:6px;right:6px;width:18px;height:18px;border-radius:50%;border:none;background:none;
+  color:var(--faint);cursor:pointer;font-size:.85rem;line-height:1;display:none;align-items:center;justify-content:center;
+}
+.review-card.mine:hover .review-card-del{display:flex}
+.review-card-del:hover{color:var(--stamp)}
+.review-text{font-family:var(--serif);font-style:italic;color:var(--soft);line-height:1.5;margin-bottom:4px;white-space:pre-wrap}
+
+.review-add-toggle{color:var(--accent-deep);text-decoration:underline;text-underline-offset:2px;cursor:pointer;font-weight:600;font-size:.76rem}
+.review-add-toggle:hover{color:var(--stamp)}
+.review-add-form{margin-top:6px}
+.review-add-form textarea{
+  width:100%;min-height:60px;padding:8px 10px;border:1.5px solid var(--line-2);border-radius:8px;
+  background:var(--paper);color:var(--ink);font-family:var(--serif);font-size:.82rem;resize:vertical;margin-top:6px;
+}
+.review-add-actions{display:flex;gap:6px;margin-top:6px}
+.review-add-actions button{flex:1;padding:6px;font-size:.76rem;border-radius:8px;font-weight:600;border:none}
+.review-add-actions button[data-cancel-review]{background:none;border:1px solid var(--line-2);color:var(--faint)}
+.review-add-actions button[data-save-review]{background:var(--accent-solid);color:#fff}
+.review-add-actions button:disabled{opacity:.6}
 
 .card-foot{
   display:flex;align-items:center;justify-content:space-between;gap:10px;
@@ -1691,28 +1709,36 @@ catalogEl.addEventListener("keydown", (e) => {
 
 const READ_STATUS_LABELS = { want: "Muốn đọc", reading: "Đang đọc", done: "Đã đọc" };
 
-// ── star rating + personal review, per-author (BookReview rows) instead
-// of one shared value — currentWho's own row is editable, the other
-// person's (if any) shows read-only underneath ──
+// ── star rating + personal reviews — a running log of entries (BookReview
+// rows), not one slot per person. Anyone can add as many entries as they
+// want (re-reads, updated thoughts, …); only the author of an entry can
+// delete it. Rendered as a stack of separate cards, newest first, plus a
+// standing "+ Viết đánh giá" form to add another. ──
 function ratingReviewBlockHTML(b){
-  const otherAuthor = currentWho === "me" ? "partner" : "me";
   const reviews = b.reviews || [];
-  const mine = reviews.find(r => r.author === currentWho);
-  const other = reviews.find(r => r.author === otherAuthor);
-  const otherHasContent = other && (other.rating || other.review);
+  const listHTML = reviews.length
+    ? `<div class="review-list">${reviews.map(r => reviewCardHTML(b.id, r)).join("")}</div>`
+    : "";
   return `
     <div class="rating-review" data-book-id="${b.id}">
-      <div class="review-person">
-        <div class="rating-row" data-book-id="${b.id}">${ratingStarsHTML(b.id, mine ? mine.rating : 0, true)}</div>
-        ${reviewViewHTML(b.id, mine)}
+      ${listHTML}
+      <span class="review-add-toggle" role="button" tabindex="0" data-review-add-toggle="${b.id}">+ Viết đánh giá</span>
+    </div>
+  `;
+}
+function reviewCardHTML(bookId, r){
+  const mine = r.author === currentWho;
+  const who = escapeHTML(authorNames[r.author] || r.author);
+  const date = r.createdAt ? new Date(r.createdAt).toLocaleDateString("vi-VN") : "";
+  return `
+    <div class="review-card${mine ? " mine" : ""}" data-review-id="${r.id}">
+      ${mine ? `<button type="button" class="review-card-del" data-delete-review="${r.id}" data-book-id="${bookId}" aria-label="Xoá đánh giá này">✕</button>` : ""}
+      <div class="review-card-head">
+        <span class="review-card-who">${who}</span>
+        ${date ? `<span class="review-card-date">${date}</span>` : ""}
       </div>
-      ${otherHasContent ? `
-        <div class="review-person">
-          <span class="review-person-label">${escapeHTML(authorNames[otherAuthor] || otherAuthor)}</span>
-          <div class="rating-row readonly">${ratingStarsHTML(b.id, other.rating, false)}</div>
-          ${other.review ? `<p class="review-text">${escapeHTML(other.review)}</p>` : ""}
-        </div>
-      ` : ""}
+      ${r.rating ? `<div class="rating-row readonly">${ratingStarsHTML(bookId, r.rating, false)}</div>` : ""}
+      ${r.review ? `<p class="review-text">${escapeHTML(r.review)}</p>` : ""}
     </div>
   `;
 }
@@ -1721,21 +1747,17 @@ function ratingStarsHTML(bookId, rating, interactive){
     <span class="rating-star${(rating || 0) >= n ? " active" : ""}"${interactive ? ` role="button" tabindex="0" data-rating-star="${n}" data-book-id="${bookId}" aria-label="${n} sao"` : ""}>★</span>
   `).join("");
 }
-function reviewViewHTML(bookId, mine){
-  return `
-    <div class="review-view" data-book-id="${bookId}">
-      ${mine && mine.review ? `<p class="review-text">${escapeHTML(mine.review)}</p>` : ""}
-      <span class="review-edit-toggle" role="button" tabindex="0" data-review-edit="${bookId}">${mine && mine.review ? "Sửa cảm nhận" : "+ Viết cảm nhận"}</span>
-    </div>
-  `;
+function reviewAddToggleHTML(bookId){
+  return `<span class="review-add-toggle" role="button" tabindex="0" data-review-add-toggle="${bookId}">+ Viết đánh giá</span>`;
 }
-function reviewEditFormHTML(bookId, mine){
+function reviewAddFormHTML(bookId){
   return `
-    <div class="review-edit" data-book-id="${bookId}">
-      <textarea class="review-edit-input" placeholder="Cảm nhận của bạn về cuốn này…">${escapeHTML((mine && mine.review) || "")}</textarea>
-      <div class="review-edit-actions">
+    <div class="review-add-form" data-book-id="${bookId}">
+      <div class="rating-row" data-add-rating="0">${ratingStarsHTML(bookId, 0, true)}</div>
+      <textarea class="review-add-input" placeholder="Cảm nhận của bạn về cuốn này…"></textarea>
+      <div class="review-add-actions">
         <button type="button" data-cancel-review="${bookId}">Huỷ</button>
-        <button type="button" data-save-review="${bookId}">Lưu</button>
+        <button type="button" data-save-review="${bookId}">Đăng</button>
       </div>
     </div>
   `;
@@ -1749,10 +1771,9 @@ function findBookInCatalog(id){
   return null;
 }
 // merges instead of replacing wholesale — a favorite-toggle response is
-// a full Book but without a loaded "reviews" relation, and vice versa
-// isn't even a Book at all (see updateBookReviewInCatalog) — either way,
-// a field that's absent from the response must never blank out what's
-// already cached locally
+// a full Book but without a loaded "reviews" relation, so a field that's
+// absent from the response must never blank out what's already cached
+// locally
 function updateBookInCatalog(updated){
   if(!lastCatalogData) return;
   for(const cat of lastCatalogData.categories || []){
@@ -1760,26 +1781,28 @@ function updateBookInCatalog(updated){
     if(idx !== -1){ cat.books[idx] = { ...cat.books[idx], ...updated }; return; }
   }
 }
-function updateBookReviewInCatalog(bookId, author, reviewRow){
+function addReviewToCatalog(bookId, reviewRow){
   const book = findBookInCatalog(bookId);
   if(!book) return;
-  const others = (book.reviews || []).filter(r => r.author !== author);
-  book.reviews = reviewRow
-    ? [...others, { author, rating: reviewRow.rating, review: reviewRow.review }]
-    : others;
+  book.reviews = [reviewRow, ...(book.reviews || [])];
+}
+function removeReviewFromCatalog(bookId, reviewId){
+  const book = findBookInCatalog(bookId);
+  if(!book) return;
+  book.reviews = (book.reviews || []).filter(r => r.id !== reviewId);
 }
 function refreshRatingReviewBlock(book){
   const card = document.querySelector(`a.card[data-book-id="${book.id}"]`);
   const block = card && card.querySelector(".rating-review");
   if(block) block.outerHTML = ratingReviewBlockHTML(book);
 }
-async function upsertBookReview(id, author, rating, review){
+async function addBookReview(id, author, rating, review){
   const token = getStoredToken();
   if(!token){ showGate(); throw new Error("no-token"); }
   const res = await fetch(`${API_BASE}/books/${id}/reviews`, {
-    method: "PUT",
+    method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ author, rating, review }),
+    body: JSON.stringify({ author, rating: rating || undefined, review: review || undefined }),
   });
   if(res.status === 401){
     clearToken();
@@ -1789,33 +1812,47 @@ async function upsertBookReview(id, author, rating, review){
   if(!res.ok) throw new Error("HTTP " + res.status);
   return res.json();
 }
-async function setBookRating(bookId, rating){
+async function deleteBookReview(bookId, reviewId){
+  const token = getStoredToken();
+  if(!token){ showGate(); throw new Error("no-token"); }
+  const res = await fetch(`${API_BASE}/books/${bookId}/reviews/${reviewId}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if(res.status === 401){
+    clearToken();
+    showGate("Phiên đã hết hạn, nhập lại mã PIN nhé.");
+    throw new Error("unauthorized");
+  }
+  if(!res.ok && res.status !== 204) throw new Error("HTTP " + res.status);
+}
+async function submitNewReview(bookId, rating, review, formEl){
+  const saveBtn = formEl.querySelector("[data-save-review]");
+  if(!rating && !review){
+    flash("Cần chấm sao hoặc viết cảm nhận đã nhé.", "err");
+    return;
+  }
+  saveBtn.disabled = true;
+  saveBtn.textContent = "Đang đăng…";
   try{
-    const book = findBookInCatalog(bookId);
-    const mine = book && (book.reviews||[]).find(r => r.author === currentWho);
-    const updated = await upsertBookReview(bookId, currentWho, rating, mine ? mine.review : null);
-    updateBookReviewInCatalog(bookId, currentWho, updated);
+    const created = await addBookReview(bookId, currentWho, rating, review);
+    addReviewToCatalog(bookId, created);
     const fresh = findBookInCatalog(bookId);
     if(fresh) refreshRatingReviewBlock(fresh);
   }catch(err){
-    if(err.message !== "unauthorized") flash("Không lưu được, thử lại nhé.", "err");
+    if(err.message !== "unauthorized") flash("Không đăng được, thử lại nhé.", "err");
+    saveBtn.disabled = false;
+    saveBtn.textContent = "Đăng";
   }
 }
-async function saveBookReview(bookId, review, formEl){
-  const saveBtn = formEl.querySelector("[data-save-review]");
-  saveBtn.disabled = true;
-  saveBtn.textContent = "Đang lưu…";
+async function removeReview(bookId, reviewId){
   try{
-    const book = findBookInCatalog(bookId);
-    const mine = book && (book.reviews||[]).find(r => r.author === currentWho);
-    const updated = await upsertBookReview(bookId, currentWho, mine ? mine.rating : null, review);
-    updateBookReviewInCatalog(bookId, currentWho, updated);
+    await deleteBookReview(bookId, reviewId);
+    removeReviewFromCatalog(bookId, reviewId);
     const fresh = findBookInCatalog(bookId);
     if(fresh) refreshRatingReviewBlock(fresh);
   }catch(err){
-    if(err.message !== "unauthorized") flash("Không lưu được, thử lại nhé.", "err");
-    saveBtn.disabled = false;
-    saveBtn.textContent = "Lưu";
+    if(err.message !== "unauthorized") flash("Không xoá được, thử lại nhé.", "err");
   }
 }
 catalogEl.addEventListener("click", (e) => {
@@ -1823,35 +1860,41 @@ catalogEl.addEventListener("click", (e) => {
   if(!block) return;
   e.preventDefault();
   e.stopPropagation();
+  const bookId = block.dataset.bookId;
 
-  const starEl = e.target.closest("[data-rating-star]");
-  if(starEl){
-    const book = findBookInCatalog(starEl.dataset.bookId);
-    const mine = book && (book.reviews||[]).find(r => r.author === currentWho);
-    const clicked = Number(starEl.dataset.ratingStar);
-    const nextRating = mine && mine.rating === clicked ? null : clicked;
-    setBookRating(starEl.dataset.bookId, nextRating);
-    return;
-  }
-  const editBtn = e.target.closest("[data-review-edit]");
-  if(editBtn){
-    const book = findBookInCatalog(editBtn.dataset.reviewEdit);
-    const mine = book && (book.reviews||[]).find(r => r.author === currentWho);
-    if(book) editBtn.closest(".review-view").outerHTML = reviewEditFormHTML(book.id, mine);
+  const addToggle = e.target.closest("[data-review-add-toggle]");
+  if(addToggle){
+    addToggle.outerHTML = reviewAddFormHTML(bookId);
     return;
   }
   const cancelBtn = e.target.closest("[data-cancel-review]");
   if(cancelBtn){
-    const book = findBookInCatalog(cancelBtn.dataset.cancelReview);
-    const mine = book && (book.reviews||[]).find(r => r.author === currentWho);
-    if(book) cancelBtn.closest(".review-edit").outerHTML = reviewViewHTML(book.id, mine);
+    cancelBtn.closest(".review-add-form").outerHTML = reviewAddToggleHTML(bookId);
+    return;
+  }
+  const delBtn = e.target.closest("[data-delete-review]");
+  if(delBtn){
+    if(!confirm("Xoá đánh giá này?")) return;
+    removeReview(delBtn.dataset.bookId, delBtn.dataset.deleteReview);
+    return;
+  }
+  const starEl = e.target.closest("[data-rating-star]");
+  if(starEl){
+    const row = starEl.closest("[data-add-rating]");
+    if(!row) return; // stars on an existing card are read-only display
+    const current = Number(row.dataset.addRating) || 0;
+    const clicked = Number(starEl.dataset.ratingStar);
+    const next = current === clicked ? 0 : clicked;
+    row.dataset.addRating = String(next);
+    row.innerHTML = ratingStarsHTML(bookId, next, true);
     return;
   }
   const saveBtn = e.target.closest("[data-save-review]");
   if(saveBtn){
-    const form = saveBtn.closest(".review-edit");
-    const text = form.querySelector(".review-edit-input").value.trim();
-    saveBookReview(saveBtn.dataset.saveReview, text || null, form);
+    const form = saveBtn.closest(".review-add-form");
+    const rating = Number(form.querySelector("[data-add-rating]").dataset.addRating) || 0;
+    const text = form.querySelector(".review-add-input").value.trim();
+    submitNewReview(bookId, rating, text, form);
   }
 });
 catalogEl.addEventListener("keydown", (e) => {
