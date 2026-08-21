@@ -525,24 +525,19 @@ function timeAgo(iso){
   return `${Math.floor(day / 7)} tuần trước`;
 }
 
-// ── notification bell — same tb_notifications localStorage key as
-// index.html/diary.html, so history is consistent across all 3 pages
-// (this is a static 2-person site behind one shared PIN, not a backend
-// with per-user notification rows). Kept to the last 7 days ──
-const NOTIF_KEY = "tb_notifications";
-const NOTIF_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
-const NOTIF_MAX_COUNT = 50;
-
-function loadNotifications(){
-  let list;
-  try{ list = JSON.parse(localStorage.getItem(NOTIF_KEY) || "[]"); }catch{ list = []; }
-  const cutoff = Date.now() - NOTIF_MAX_AGE_MS;
-  const fresh = list.filter(n => new Date(n.createdAt).getTime() >= cutoff);
-  if(fresh.length !== list.length) saveNotifications(fresh);
-  return fresh;
-}
-function saveNotifications(list){
-  localStorage.setItem(NOTIF_KEY, JSON.stringify(list.slice(0, NOTIF_MAX_COUNT)));
+// ── notification bell — backed by GET/PATCH /notifications on the
+// server, not localStorage. This is a 2-person site: localStorage is
+// per-browser, so each device/phone had its own history and neither
+// person ever saw what the other had actually acted on. A shared DB
+// table is the correct model — notifications are created server-side
+// (BooksService/DiaryService, on a new book / new shared diary entry),
+// this page is purely a reader of that feed ──
+async function loadNotifications(){
+  try{
+    return await api("/notifications");
+  }catch{
+    return [];
+  }
 }
 
 const notifBellBtn = document.getElementById("notifBellBtn");
@@ -550,8 +545,8 @@ const notifPanel = document.getElementById("notifPanel");
 const notifBadge = document.getElementById("notifBadge");
 const notifPanelBody = document.getElementById("notifPanelBody");
 
-function renderNotifications(){
-  const list = loadNotifications();
+async function renderNotifications(){
+  const list = await loadNotifications();
   const unread = list.filter(n => !n.read).length;
   notifBadge.textContent = unread > 9 ? "9+" : String(unread);
   notifBadge.hidden = unread === 0;
@@ -567,26 +562,22 @@ function renderNotifications(){
       `).join("")
     : `<p class="empty-note">Chưa có thông báo nào.</p>`;
 }
-notifPanelBody.addEventListener("click", (e) => {
+notifPanelBody.addEventListener("click", async (e) => {
   const item = e.target.closest("[data-notif-id]");
   if(!item) return;
-  const list = loadNotifications();
-  const n = list.find(x => x.id === item.dataset.notifId);
-  if(n && !n.read){
-    n.read = true;
-    saveNotifications(list);
-    renderNotifications();
-  }
+  try{ await api(`/notifications/${item.dataset.notifId}/read`, { method: "PATCH" }); }catch{}
+  renderNotifications();
 });
-document.getElementById("notifMarkAllBtn").addEventListener("click", () => {
-  const list = loadNotifications();
-  list.forEach(n => { n.read = true; });
-  saveNotifications(list);
+document.getElementById("notifMarkAllBtn").addEventListener("click", async () => {
+  try{ await api("/notifications/read-all", { method: "PATCH" }); }catch{}
   renderNotifications();
 });
 function toggleNotifPanel(open){
   notifPanel.classList.toggle("open", open);
   notifBellBtn.setAttribute("aria-expanded", String(open));
+  // refetched every time the panel opens, not just on page load — the
+  // other person may have added something since this page was loaded
+  if(open) renderNotifications();
 }
 notifBellBtn.addEventListener("click", (e) => {
   e.stopPropagation();

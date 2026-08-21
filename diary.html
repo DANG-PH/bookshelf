@@ -1015,9 +1015,7 @@ function showPrivateContent(author){
   privatePickerEl.hidden = true;
   privateContentPanelEl.hidden = false;
   privateActiveWhoNameEl.textContent = authorNames[author] || author;
-  loadPrivateEntries()
-    .then(() => checkNewPrivateEntriesSinceLastVisit(author, allPrivateEntries))
-    .catch(() => {});
+  loadPrivateEntries().catch(() => {});
 }
 function attemptSelectPrivateWho(author){
   if(!authorLockConfigured[author]){
@@ -1482,36 +1480,22 @@ document.getElementById("privateEntryForm").addEventListener("submit", async (e)
   }
 });
 
-// ── notification bell — localStorage-backed history (this is a static
-// 2-person site with one shared PIN, not a backend with per-user
-// notification rows, so "history" lives on this device only, same as
-// WHO_KEY/unlockedAuthors elsewhere on this page). Kept to the last 7
-// days; older entries are dropped whenever the list is read ──
-const NOTIF_KEY = "tb_notifications";
-const NOTIF_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
-const NOTIF_MAX_COUNT = 50;
-
-function loadNotifications(){
-  let list;
-  try{ list = JSON.parse(localStorage.getItem(NOTIF_KEY) || "[]"); }catch{ list = []; }
-  const cutoff = Date.now() - NOTIF_MAX_AGE_MS;
-  const fresh = list.filter(n => new Date(n.createdAt).getTime() >= cutoff);
-  if(fresh.length !== list.length) saveNotifications(fresh);
-  return fresh;
-}
-function saveNotifications(list){
-  localStorage.setItem(NOTIF_KEY, JSON.stringify(list.slice(0, NOTIF_MAX_COUNT)));
-}
-function pushNotification(text){
-  const list = loadNotifications();
-  list.unshift({
-    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    text,
-    createdAt: new Date().toISOString(),
-    read: false,
-  });
-  saveNotifications(list);
-  renderNotifications();
+// ── notification bell — backed by GET/PATCH /notifications on the
+// server, not localStorage. This is a 2-person site: localStorage is
+// per-browser, so each device/phone had its own history and neither
+// person ever saw what the other had actually acted on. A shared DB
+// table is the correct model — notifications are created server-side
+// (BooksService/DiaryService, on a new book / new shared diary entry),
+// so there's no more client-side "diff against my last visit" needed
+// here at all (private-diary entries still never notify anyone — that
+// endpoint only ever returns your own entries, and nothing server-side
+// creates a notification for it) ──
+async function loadNotifications(){
+  try{
+    return await api("/notifications");
+  }catch{
+    return [];
+  }
 }
 
 const notifBellBtn = document.getElementById("notifBellBtn");
@@ -1519,8 +1503,8 @@ const notifPanel = document.getElementById("notifPanel");
 const notifBadge = document.getElementById("notifBadge");
 const notifPanelBody = document.getElementById("notifPanelBody");
 
-function renderNotifications(){
-  const list = loadNotifications();
+async function renderNotifications(){
+  const list = await loadNotifications();
   const unread = list.filter(n => !n.read).length;
   notifBadge.textContent = unread > 9 ? "9+" : String(unread);
   notifBadge.hidden = unread === 0;
@@ -1536,26 +1520,22 @@ function renderNotifications(){
       `).join("")
     : `<p class="empty-note">Chưa có thông báo nào.</p>`;
 }
-notifPanelBody.addEventListener("click", (e) => {
+notifPanelBody.addEventListener("click", async (e) => {
   const item = e.target.closest("[data-notif-id]");
   if(!item) return;
-  const list = loadNotifications();
-  const n = list.find(x => x.id === item.dataset.notifId);
-  if(n && !n.read){
-    n.read = true;
-    saveNotifications(list);
-    renderNotifications();
-  }
+  try{ await api(`/notifications/${item.dataset.notifId}/read`, { method: "PATCH" }); }catch{}
+  renderNotifications();
 });
-document.getElementById("notifMarkAllBtn").addEventListener("click", () => {
-  const list = loadNotifications();
-  list.forEach(n => { n.read = true; });
-  saveNotifications(list);
+document.getElementById("notifMarkAllBtn").addEventListener("click", async () => {
+  try{ await api("/notifications/read-all", { method: "PATCH" }); }catch{}
   renderNotifications();
 });
 function toggleNotifPanel(open){
   notifPanel.classList.toggle("open", open);
   notifBellBtn.setAttribute("aria-expanded", String(open));
+  // refetched every time the panel opens, not just on page load — the
+  // other person may have added something since this page was loaded
+  if(open) renderNotifications();
 }
 notifBellBtn.addEventListener("click", (e) => {
   e.stopPropagation();
@@ -1568,54 +1548,6 @@ document.addEventListener("keydown", (e) => {
   if(e.key === "Escape") toggleNotifPanel(false);
 });
 renderNotifications();
-
-// ── "có nhật ký mới" check — only run once at boot against the true
-// unfiltered newest entry (never after a search/filter reload, which
-// could see a narrower slice and wrongly mark newer entries as "seen").
-// Names who wrote the new entries — fine here since the shared tab
-// already shows both people's entries to each other anyway ──
-const DIARY_SEEN_KEY = "tb_diary_last_seen_at";
-function checkNewEntriesSinceLastVisit(){
-  if(!allEntries.length) return;
-  const lastSeen = localStorage.getItem(DIARY_SEEN_KEY);
-  const newest = allEntries[0].createdAt;
-  if(lastSeen){
-    const newOnes = allEntries.filter(e => new Date(e.createdAt) > new Date(lastSeen));
-    if(newOnes.length){
-      const byAuthor = {};
-      newOnes.forEach(e => { byAuthor[e.author] = (byAuthor[e.author] || 0) + 1; });
-      const who = Object.keys(byAuthor);
-      const names = who.map(a => authorNames[a] || a);
-      const text = who.length === 1
-        ? `${names[0]} vừa thêm ${byAuthor[who[0]]} dòng nhật ký mới`
-        : `${names.join(" và ")} vừa thêm nhật ký mới`;
-      pushNotification(text);
-    }
-  }
-  localStorage.setItem(DIARY_SEEN_KEY, newest);
-}
-
-// ── same check for "Nhật Ký Riêng" — but scoped to just your own
-// entries. Private entries never cross identities (the API itself won't
-// return the other person's), so this can only ever mean "you wrote
-// this from another device/session," never "the other person wrote
-// something" — naming a person here would either be redundant (always
-// you) or, if it somehow meant the other author, would leak private-
-// diary activity across identities. Tracked per-author since the same
-// browser/device can be used by both people ──
-function checkNewPrivateEntriesSinceLastVisit(author, entries){
-  if(!entries.length) return;
-  const key = `tb_private_last_seen_${author}`;
-  const lastSeen = localStorage.getItem(key);
-  const newest = entries[0].createdAt;
-  if(lastSeen){
-    const newCount = entries.filter(e => new Date(e.createdAt) > new Date(lastSeen)).length;
-    if(newCount > 0){
-      pushNotification(`Có ${newCount} dòng nhật ký riêng mới từ lần trước — chắc bạn viết ở thiết bị khác`);
-    }
-  }
-  localStorage.setItem(key, newest);
-}
 
 // ── tabs: Nhật Ký / Kỷ Niệm Chung ──
 document.getElementById("tabBar").addEventListener("click", (e) => {
@@ -2230,9 +2162,6 @@ async function boot(){
     // separate "Nhật Ký Riêng" tab, entries here render independent of it
     await Promise.all([loadNames(), loadAuthorLockStatus()]);
     await Promise.all([loadEntries(), loadMemories()]);
-    // only ever checked against this one unfiltered load — never after a
-    // search/date-filter reload, which could see a narrower slice
-    checkNewEntriesSinceLastVisit();
   }catch(err){
     if(err.message !== "unauthorized" && err.message !== "no-token") flash(err.message, "err");
   }

@@ -1917,35 +1917,25 @@ document.addEventListener("keydown", (e) => {
   if(e.key === "Escape" && newBooksModalBackdrop.classList.contains("open")) closeNewBooksModal();
 });
 
-// ── notification bell — localStorage-backed history, same tb_notifications
-// key as diary.html so the badge/history is consistent no matter which
-// page is open (this is a static 2-person site behind one shared PIN, not
-// a backend with per-user notification rows). Kept to the last 7 days ──
-const NOTIF_KEY = "tb_notifications";
-const NOTIF_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
-const NOTIF_MAX_COUNT = 50;
-
-function loadNotifications(){
-  let list;
-  try{ list = JSON.parse(localStorage.getItem(NOTIF_KEY) || "[]"); }catch{ list = []; }
-  const cutoff = Date.now() - NOTIF_MAX_AGE_MS;
-  const fresh = list.filter(n => new Date(n.createdAt).getTime() >= cutoff);
-  if(fresh.length !== list.length) saveNotifications(fresh);
-  return fresh;
-}
-function saveNotifications(list){
-  localStorage.setItem(NOTIF_KEY, JSON.stringify(list.slice(0, NOTIF_MAX_COUNT)));
-}
-function pushNotification(text){
-  const list = loadNotifications();
-  list.unshift({
-    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    text,
-    createdAt: new Date().toISOString(),
-    read: false,
-  });
-  saveNotifications(list);
-  renderNotifications();
+// ── notification bell — backed by GET/PATCH /notifications on the
+// server, not localStorage. This is a 2-person site: localStorage is
+// per-browser, so each device/phone had its own history and neither
+// person ever saw what the other had actually acted on. A shared DB
+// table is the correct model here — notifications are created
+// server-side (BooksService/DiaryService, on a new book / new shared
+// diary entry) rather than by the client diffing "what's new since my
+// last visit", so it's also accurate regardless of which device
+// noticed first ──
+async function loadNotifications(){
+  const token = getStoredToken();
+  if(!token) return [];
+  try{
+    const res = await fetch(`${API_BASE}/notifications`, { headers: { Authorization: `Bearer ${token}` } });
+    if(!res.ok) return [];
+    return await res.json();
+  }catch{
+    return [];
+  }
 }
 
 const notifBellBtn = document.getElementById("notifBellBtn");
@@ -1953,8 +1943,8 @@ const notifPanel = document.getElementById("notifPanel");
 const notifBadge = document.getElementById("notifBadge");
 const notifPanelBody = document.getElementById("notifPanelBody");
 
-function renderNotifications(){
-  const list = loadNotifications();
+async function renderNotifications(){
+  const list = await loadNotifications();
   const unread = list.filter(n => !n.read).length;
   notifBadge.textContent = unread > 9 ? "9+" : String(unread);
   notifBadge.hidden = unread === 0;
@@ -1970,21 +1960,24 @@ function renderNotifications(){
       `).join("")
     : `<p class="empty-note">Chưa có thông báo nào.</p>`;
 }
-notifPanelBody.addEventListener("click", (e) => {
+notifPanelBody.addEventListener("click", async (e) => {
   const item = e.target.closest("[data-notif-id]");
   if(!item) return;
-  const list = loadNotifications();
-  const n = list.find(x => x.id === item.dataset.notifId);
-  if(n && !n.read){
-    n.read = true;
-    saveNotifications(list);
-    renderNotifications();
-  }
+  const token = getStoredToken();
+  if(!token) return;
+  await fetch(`${API_BASE}/notifications/${item.dataset.notifId}/read`, {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${token}` },
+  }).catch(() => {});
+  renderNotifications();
 });
-document.getElementById("notifMarkAllBtn").addEventListener("click", () => {
-  const list = loadNotifications();
-  list.forEach(n => { n.read = true; });
-  saveNotifications(list);
+document.getElementById("notifMarkAllBtn").addEventListener("click", async () => {
+  const token = getStoredToken();
+  if(!token) return;
+  await fetch(`${API_BASE}/notifications/read-all`, {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${token}` },
+  }).catch(() => {});
   renderNotifications();
 });
 // position:fixed means this has to be placed by hand — clamped so it
@@ -2001,7 +1994,12 @@ function positionNotifPanel(){
 function toggleNotifPanel(open){
   notifPanel.classList.toggle("open", open);
   notifBellBtn.setAttribute("aria-expanded", String(open));
-  if(open) positionNotifPanel();
+  if(open){
+    positionNotifPanel();
+    // refetched every time the panel opens, not just on page load — the
+    // other person may have added something since this page was loaded
+    renderNotifications();
+  }
 }
 notifBellBtn.addEventListener("click", (e) => {
   e.stopPropagation();
@@ -2017,46 +2015,6 @@ window.addEventListener("resize", () => {
   if(notifPanel.classList.contains("open")) positionNotifPanel();
 });
 renderNotifications();
-
-// diary entries aren't part of /catalog, so this page checks them
-// separately — same tb_diary_last_seen_at key diary.html uses, so
-// whichever page you open first is the one that "claims" new entries
-const DIARY_SEEN_KEY = "tb_diary_last_seen_at";
-async function checkNewDiaryEntriesSinceLastVisit(){
-  const token = getStoredToken();
-  if(!token) return;
-  try{
-    const [entriesRes, settingsRes] = await Promise.all([
-      fetch(`${API_BASE}/diary?limit=30&offset=0`, { headers: { Authorization: `Bearer ${token}` } }),
-      fetch(`${API_BASE}/settings`, { headers: { Authorization: `Bearer ${token}` } }),
-    ]);
-    if(!entriesRes.ok) return;
-    const data = await entriesRes.json();
-    const entries = data.items || [];
-    if(!entries.length) return;
-    const names = settingsRes.ok ? await settingsRes.json() : {};
-    const authorNames = { me: names.curatorName || "Đăng", partner: names.partnerName || "Vy" };
-
-    const lastSeen = localStorage.getItem(DIARY_SEEN_KEY);
-    const newest = entries[0].createdAt;
-    if(lastSeen){
-      const newOnes = entries.filter(e => new Date(e.createdAt) > new Date(lastSeen));
-      if(newOnes.length){
-        const byAuthor = {};
-        newOnes.forEach(e => { byAuthor[e.author] = (byAuthor[e.author] || 0) + 1; });
-        const who = Object.keys(byAuthor);
-        const displayNames = who.map(a => authorNames[a] || a);
-        const text = who.length === 1
-          ? `${displayNames[0]} vừa thêm ${byAuthor[who[0]]} dòng nhật ký mới`
-          : `${displayNames.join(" và ")} vừa thêm nhật ký mới`;
-        pushNotification(text);
-      }
-    }
-    localStorage.setItem(DIARY_SEEN_KEY, newest);
-  }catch{
-    // best-effort — a failed check here shouldn't disrupt the catalog page
-  }
-}
 
 function newBookItemHTML(b, cat){
   const coverSrc = b.cover ? encodeURI(resolvePath(cat, b.cover)) : "";
@@ -2095,10 +2053,8 @@ function checkNewSinceLastVisit(data){
   newBooksModalSub.textContent = "Thêm vào kể từ lần trước bạn ghé — bấm vào cuốn nào để xem ngay.";
   newBooksList.innerHTML = newEntries.map(({ book, cat }) => newBookItemHTML(book, cat)).join("");
   newBooksModalBackdrop.classList.add("open");
-
-  const titles = newEntries.slice(0, 3).map(e => e.book.title);
-  const extra = newEntries.length > 3 ? ` và ${newEntries.length - 3} sách khác` : "";
-  pushNotification(`Đã thêm sách mới: ${titles.join(", ")}${extra}`);
+  // no client-side push here — the backend already logged a notification
+  // for each book the moment it was created (see BooksService.create)
 }
 
 newBooksList.addEventListener("click", (e) => {
@@ -2193,7 +2149,6 @@ function loadCatalog(){
       lastCatalogData = data;
       render(data);
       checkNewSinceLastVisit(data);
-      checkNewDiaryEntriesSinceLastVisit();
     })
     .catch((err) => {
       if(err.message === "unauthorized") return;
