@@ -559,7 +559,9 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
 .status-pill:hover{border-color:var(--cat,var(--accent));color:var(--cat,var(--accent-deep))}
 .status-pill.active{background:var(--cat,var(--accent-solid));border-color:var(--cat,var(--accent-solid));color:#fff}
 
-/* rating + personal review — only shown once a book is marked "Đã đọc" */
+/* rating + personal review — always shown, not gated behind readStatus
+   (that was undiscoverable: nothing hinted you had to mark a book
+   "Đã đọc" first before the stars would even appear) */
 .rating-review{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line-2);position:relative;z-index:1}
 .rating-row{display:flex;gap:2px;margin-bottom:6px}
 .rating-star{font-size:1.05rem;line-height:1;color:var(--line-2);cursor:pointer;transition:color .15s,transform .1s}
@@ -1589,7 +1591,7 @@ catalogEl.addEventListener("keydown", (e) => {
 
 const READ_STATUS_LABELS = { want: "Muốn đọc", reading: "Đang đọc", done: "Đã đọc" };
 
-// ── star rating + personal review, only shown once a book is "Đã đọc" —
+// ── star rating + personal review, always visible on every card —
 // set the same way favorite/readStatus are, by whoever's browsing ──
 function ratingReviewBlockHTML(b){
   return `
@@ -1764,7 +1766,7 @@ function cardHTML(b, cat){
         ${blurbLong ? `<span class="blurb-toggle" role="button" tabindex="0" data-blurb-toggle data-expanded="0">Xem thêm</span>` : ""}
       </div>
       <div class="card-status">${statusPills}</div>
-      ${b.readStatus === "done" ? ratingReviewBlockHTML(b) : ""}
+      ${ratingReviewBlockHTML(b)}
       <div class="card-foot">
         <div class="card-subjects">${tagsHTML ? `<b>Chủ đề</b><br>${tagsHTML}` : ""}</div>
         <div class="stamp" aria-hidden="true">Đọc<br>ngay</div>
