@@ -567,12 +567,16 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
    style) listing every entry — comments here don't carry a name, so
    there's nothing worth showing inline on the card. */
 .rating-row{display:flex;gap:2px;margin-bottom:6px}
-.rating-star{font-size:1.05rem;line-height:1;color:var(--line-2);cursor:pointer;transition:color .15s,transform .1s}
+.rating-star{position:relative;font-size:1.05rem;line-height:1;color:var(--line-2);cursor:pointer;transition:color .15s,transform .1s}
 .rating-star:hover{transform:scale(1.15);color:#e0a94a}
 .rating-star.active{color:#e0a94a}
 .rating-row.readonly .rating-star{cursor:default}
 .rating-row.readonly .rating-star:hover{transform:none;color:var(--line-2)}
 .rating-row.readonly .rating-star.active:hover{color:#e0a94a}
+/* half-star: empty star as the base glyph, a 50%-width gold copy on top */
+.rating-star.half::before{
+  content:"★";position:absolute;left:0;top:0;width:50%;overflow:hidden;color:#e0a94a;
+}
 
 .review-summary{
   margin-top:10px;padding-top:10px;border-top:1px dashed var(--line-2);position:relative;z-index:1;
@@ -594,12 +598,11 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
 .review-card .rating-row{margin-bottom:4px}
 .review-card .review-text{margin-bottom:0}
 .review-card-del{
-  position:absolute;top:6px;right:6px;width:18px;height:18px;border-radius:50%;border:none;background:none;
-  color:var(--faint);cursor:pointer;font-size:.85rem;line-height:1;display:flex;align-items:center;justify-content:center;
-  opacity:0;transition:opacity .15s;
+  position:absolute;top:6px;right:6px;width:20px;height:20px;border-radius:50%;border:none;background:none;
+  color:var(--faint);opacity:.55;cursor:pointer;font-size:.85rem;line-height:1;display:flex;align-items:center;justify-content:center;
+  transition:opacity .15s,color .15s;
 }
-.review-card.mine:hover .review-card-del,.review-card.mine:focus-within .review-card-del{opacity:1}
-.review-card-del:hover{color:var(--stamp)}
+.review-card-del:hover{opacity:1;color:var(--stamp)}
 .review-text{font-family:var(--serif);font-style:italic;color:var(--soft);line-height:1.5;margin-bottom:4px;white-space:pre-wrap}
 .review-empty{font-size:.82rem;color:var(--faint);text-align:center;padding:18px 10px}
 
@@ -1239,6 +1242,7 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
             <option value="title">Tên A–Z</option>
             <option value="year-desc">Năm xuất bản mới nhất</option>
             <option value="year-asc">Năm xuất bản cũ nhất</option>
+            <option value="rating-desc">Đánh giá cao nhất</option>
           </select>
           <button type="button" class="random-btn" id="randomBtn" aria-label="Chọn ngẫu nhiên một cuốn cho mình" title="Chọn ngẫu nhiên cho mình">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6"/><path d="M4 4l5 5"/></svg>
@@ -1749,14 +1753,26 @@ function reviewSummaryHTML(b){
   const avg = rated.length ? rated.reduce((s, r) => s + r.rating, 0) / rated.length : 0;
   const avgDisplay = rated.length ? (Math.round(avg * 10) / 10).toString().replace(".", ",") : null;
   const countLabel = reviews.length ? `${reviews.length} đánh giá` : "Chưa có đánh giá";
+  const cta = reviews.length ? "Xem ›" : "Viết đánh giá ›";
   return `
     <div class="review-summary" role="button" tabindex="0" data-open-reviews="${b.id}" aria-label="Xem đánh giá">
-      <div class="rating-row readonly">${ratingStarsHTML(b.id, Math.round(avg), false)}</div>
+      <div class="rating-row readonly">${rated.length ? avgStarsHTML(avg) : ratingStarsHTML(b.id, 0, false)}</div>
       ${avgDisplay ? `<span class="review-summary-avg">${avgDisplay}</span>` : ""}
       <span class="review-summary-count">${countLabel}</span>
-      <span class="review-summary-cta">Xem ›</span>
+      <span class="review-summary-cta">${cta}</span>
     </div>
   `;
+}
+// average rating shown at half-star granularity (Google/Shopee-style) —
+// e.g. 3.6 fills 3½ stars, 3.9 rounds up and fills all 4 — while the
+// number next to it stays the exact one-decimal average
+function avgStarsHTML(value){
+  const rounded = Math.round(value * 2) / 2;
+  return [1, 2, 3, 4, 5].map(n => {
+    if(rounded >= n) return `<span class="rating-star active">★</span>`;
+    if(rounded + 0.5 === n) return `<span class="rating-star half">★</span>`;
+    return `<span class="rating-star">★</span>`;
+  }).join("");
 }
 function reviewCardHTML(bookId, r){
   const mine = r.author === currentWho;
@@ -1826,12 +1842,22 @@ function removeReviewFromCatalog(bookId, reviewId){
   if(!book) return;
   book.reviews = (book.reviews || []).filter(r => r.id !== reviewId);
 }
+function reviewModalSubText(book){
+  const reviews = book.reviews || [];
+  if(!reviews.length) return "Chưa có đánh giá";
+  const rated = reviews.filter(r => r.rating != null);
+  const countLabel = `${reviews.length} đánh giá`;
+  if(!rated.length) return countLabel;
+  const avg = rated.reduce((s, r) => s + r.rating, 0) / rated.length;
+  const avgDisplay = (Math.round(avg * 10) / 10).toString().replace(".", ",");
+  return `★ ${avgDisplay} · ${countLabel}`;
+}
 function refreshBookReviewsUI(book){
   const card = document.querySelector(`a.card[data-book-id="${book.id}"]`);
   const summary = card && card.querySelector(".review-summary");
   if(summary) summary.outerHTML = reviewSummaryHTML(book);
   if(reviewModalBookId === book.id){
-    reviewModalSub.textContent = book.reviews && book.reviews.length ? `${book.reviews.length} đánh giá` : "Chưa có đánh giá";
+    reviewModalSub.textContent = reviewModalSubText(book);
     reviewModalBody.innerHTML = reviewModalBodyHTML(book);
   }
 }
@@ -1917,7 +1943,7 @@ function openReviewModal(bookId){
   if(!book) return;
   reviewModalBookId = bookId;
   reviewModalTitle.textContent = book.title || "Đánh giá";
-  reviewModalSub.textContent = (book.reviews || []).length ? `${book.reviews.length} đánh giá` : "Chưa có đánh giá";
+  reviewModalSub.textContent = reviewModalSubText(book);
   reviewModalBody.innerHTML = reviewModalBodyHTML(book);
   reviewModalBackdrop.classList.add("open");
 }
@@ -2093,12 +2119,18 @@ function renderTopViewed(data){
   `).join("");
 }
 
+function bookAvgRating(b){
+  const rated = (b.reviews || []).filter(r => r.rating != null);
+  if(!rated.length) return 0;
+  return rated.reduce((s, r) => s + r.rating, 0) / rated.length;
+}
 function applyBookSort(books, mode){
   const sorted = books.slice();
   if(mode === "newest") sorted.sort((a,b) => new Date(b.createdAt||0) - new Date(a.createdAt||0));
   else if(mode === "title") sorted.sort((a,b) => (a.title||"").localeCompare(b.title||"", "vi"));
   else if(mode === "year-desc") sorted.sort((a,b) => (b.year||0) - (a.year||0));
   else if(mode === "year-asc") sorted.sort((a,b) => (a.year||0) - (b.year||0));
+  else if(mode === "rating-desc") sorted.sort((a,b) => bookAvgRating(b) - bookAvgRating(a));
   return sorted;
 }
 
