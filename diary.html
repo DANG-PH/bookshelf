@@ -467,6 +467,13 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
   width:28px;height:12px;background:rgba(255,255,255,.55);border:1px solid rgba(255,255,255,.7);
 }
 @media(max-width:480px){.entry-photo-btn{width:72px}}
+/* stays visible on a failed load instead of quietly vanishing — a
+   silently-removed element looked identical to "never had a photo",
+   which made a real bug impossible to tell apart from just not
+   attaching one */
+.entry-photo-btn.broken{background:var(--stamp-wash);display:grid;place-items:center}
+.entry-photo-btn.broken img{display:none}
+.entry-photo-btn.broken::after{content:"⚠";font-size:1.1rem;color:var(--stamp)}
 .entry-title{font-family:var(--serif);font-size:1.02rem;font-weight:600;margin-bottom:4px}
 .entry-content{font-family:var(--serif);font-size:.94rem;line-height:1.65;color:var(--ink);white-space:pre-wrap}
 .entry-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px;padding-top:8px;border-top:1px dashed var(--line-2)}
@@ -1473,7 +1480,7 @@ function entryHTML(entry, opts){
       <div class="entry-view">
         ${entry.photoUrl ? `
           <button type="button" class="entry-photo-btn" data-view-photo="${escapeHTML(entry.photoUrl)}" aria-label="Xem ảnh">
-            <img src="${escapeHTML(entry.photoUrl)}" alt="" loading="lazy" onerror="this.closest('.entry-photo-btn').remove()" />
+            <img src="${escapeHTML(entry.photoUrl)}" alt="" loading="lazy" onerror="this.closest('.entry-photo-btn').classList.add('broken');console.error('Không tải được ảnh nhật ký:', this.src)" />
           </button>
         ` : ""}
         ${entry.title ? `<div class="entry-title">${escapeHTML(entry.title)}</div>` : ""}
