@@ -599,6 +599,9 @@ function isIOSDevice(){
 function isRunningStandalone(){
   return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
 }
+// install always gets first shot over the push banner on a fresh device —
+// see the beforeinstallprompt handler and maybeShowPushBanner() below
+const installBannerEl = document.getElementById("installBanner");
 
 // ── "cài đặt ứng dụng" — a banner (prominent, respects the "đừng nhắc
 // nữa" snooze) plus a small persistent header icon (always there
@@ -629,6 +632,7 @@ function isRunningStandalone(){
   closeEl.addEventListener("click", () => {
     banner.hidden = true;
     recordDismiss();
+    maybeShowPushBanner();
   });
 
   if(isRunningStandalone()) return;
@@ -642,6 +646,7 @@ function isRunningStandalone(){
     ctaEl.addEventListener("click", () => {
       banner.hidden = true;
       recordDismiss();
+      maybeShowPushBanner();
     });
     return;
   }
@@ -651,7 +656,13 @@ function isRunningStandalone(){
     e.preventDefault();
     deferredInstallPrompt = e;
     iconBtn.hidden = false;
-    if(!isSnoozed()) banner.hidden = false;
+    if(!isSnoozed()){
+      banner.hidden = false;
+      // this can fire after the push banner's already had its own,
+      // earlier chance to show (its check runs after a couple of network
+      // round-trips) — install still wins, so bump push out of the way
+      if(!pushBannerEl.hidden) pushBannerEl.hidden = true;
+    }
   });
   async function triggerInstall(){
     if(!deferredInstallPrompt) return;
@@ -662,6 +673,7 @@ function isRunningStandalone(){
     prompt.prompt();
     const choice = await prompt.userChoice;
     if(choice.outcome !== "accepted") recordDismiss();
+    maybeShowPushBanner();
   }
   ctaEl.addEventListener("click", triggerInstall);
   iconBtn.addEventListener("click", triggerInstall);
@@ -673,6 +685,7 @@ function isRunningStandalone(){
     if(token){
       fetch(`${API_BASE}/push/app-installed`, { method: "POST", headers: { Authorization: `Bearer ${token}` } }).catch(() => {});
     }
+    maybeShowPushBanner();
   });
 })();
 
@@ -891,6 +904,17 @@ pushBannerCtaEl.addEventListener("click", () => {
   subscribeToPush(); // handles its own errors/flash — see above
 });
 
+// the install banner always gets first shot — if it's currently showing,
+// wait; the install banner's own dismiss/install handlers call this again
+// once it's out of the way (see the IIFE above)
+let pushEligibleToOffer = false;
+function maybeShowPushBanner(){
+  if(!pushEligibleToOffer) return;
+  if(isPushBannerSnoozed()) return;
+  if(!installBannerEl.hidden) return;
+  pushBannerEl.hidden = false;
+}
+
 async function initPushToggle(){
   // getStoredToken() check up front, not just left to api()'s own —
   // api() would call showGate() on a missing token too, which is
@@ -905,8 +929,9 @@ async function initPushToggle(){
     const sub = await reg.pushManager.getSubscription();
     updatePushToggleUI(Boolean(sub));
     notifPushToggleEl.hidden = false;
-    if(!sub && !isPushBannerSnoozed() && (!isIOSDevice() || isRunningStandalone())){
-      pushBannerEl.hidden = false;
+    if(!sub && (!isIOSDevice() || isRunningStandalone())){
+      pushEligibleToOffer = true;
+      maybeShowPushBanner();
     }
   }catch{
     // best-effort — push is a nice-to-have, never worth breaking the
