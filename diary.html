@@ -572,7 +572,11 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
 }
 .export-modal-cancel:hover{color:var(--accent-deep)}
 
-/* ── photo lightbox — tapping an entry's polaroid opens the full image ── */
+/* ── photo lightbox — tapping an entry's polaroid opens the full image.
+   The close button sits on .photo-lightbox-inner (sized to the image
+   itself), not the fixed backdrop — pinning it to the viewport corner
+   instead left it visually detached from photos that don't fill the
+   whole screen (most of them, especially tall/portrait ones) ── */
 .photo-lightbox-backdrop{
   position:fixed;inset:0;z-index:260;display:flex;align-items:center;justify-content:center;
   padding:40px 20px;background:rgba(10,7,5,.88);
@@ -583,19 +587,23 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
   opacity:1;visibility:visible;pointer-events:auto;
   transition:opacity .2s ease,visibility 0s linear 0s;
 }
-.photo-lightbox-backdrop img{
-  max-width:100%;max-height:100%;border-radius:8px;display:block;
-  box-shadow:0 30px 80px -20px rgba(0,0,0,.6);
+.photo-lightbox-inner{
+  position:relative;max-width:100%;max-height:100%;
   transform:scale(.96);transition:transform .25s cubic-bezier(.2,.7,.2,1);
 }
-.photo-lightbox-backdrop.open img{transform:scale(1)}
-.photo-lightbox-close{
-  position:absolute;top:16px;right:16px;width:38px;height:38px;border-radius:50%;
-  background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);color:#fff;
-  font-size:1rem;display:grid;place-items:center;
+.photo-lightbox-backdrop.open .photo-lightbox-inner{transform:scale(1)}
+.photo-lightbox-inner img{
+  max-width:100%;max-height:calc(100vh - 80px);border-radius:8px;display:block;
+  box-shadow:0 30px 80px -20px rgba(0,0,0,.6);
 }
-.photo-lightbox-close:hover{background:rgba(255,255,255,.22)}
-@media(prefers-reduced-motion:reduce){.photo-lightbox-backdrop,.photo-lightbox-backdrop img{transition:none}}
+.photo-lightbox-close{
+  position:absolute;top:10px;right:10px;width:34px;height:34px;border-radius:50%;
+  background:rgba(20,14,10,.55);border:1px solid rgba(255,255,255,.25);color:#fff;
+  font-size:1rem;display:grid;place-items:center;
+  -webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);
+}
+.photo-lightbox-close:hover{background:rgba(20,14,10,.75)}
+@media(prefers-reduced-motion:reduce){.photo-lightbox-backdrop,.photo-lightbox-inner{transition:none}}
 
 /* ── print: strip the app chrome down to just the writing — text-first
    fine print for reading on a phone becomes plain body copy on paper ── */
@@ -895,8 +903,10 @@ button{cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-weig
 </div>
 
 <div class="photo-lightbox-backdrop" id="photoLightboxBackdrop">
-  <button type="button" class="photo-lightbox-close" id="photoLightboxClose" aria-label="Đóng">✕</button>
-  <img id="photoLightboxImg" src="" alt="" />
+  <div class="photo-lightbox-inner">
+    <img id="photoLightboxImg" src="" alt="" />
+    <button type="button" class="photo-lightbox-close" id="photoLightboxClose" aria-label="Đóng">✕</button>
+  </div>
 </div>
 
 <script>
