@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+Disallow: /diary.html
+Disallow: /admin.html
