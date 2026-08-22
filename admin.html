@@ -811,7 +811,16 @@ async function subscribeToPush(){
       userVisibleOnly: true,
       applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
     });
-    await api("/push/subscribe", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(sub.toJSON()) });
+    try{
+      await api("/push/subscribe", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(sub.toJSON()) });
+    }catch(saveErr){
+      // saved locally but not on the server — undo the local half too,
+      // otherwise the next toggle click sees a "subscription" that
+      // getSubscription() returns but the server never knew about, and
+      // tries to unsubscribe instead of retrying subscribe
+      await sub.unsubscribe().catch(() => {});
+      throw saveErr;
+    }
     updatePushToggleUI(true);
     flash("Đã bật thông báo trên thiết bị này rồi nhé.", "ok");
   }catch(err){
