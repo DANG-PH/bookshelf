@@ -176,6 +176,14 @@ button:disabled{opacity:.55;cursor:default}
   background:none;border:none;color:var(--accent-deep);font-size:.74rem;font-weight:600;padding:0;
 }
 .notif-panel-head button:hover{color:var(--stamp)}
+.notif-push-toggle{
+  display:block;width:100%;text-align:center;padding:9px 10px;
+  font-size:.78rem;font-weight:600;color:var(--accent-deep);
+  background:var(--accent-wash);border:none;border-bottom:1px solid var(--line);
+}
+.notif-push-toggle:hover{background:var(--accent-wash-2,var(--accent-wash))}
+.notif-push-toggle.active{color:var(--good);background:none}
+.notif-push-toggle[hidden]{display:none}
 .notif-panel-body{padding:6px}
 .notif-panel-body .empty-note{padding:20px 10px;font-size:.86rem;color:var(--faint);text-align:center}
 .notif-item{display:flex;gap:9px;padding:10px 8px;border-radius:10px;align-items:flex-start}
@@ -357,6 +365,7 @@ details.more .more-body{padding-top:14px}
           <span>Thông báo</span>
           <button type="button" id="notifMarkAllBtn">Đánh dấu đã đọc hết</button>
         </div>
+        <button type="button" class="notif-push-toggle" id="notifPushToggle" hidden>🔔 Bật thông báo trên thiết bị này</button>
         <div class="notif-panel-body" id="notifPanelBody"></div>
       </div>
     </div>
@@ -735,6 +744,77 @@ document.getElementById("notifMarkAllBtn").addEventListener("click", async () =>
   try{ await api("/notifications/read-all", { method: "PATCH" }); }catch{}
   renderNotifications();
 });
+
+// ── real push notifications — like a native app, arrives even when no
+// tab is open. Registers sw.js and subscribes this device; the toggle
+// stays hidden unless both this browser supports it AND the server has
+// VAPID keys configured (checked via /push/vapid-public-key), so it
+// never shows a control that can't actually do anything ──
+const notifPushToggleEl = document.getElementById("notifPushToggle");
+const pushApiSupported = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+let vapidPublicKey = null;
+function urlBase64ToUint8Array(base64String){
+  const padding = "=".repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for(let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
+  return outputArray;
+}
+function updatePushToggleUI(subscribed){
+  notifPushToggleEl.classList.toggle("active", subscribed);
+  notifPushToggleEl.textContent = subscribed ? "✓ Đã bật thông báo trên thiết bị này" : "🔔 Bật thông báo trên thiết bị này";
+}
+async function initPushToggle(){
+  // getStoredToken() check up front, not just left to api()'s own —
+  // api() would call showGate() on a missing token too, which is
+  // harmless (idempotent) but needlessly redundant with the real
+  // gate-or-boot decision at the bottom of this file
+  if(!pushApiSupported || !getStoredToken()) return;
+  try{
+    const { publicKey, configured } = await api("/push/vapid-public-key");
+    if(!configured) return;
+    vapidPublicKey = publicKey;
+    const reg = await navigator.serviceWorker.register("sw.js");
+    const sub = await reg.pushManager.getSubscription();
+    updatePushToggleUI(Boolean(sub));
+    notifPushToggleEl.hidden = false;
+  }catch{
+    // best-effort — push is a nice-to-have, never worth breaking the
+    // rest of the page over
+  }
+}
+async function togglePush(){
+  try{
+    const reg = await navigator.serviceWorker.ready;
+    const existing = await reg.pushManager.getSubscription();
+    if(existing){
+      const endpoint = existing.endpoint;
+      await existing.unsubscribe();
+      await api("/push/subscribe", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ endpoint }) }).catch(() => {});
+      updatePushToggleUI(false);
+      flash("Đã tắt thông báo trên thiết bị này.", "ok");
+      return;
+    }
+    const permission = await Notification.requestPermission();
+    if(permission !== "granted"){
+      flash("Cần cho phép quyền thông báo ở trình duyệt nhé.", "err");
+      return;
+    }
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+    });
+    await api("/push/subscribe", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(sub.toJSON()) });
+    updatePushToggleUI(true);
+    flash("Đã bật thông báo trên thiết bị này rồi nhé.", "ok");
+  }catch(err){
+    if(err.message !== "unauthorized") flash("Không bật được thông báo, thử lại nhé.", "err");
+  }
+}
+notifPushToggleEl.addEventListener("click", togglePush);
+initPushToggle();
+
 function toggleNotifPanel(open){
   notifPanel.classList.toggle("open", open);
   notifBellBtn.setAttribute("aria-expanded", String(open));
@@ -909,6 +989,7 @@ pinFormEl.addEventListener("submit", async (e) => {
     storeToken(accessToken);
     hideGate();
     boot();
+    initPushToggle();
   }catch(err){
     pinErrorEl.textContent = err.message;
   }finally{
