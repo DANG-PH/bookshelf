@@ -1413,6 +1413,19 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
           </label>
         </div>
       </div>
+      <div class="install-banner" id="pushBanner" hidden>
+        <div class="install-banner-head">
+          <span>🔔 Bật thông báo nhé?</span>
+          <button type="button" id="pushBannerClose" aria-label="Đóng">✕</button>
+        </div>
+        <p class="install-banner-desc" id="pushBannerDesc">Có sách mới hay nhật ký mới là báo liền, kể cả khi không mở web — như Messenger vậy.</p>
+        <div class="install-banner-actions">
+          <button type="button" class="install-banner-cta" id="pushBannerCta">Bật thông báo</button>
+          <label class="install-banner-skip">
+            <input type="checkbox" id="pushBannerSkipCheck" /> Không hiện lại
+          </label>
+        </div>
+      </div>
       <div class="stalled-card" id="stalledBooksCard" hidden>
         <div class="stalled-card-head">
           <span>📖 Đọc dở lâu rồi nè</span>
@@ -1647,6 +1660,18 @@ themeToggleEl.addEventListener("click", () => {
 });
 applyThemeColorMeta();
 
+// ── shared platform checks — used by both the install banner below and
+// the push-notification banner further down, since both care about the
+// same two things: is this iOS (no programmatic install/push-permission
+// API there until the app's actually installed), and are we already
+// running as the installed app right now ──
+function isIOSDevice(){
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+}
+function isRunningStandalone(){
+  return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+}
+
 // ── "cài đặt ứng dụng" — a banner (prominent, respects the "đừng nhắc
 // nữa" snooze) plus a small persistent header icon (always there
 // whenever installing is actually possible, regardless of whether the
@@ -1664,12 +1689,6 @@ applyThemeColorMeta();
   const iconBtn = document.getElementById("installAppBtn");
   const DISMISS_KEY = "tb_install_banner_dismissed_until";
 
-  function isIOSDevice(){
-    return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-  }
-  function isRunningStandalone(){
-    return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
-  }
   function isSnoozed(){
     const raw = localStorage.getItem(DISMISS_KEY);
     if(!raw) return false;
@@ -3032,10 +3051,13 @@ document.getElementById("notifMarkAllBtn").addEventListener("click", async () =>
 });
 
 // ── real push notifications — like a native app, arrives even when no
-// tab is open. Registers sw.js and subscribes this device; the toggle
-// stays hidden unless both this browser supports it AND the server has
-// VAPID keys configured (checked via /push/vapid-public-key), so it
-// never shows a control that can't actually do anything ──
+// tab is open. Two entry points share the same subscribe/unsubscribe
+// logic: the toggle tucked inside the bell panel (easy to miss — that
+// was the whole complaint) and a banner that actually surfaces it,
+// same shape as the install banner and shown right alongside it.
+// Both stay hidden unless this browser supports push AND the server has
+// VAPID keys configured (checked via /push/vapid-public-key), so
+// neither ever offers a control that can't actually do anything ──
 const notifPushToggleEl = document.getElementById("notifPushToggle");
 const pushApiSupported = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
 let vapidPublicKey = null;
@@ -3050,6 +3072,7 @@ function urlBase64ToUint8Array(base64String){
 function updatePushToggleUI(subscribed){
   notifPushToggleEl.classList.toggle("active", subscribed);
   notifPushToggleEl.textContent = subscribed ? "✓ Đã bật thông báo trên thiết bị này" : "🔔 Bật thông báo trên thiết bị này";
+  pushBannerEl.hidden = true;
 }
 async function sendPushSubscription(sub){
   const token = getStoredToken();
@@ -3071,6 +3094,71 @@ async function removePushSubscription(endpoint){
     body: JSON.stringify({ endpoint }),
   }).catch(() => {});
 }
+// Chrome won't show its own permission popup unless this runs directly
+// off a user gesture (a click) — never call this from page-load code
+async function subscribeToPush(){
+  const reg = await navigator.serviceWorker.ready;
+  const permission = await Notification.requestPermission();
+  if(permission !== "granted"){
+    flash(
+      permission === "denied"
+        ? "Bạn đã từng từ chối thông báo — cần vào cài đặt trình duyệt (biểu tượng ổ khoá cạnh địa chỉ trang) bật lại quyền cho trang này."
+        : "Cần cho phép quyền thông báo ở trình duyệt nhé.",
+      "err",
+    );
+    return;
+  }
+  const sub = await reg.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+  });
+  await sendPushSubscription(sub);
+  updatePushToggleUI(true);
+  flash("Đã bật thông báo trên thiết bị này rồi nhé.", "ok");
+}
+async function unsubscribeFromPush(existing){
+  const endpoint = existing.endpoint;
+  await existing.unsubscribe();
+  await removePushSubscription(endpoint);
+  updatePushToggleUI(false);
+  flash("Đã tắt thông báo trên thiết bị này.", "ok");
+}
+async function togglePush(){
+  try{
+    const reg = await navigator.serviceWorker.ready;
+    const existing = await reg.pushManager.getSubscription();
+    if(existing) await unsubscribeFromPush(existing);
+    else await subscribeToPush();
+  }catch(err){
+    if(err.message !== "unauthorized") flash("Không bật được thông báo, thử lại nhé.", "err");
+  }
+}
+notifPushToggleEl.addEventListener("click", togglePush);
+
+// ── the banner half — same install-banner shape and dismiss pattern
+// (7-day snooze, or forever with the checkbox). iOS can't do push at
+// all until the app's actually installed, so this simply never offers
+// it there until isRunningStandalone() is true ──
+const pushBannerEl = document.getElementById("pushBanner");
+const pushBannerCtaEl = document.getElementById("pushBannerCta");
+const pushBannerCloseEl = document.getElementById("pushBannerClose");
+const pushBannerSkipCheckEl = document.getElementById("pushBannerSkipCheck");
+const PUSH_BANNER_DISMISS_KEY = "tb_push_banner_dismissed_until";
+function isPushBannerSnoozed(){
+  const raw = localStorage.getItem(PUSH_BANNER_DISMISS_KEY);
+  if(!raw) return false;
+  return raw === "forever" || Date.now() < Number(raw);
+}
+pushBannerCloseEl.addEventListener("click", () => {
+  pushBannerEl.hidden = true;
+  const forever = pushBannerSkipCheckEl.checked;
+  localStorage.setItem(PUSH_BANNER_DISMISS_KEY, forever ? "forever" : String(Date.now() + 7 * 86400000));
+});
+pushBannerCtaEl.addEventListener("click", async () => {
+  pushBannerEl.hidden = true;
+  try{ await subscribeToPush(); }catch(err){ if(err.message !== "unauthorized") flash("Không bật được thông báo, thử lại nhé.", "err"); }
+});
+
 async function initPushToggle(){
   if(!pushApiSupported) return;
   const token = getStoredToken();
@@ -3085,40 +3173,14 @@ async function initPushToggle(){
     const sub = await reg.pushManager.getSubscription();
     updatePushToggleUI(Boolean(sub));
     notifPushToggleEl.hidden = false;
+    if(!sub && !isPushBannerSnoozed() && (!isIOSDevice() || isRunningStandalone())){
+      pushBannerEl.hidden = false;
+    }
   }catch{
     // best-effort — push is a nice-to-have, never worth breaking the
     // rest of the page over
   }
 }
-async function togglePush(){
-  try{
-    const reg = await navigator.serviceWorker.ready;
-    const existing = await reg.pushManager.getSubscription();
-    if(existing){
-      const endpoint = existing.endpoint;
-      await existing.unsubscribe();
-      await removePushSubscription(endpoint);
-      updatePushToggleUI(false);
-      flash("Đã tắt thông báo trên thiết bị này.", "ok");
-      return;
-    }
-    const permission = await Notification.requestPermission();
-    if(permission !== "granted"){
-      flash("Cần cho phép quyền thông báo ở trình duyệt nhé.", "err");
-      return;
-    }
-    const sub = await reg.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
-    });
-    await sendPushSubscription(sub);
-    updatePushToggleUI(true);
-    flash("Đã bật thông báo trên thiết bị này rồi nhé.", "ok");
-  }catch(err){
-    if(err.message !== "unauthorized") flash("Không bật được thông báo, thử lại nhé.", "err");
-  }
-}
-notifPushToggleEl.addEventListener("click", togglePush);
 initPushToggle();
 // position:fixed means this has to be placed by hand — clamped so it
 // never runs off either edge of the viewport (the bell sits inside a
