@@ -3002,6 +3002,12 @@ const notifBellBtn = document.getElementById("notifBellBtn");
 const notifPanel = document.getElementById("notifPanel");
 const notifBadge = document.getElementById("notifBadge");
 const notifPanelBody = document.getElementById("notifPanelBody");
+// on mobile the sidebar becomes a drawer with `transform:translateX(...)`,
+// which makes it the containing block for any position:fixed descendant —
+// so the panel's JS-computed viewport coordinates were being applied
+// relative to the (scrollable, clipped) sidebar instead of the screen,
+// pushing it out of view. Moving it to <body> once escapes that.
+document.body.appendChild(notifPanel);
 
 async function renderNotifications(){
   const list = await loadNotifications();
@@ -3232,7 +3238,9 @@ notifBellBtn.addEventListener("click", (e) => {
   toggleNotifPanel(!notifPanel.classList.contains("open"));
 });
 document.addEventListener("click", (e) => {
-  if(notifPanel.classList.contains("open") && !e.target.closest(".notif-bell-wrap")) toggleNotifPanel(false);
+  // panel now lives at the end of <body> (see the appendChild above), so
+  // clicks inside it no longer match .closest(".notif-bell-wrap")
+  if(notifPanel.classList.contains("open") && !e.target.closest(".notif-bell-wrap") && !e.target.closest("#notifPanel")) toggleNotifPanel(false);
 });
 document.addEventListener("keydown", (e) => {
   if(e.key === "Escape") toggleNotifPanel(false);
