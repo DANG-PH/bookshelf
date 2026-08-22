@@ -669,6 +669,10 @@ function isRunningStandalone(){
     banner.hidden = true;
     iconBtn.hidden = true;
     deferredInstallPrompt = null;
+    const token = getStoredToken();
+    if(token){
+      fetch(`${API_BASE}/push/app-installed`, { method: "POST", headers: { Authorization: `Bearer ${token}` } }).catch(() => {});
+    }
   });
 })();
 
