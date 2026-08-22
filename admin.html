@@ -559,13 +559,6 @@ details.more .more-body{padding-top:14px}
       <p class="panel-sub">Lỡ quên mật khẩu riêng của ai thì xoá ở đây để đặt lại từ đầu — chỉ dùng khi thật sự cần, vì xoá xong là mất luôn mật khẩu cũ.</p>
       <div class="list" id="authorLockList"><p class="empty-note">Đang tải…</p></div>
     </section>
-
-    <section class="panel">
-      <h2 style="font-size:1rem">Thông báo đẩy</h2>
-      <p class="panel-sub">Gửi ngay 1 thông báo thử tới mọi thiết bị đã bật — biết ngay là server gửi được hay không, tách bạch với việc máy nhận có chặn nền hay không.</p>
-      <button type="button" class="btn-primary" id="pushTestBtn" style="width:auto">Gửi thử thông báo</button>
-      <div class="list" id="pushTestResult" style="margin-top:14px"></div>
-    </section>
   </details>
 </div>
 
@@ -1172,38 +1165,6 @@ document.getElementById("authorLockList").addEventListener("click", async (e) =>
     await loadAuthorLocks();
   }catch(err){
     if(err.message !== "unauthorized") flash(err.message, "err");
-  }
-});
-
-// ── "gửi thử thông báo" — isolates whether push actually works from
-// whether the receiving device/browser is blocking it in the
-// background: this reads the server's own send result (sent/failed
-// per subscription, with the push service's real error), so "did it
-// work" is answerable from this one response, no server log access
-// needed ──
-document.getElementById("pushTestBtn").addEventListener("click", async () => {
-  const btn = document.getElementById("pushTestBtn");
-  const resultEl = document.getElementById("pushTestResult");
-  btn.disabled = true;
-  btn.textContent = "Đang gửi…";
-  resultEl.innerHTML = "";
-  try{
-    const result = await api("/push/test", { method: "POST" });
-    if(result.total === 0){
-      resultEl.innerHTML = `<p class="empty-note">Chưa có thiết bị nào đăng ký nhận thông báo cả — vào chuông 🔔 ở trang chính/nhật ký, bấm "Bật thông báo" trước đã.</p>`;
-    }else{
-      const lines = [`Đã thử gửi tới ${result.total} thiết bị: <b>${result.sent} thành công</b>, ${result.failed} thất bại.`];
-      if(result.errors && result.errors.length){
-        lines.push(...result.errors.map(e => `— ${escapeHTML(e.endpointHost)}: ${escapeHTML(e.error)}`));
-      }
-      resultEl.innerHTML = `<div class="list-item" style="display:block"><div class="meta"><div class="t" style="white-space:normal">${lines.join("<br>")}</div></div></div>`;
-    }
-    flash(result.sent > 0 ? "Đã gửi thử — kiểm tra xem thiết bị có nhận được không nhé." : "Gửi xong nhưng không có thiết bị nào nhận được, xem chi tiết bên dưới.", result.sent > 0 ? "ok" : "err");
-  }catch(err){
-    if(err.message !== "unauthorized") flash(err.message, "err");
-  }finally{
-    btn.disabled = false;
-    btn.textContent = "Gửi thử thông báo";
   }
 });
 
