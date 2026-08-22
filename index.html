@@ -3121,7 +3121,7 @@ async function subscribeToPush(){
     flash("Đã bật thông báo trên thiết bị này rồi nhé.", "ok");
   }catch(err){
     console.error("[Push] Không bật được thông báo:", err);
-    if(err.message !== "unauthorized") flash("Không bật được thông báo, thử lại nhé.", "err");
+    if(err.message !== "unauthorized") flash(`Không bật được: ${err.name || ""} ${err.message || err}`.trim(), "err");
   }
 }
 async function unsubscribeFromPush(existing){
@@ -3133,7 +3133,7 @@ async function unsubscribeFromPush(existing){
     flash("Đã tắt thông báo trên thiết bị này.", "ok");
   }catch(err){
     console.error("[Push] Không tắt được thông báo:", err);
-    flash("Không tắt được thông báo, thử lại nhé.", "err");
+    flash(`Không tắt được: ${err.name || ""} ${err.message || err}`.trim(), "err");
   }
 }
 // disabled while in flight so a second click before the first finishes
