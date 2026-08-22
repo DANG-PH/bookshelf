@@ -3095,42 +3095,66 @@ async function removePushSubscription(endpoint){
   }).catch(() => {});
 }
 // Chrome won't show its own permission popup unless this runs directly
-// off a user gesture (a click) — never call this from page-load code
+// off a user gesture (a click) — never call this from page-load code.
+// Each half logs the real error to the console instead of only a generic
+// toast — a silent failure here looked identical to "did nothing" with
+// no way to tell why, same lesson as the diary-photo bug earlier.
 async function subscribeToPush(){
-  const reg = await navigator.serviceWorker.ready;
-  const permission = await Notification.requestPermission();
-  if(permission !== "granted"){
-    flash(
-      permission === "denied"
-        ? "Bạn đã từng từ chối thông báo — cần vào cài đặt trình duyệt (biểu tượng ổ khoá cạnh địa chỉ trang) bật lại quyền cho trang này."
-        : "Cần cho phép quyền thông báo ở trình duyệt nhé.",
-      "err",
-    );
-    return;
+  try{
+    const reg = await navigator.serviceWorker.ready;
+    const permission = await Notification.requestPermission();
+    if(permission !== "granted"){
+      flash(
+        permission === "denied"
+          ? "Bạn đã từng từ chối thông báo — cần vào cài đặt trình duyệt (biểu tượng ổ khoá cạnh địa chỉ trang) bật lại quyền cho trang này."
+          : "Cần cho phép quyền thông báo ở trình duyệt nhé.",
+        "err",
+      );
+      return;
+    }
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+    });
+    await sendPushSubscription(sub);
+    updatePushToggleUI(true);
+    flash("Đã bật thông báo trên thiết bị này rồi nhé.", "ok");
+  }catch(err){
+    console.error("[Push] Không bật được thông báo:", err);
+    if(err.message !== "unauthorized") flash("Không bật được thông báo, thử lại nhé.", "err");
   }
-  const sub = await reg.pushManager.subscribe({
-    userVisibleOnly: true,
-    applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
-  });
-  await sendPushSubscription(sub);
-  updatePushToggleUI(true);
-  flash("Đã bật thông báo trên thiết bị này rồi nhé.", "ok");
 }
 async function unsubscribeFromPush(existing){
-  const endpoint = existing.endpoint;
-  await existing.unsubscribe();
-  await removePushSubscription(endpoint);
-  updatePushToggleUI(false);
-  flash("Đã tắt thông báo trên thiết bị này.", "ok");
+  try{
+    const endpoint = existing.endpoint;
+    await existing.unsubscribe();
+    await removePushSubscription(endpoint);
+    updatePushToggleUI(false);
+    flash("Đã tắt thông báo trên thiết bị này.", "ok");
+  }catch(err){
+    console.error("[Push] Không tắt được thông báo:", err);
+    flash("Không tắt được thông báo, thử lại nhé.", "err");
+  }
 }
+// disabled while in flight so a second click before the first finishes
+// (waiting on the permission prompt, say) can't race a second
+// subscribe/unsubscribe attempt against the first
+let pushToggleBusy = false;
 async function togglePush(){
+  if(pushToggleBusy) return;
+  pushToggleBusy = true;
+  notifPushToggleEl.disabled = true;
   try{
     const reg = await navigator.serviceWorker.ready;
     const existing = await reg.pushManager.getSubscription();
     if(existing) await unsubscribeFromPush(existing);
     else await subscribeToPush();
   }catch(err){
-    if(err.message !== "unauthorized") flash("Không bật được thông báo, thử lại nhé.", "err");
+    console.error("[Push] Lỗi không xác định:", err);
+    flash("Không bật/tắt được thông báo, thử lại nhé.", "err");
+  }finally{
+    pushToggleBusy = false;
+    notifPushToggleEl.disabled = false;
   }
 }
 notifPushToggleEl.addEventListener("click", togglePush);
@@ -3154,9 +3178,9 @@ pushBannerCloseEl.addEventListener("click", () => {
   const forever = pushBannerSkipCheckEl.checked;
   localStorage.setItem(PUSH_BANNER_DISMISS_KEY, forever ? "forever" : String(Date.now() + 7 * 86400000));
 });
-pushBannerCtaEl.addEventListener("click", async () => {
+pushBannerCtaEl.addEventListener("click", () => {
   pushBannerEl.hidden = true;
-  try{ await subscribeToPush(); }catch(err){ if(err.message !== "unauthorized") flash("Không bật được thông báo, thử lại nhé.", "err"); }
+  subscribeToPush(); // handles its own errors/flash — see above
 });
 
 async function initPushToggle(){
