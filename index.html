@@ -2700,10 +2700,11 @@ function renderNewBooksSection(categories){
   section.className = "section new-books-section";
   section.innerHTML = `
     <div class="section-head">
-      <span class="section-code"><span class="code-label">Mới</span>${NEW_BOOK_DAYS} ngày qua</span>
       <h2 class="section-title">Sách mới</h2>
+      <span class="section-code"><span class="code-label">Mới</span>${NEW_BOOK_DAYS} ngày qua</span>
       <span class="section-count">${newest.length} cuốn</span>
     </div>
+    <p class="section-intro">Những cuốn mới thêm vào trong ${NEW_BOOK_DAYS} ngày gần đây.</p>
     <div class="cards">
       ${newest.map(({ b, cat }) => cardHTML(b, cat)).join("")}
     </div>
