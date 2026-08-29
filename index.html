@@ -1241,7 +1241,7 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
 @media print{
   .sidebar,.mobile-top,.backdrop,.pin-gate,.progress-rail,.grain,.amb,
   .fab-add,.fab-diary,.fab-chat,.chat-panel,.status-msg,.new-books-modal-backdrop,.review-modal-backdrop,.blurb-toggle,.card-new-ribbon,
-  .fav-toggle,.card-status,.stamp,.review-summary-row,.stalled-card,.install-banner{display:none!important}
+  .fav-toggle,.card-status,.stamp,.review-summary-row,.stalled-card,.install-banner,.new-books-section{display:none!important}
   body{background:#fff;color:#000}
   .shell{display:block}
   .content{max-width:none;padding:0}
@@ -1904,6 +1904,16 @@ function updateFavCountDisplay(favBtn, count){
     countEl.remove();
   }
 }
+// a "new" book can render twice (its shelf + the pinned "Sách mới"
+// section) — mirrors the favorite state/count onto every copy, not just
+// the button that was actually clicked
+function applyFavoriteToAllCopies(bookId, active, count){
+  document.querySelectorAll(`a.card[data-book-id="${bookId}"] [data-fav-toggle]`).forEach(btn => {
+    btn.classList.toggle("active", active);
+    btn.setAttribute("aria-label", active ? "Bỏ yêu thích" : "Đánh dấu yêu thích");
+    updateFavCountDisplay(btn, count);
+  });
+}
 function toggleFavorite(favBtn){
   const bookId = favBtn.dataset.bookId;
   const wasActive = favBtn.classList.contains("active");
@@ -1911,9 +1921,7 @@ function toggleFavorite(favBtn){
   const prevCount = countEl ? Number(countEl.textContent) : 0;
   const nextCount = wasActive ? Math.max(0, prevCount - 1) : prevCount + 1;
 
-  favBtn.classList.toggle("active", !wasActive);
-  favBtn.setAttribute("aria-label", wasActive ? "Đánh dấu yêu thích" : "Bỏ yêu thích");
-  updateFavCountDisplay(favBtn, nextCount);
+  applyFavoriteToAllCopies(bookId, !wasActive, nextCount);
 
   toggleBookFavorite(bookId, currentWho)
     .then((updated) => {
@@ -1921,26 +1929,34 @@ function toggleFavorite(favBtn){
       if(book) book.favoritedBy = updated.favoritedBy || [];
     })
     .catch((err) => {
-      favBtn.classList.toggle("active", wasActive);
-      favBtn.setAttribute("aria-label", wasActive ? "Bỏ yêu thích" : "Đánh dấu yêu thích");
-      updateFavCountDisplay(favBtn, prevCount);
+      applyFavoriteToAllCopies(bookId, wasActive, prevCount);
       if(err.message !== "unauthorized") flash("Không lưu được, thử lại nhé.", "err");
     });
 }
 
+// a "new" book can render twice (its shelf + the pinned "Sách mới"
+// section) — applies the active status to every copy's pill group, not
+// just the one the click happened in
+function applyReadStatusToAllCopies(bookId, activeValue){
+  document.querySelectorAll(`a.card[data-book-id="${bookId}"] .card-status`).forEach(group => {
+    group.querySelectorAll(".status-pill").forEach(p => {
+      p.classList.toggle("active", p.dataset.statusToggle === activeValue);
+    });
+  });
+}
 function toggleReadStatus(statusBtn){
-  const group = statusBtn.closest(".card-status");
+  const bookId = statusBtn.dataset.bookId;
   const wasActive = statusBtn.classList.contains("active");
+  const group = statusBtn.closest(".card-status");
   const prevActive = group.querySelector(".status-pill.active");
   const prevValue = prevActive ? prevActive.dataset.statusToggle : null;
-  group.querySelectorAll(".status-pill").forEach(p => p.classList.remove("active"));
-  if(!wasActive) statusBtn.classList.add("active");
   const nextValue = wasActive ? null : statusBtn.dataset.statusToggle;
-  patchBookStatus(statusBtn.dataset.bookId, { readStatus: nextValue })
+  applyReadStatusToAllCopies(bookId, nextValue);
+  patchBookStatus(bookId, { readStatus: nextValue })
     .then((updated) => {
       // the cache needs startedAt/finishedAt too, not just readStatus —
       // renderReadingStats/renderStalledBooks below read straight off it
-      const book = findBookInCatalog(statusBtn.dataset.bookId);
+      const book = findBookInCatalog(bookId);
       if(book){
         book.readStatus = updated.readStatus;
         book.startedAt = updated.startedAt;
@@ -1952,8 +1968,7 @@ function toggleReadStatus(statusBtn){
       }
     })
     .catch((err) => {
-      group.querySelectorAll(".status-pill").forEach(p => p.classList.remove("active"));
-      if(prevValue) group.querySelector(`[data-status-toggle="${prevValue}"]`)?.classList.add("active");
+      applyReadStatusToAllCopies(bookId, prevValue);
       if(err.message !== "unauthorized") flash("Không lưu được, thử lại nhé.", "err");
     });
 }
@@ -1976,13 +1991,14 @@ function bumpBookView(card){
   if(token){
     fetch(`${API_BASE}/books/${id}/view`, { method: "POST", headers: { Authorization: `Bearer ${token}` } }).catch(() => {});
   }
-  const badge = card.querySelector("[data-view-count]");
-  if(badge){
+  // a "new" book can render twice (its shelf + the pinned "Sách mới"
+  // section) — bump the count on every copy, not just the one clicked
+  document.querySelectorAll(`a.card[data-book-id="${id}"] [data-view-count]`).forEach(badge => {
     const next = (parseInt(badge.textContent.replace(/\D/g, ""), 10) || 0) + 1;
     badge.textContent = `👁 ${next}`;
     badge.title = `Đã xem ${next} lần`;
     badge.hidden = false;
-  }
+  });
 }
 catalogEl.addEventListener("click", (e) => {
   const card = e.target.closest("a.card");
@@ -2181,18 +2197,22 @@ function reviewModalSubText(book){
   return `★ ${avgDisplay} · ${countLabel}`;
 }
 function refreshBookReviewsUI(book){
-  const card = document.querySelector(`a.card[data-book-id="${book.id}"]`);
-  const summary = card && card.querySelector(".review-summary");
-  if(summary) summary.outerHTML = reviewSummaryHTML(book);
+  // a "new" book can appear twice (its real shelf + the pinned "Sách mới"
+  // section) — update every copy, not just the first match
+  document.querySelectorAll(`a.card[data-book-id="${book.id}"]`).forEach(card => {
+    const summary = card.querySelector(".review-summary");
+    if(summary) summary.outerHTML = reviewSummaryHTML(book);
+  });
   if(reviewModalBookId === book.id && reviewModalTab === "reviews"){
     reviewModalSub.textContent = reviewModalSubText(book);
     reviewModalBody.innerHTML = reviewModalBodyHTML(book);
   }
 }
 function refreshBookQuotesUI(book){
-  const card = document.querySelector(`a.card[data-book-id="${book.id}"]`);
-  const btn = card && card.querySelector(".quote-count-btn");
-  if(btn) btn.outerHTML = quoteCountBtnHTML(book);
+  document.querySelectorAll(`a.card[data-book-id="${book.id}"]`).forEach(card => {
+    const btn = card.querySelector(".quote-count-btn");
+    if(btn) btn.outerHTML = quoteCountBtnHTML(book);
+  });
   if(reviewModalBookId === book.id && reviewModalTab === "quotes"){
     reviewModalSub.textContent = quoteModalSubText(book);
     reviewModalBody.innerHTML = quoteModalBodyHTML(book);
@@ -2452,6 +2472,16 @@ reviewModalBody.addEventListener("keydown", (e) => {
   starEl.click();
 });
 
+// "Mới" is computed from createdAt, not a stored flag — it just quietly
+// stops applying once a book ages past the window, no cron/queue needed.
+// Shared by the ribbon on individual cards and the pinned "Sách mới"
+// section below (single source of truth for what counts as new).
+const NEW_BOOK_DAYS = 4;
+const NEW_BOOK_WINDOW_MS = NEW_BOOK_DAYS * 24 * 60 * 60 * 1000;
+function isBookNew(b){
+  return !!b.createdAt && (Date.now() - new Date(b.createdAt).getTime()) < NEW_BOOK_WINDOW_MS;
+}
+
 function cardHTML(b, cat){
   const tagList = b.tags || [];
   const tagsHTML = tagList
@@ -2469,10 +2499,7 @@ function cardHTML(b, cat){
          <div class="no-photo" aria-hidden="true"><span>${escapeHTML(letter)}</span></div>
        </div>`;
   const searchKey = normalize([b.title, b.author, b.blurb, ...(b.tags||[])].filter(Boolean).join(" "));
-  // "Mới" is computed from createdAt, not a stored flag — it just quietly
-  // stops applying once a book turns 1 day old, no cron/queue needed
-  const ONE_DAY_MS = 24 * 60 * 60 * 1000;
-  const isNew = !!b.createdAt && (Date.now() - new Date(b.createdAt).getTime()) < ONE_DAY_MS;
+  const isNew = isBookNew(b);
   const newRibbon = isNew ? `<span class="card-new-ribbon">Mới</span>` : "";
   // long blurbs get cut to a preview with a toggle to read the rest. Cut by
   // character count (not CSS line-clamp — that breaks the float-wrap the
@@ -2614,7 +2641,9 @@ document.getElementById("stalledBooksClose").addEventListener("click", () => {
   stalledBooksCardEl.hidden = true;
 });
 function jumpToStalledBook(bookId){
-  const card = document.querySelector(`a.card[data-book-id="${bookId}"]`);
+  // scoped past .new-books-section — jump to the book's real shelf spot,
+  // not its temporary duplicate up in "Sách mới" (if it happens to be new)
+  const card = document.querySelector(`.section:not(.new-books-section) a.card[data-book-id="${bookId}"]`);
   if(!card) return;
   card.scrollIntoView({ behavior: "smooth", block: "center" });
   card.classList.add("picked");
@@ -2647,6 +2676,36 @@ function applyBookSort(books, mode){
   return sorted;
 }
 
+// ── "Sách mới" — pinned above every Dewey shelf so a fresh addition is
+// the first thing seen, not something to stumble across while browsing.
+// Only ever exists in the DOM when there's something to show — no empty
+// shell left sitting there once the newest book ages out of the window.
+// Always newest-first regardless of the visitor's chosen sort mode, since
+// the whole point here is "just added", not whatever they're sorting by ──
+function renderNewBooksSection(categories){
+  const newest = [];
+  categories.forEach(cat => (cat.books||[]).forEach(b => { if(isBookNew(b)) newest.push({ b, cat }); }));
+  if(!newest.length) return null;
+  newest.sort((x, y) => new Date(y.b.createdAt||0) - new Date(x.b.createdAt||0));
+  const section = document.createElement("section");
+  // .section for the same entrance animation/spacing as every other
+  // shelf; .new-books-section is just a marker so the scroll-spy below
+  // can skip it — it's not a real Dewey shelf to highlight in the nav
+  section.className = "section new-books-section";
+  section.innerHTML = `
+    <div class="section-head">
+      <span class="section-code"><span class="code-label">Mới</span>${NEW_BOOK_DAYS} ngày qua</span>
+      <h2 class="section-title">✨ Sách mới</h2>
+      <span class="section-count">${newest.length} cuốn</span>
+    </div>
+    <div class="cards">
+      ${newest.map(({ b, cat }) => cardHTML(b, cat)).join("")}
+    </div>
+    <div class="empty no-match" style="display:none;margin-top:14px"><div class="em-title">Không có thẻ nào khớp với tìm kiếm.</div><div class="em-sub">Thử một từ khóa khác</div></div>
+  `;
+  return section;
+}
+
 function render(data){
   // newest topic first — a topic you just added is the one worth reading,
   // not something to go dig for at the bottom of the sidebar
@@ -2657,6 +2716,9 @@ function render(data){
   let volumes = 0;
   catalogEl.innerHTML = "";
   sidebarNavEl.innerHTML = "";
+
+  const newBooksSection = renderNewBooksSection(categories);
+  if(newBooksSection) catalogEl.appendChild(newBooksSection);
 
   // ── build "Tất cả" pseudo-item at top of nav ──
   const allBtn = document.createElement("button");
@@ -2760,7 +2822,10 @@ function render(data){
     document.querySelectorAll(".cards .card").forEach(c => cardObserver.observe(c));
   }
 
-  const sections = Array.from(document.querySelectorAll(".section"));
+  // .new-books-section excluded — it's a pinned highlight, not a real
+  // Dewey shelf, so scrolling through it just keeps whatever nav item
+  // (usually "Tất cả") was already active
+  const sections = Array.from(document.querySelectorAll(".section:not(.new-books-section)"));
   const observer = new IntersectionObserver((entries) => {
     if(spySuppressed) return;
     // if we're essentially at the top of the page, "Tất cả" wins
@@ -3333,7 +3398,9 @@ newBooksList.addEventListener("click", (e) => {
   const item = e.target.closest("[data-jump-book]");
   if(!item) return;
   e.preventDefault();
-  const target = document.querySelector(`a.card[data-book-id="${item.dataset.jumpBook}"]`);
+  // scoped past .new-books-section — jump to the book's real shelf spot,
+  // not its temporary duplicate up in "Sách mới" (if it happens to be new)
+  const target = document.querySelector(`.section:not(.new-books-section) a.card[data-book-id="${item.dataset.jumpBook}"]`);
   closeNewBooksModal();
   if(!target) return;
   // wait for the modal's own close transition so the scroll isn't
