@@ -453,7 +453,13 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
 .section-intro{color:var(--soft);font-size:.92rem;line-height:1.7;margin:-8px 0 22px;max-width:640px}
 
 /* ── card grid ─────────────────────── */
-.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:18px;padding-bottom:4px}
+/* auto-fit, not auto-fill — a shelf with just 1-2 books (small
+   categories, or "Sách mới" on a quiet week) shouldn't leave the rest
+   of the row sitting empty. Capped at 340px rather than 1fr, so a lone
+   card grows to a comfortable reading width instead of stretching edge
+   to edge with the cover floated way off to one side; behaves the same
+   as before once there are enough cards to actually fill a row */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,340px));gap:18px;padding-bottom:4px}
 @media(max-width:520px){.cards{grid-template-columns:1fr}}
 
 .card{
@@ -2695,7 +2701,7 @@ function renderNewBooksSection(categories){
   section.innerHTML = `
     <div class="section-head">
       <span class="section-code"><span class="code-label">Mới</span>${NEW_BOOK_DAYS} ngày qua</span>
-      <h2 class="section-title">✨ Sách mới</h2>
+      <h2 class="section-title">Sách mới</h2>
       <span class="section-count">${newest.length} cuốn</span>
     </div>
     <div class="cards">
