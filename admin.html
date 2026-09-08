@@ -504,6 +504,7 @@ details.more .more-body{padding-top:14px}
               <input id="bookTranslatedFile" name="translatedFile" type="file" accept="application/pdf" />
             </div>
             <p class="file-hint" id="bookTranslatedFileEditHint" hidden>Đã có bản dịch — để trống nếu chưa muốn đổi</p>
+            <p class="file-hint" id="bookTranslatedLangHint" hidden>File sách này được nhận diện là tiếng Việt sẵn rồi — có lẽ không cần thêm bản dịch</p>
           </div>
         </div>
       </details>
@@ -1394,7 +1395,7 @@ function renderBooks(){
     <div class="list-item">
       <div class="meta">
         <div class="t">${escapeHTML(b.title)}</div>
-        <div class="s">${escapeHTML(b.author || "—")} · ${escapeHTML(b.category?.title || "")}${b.translatedFileUrl ? " · Có bản dịch tiếng Việt" : ""}</div>
+        <div class="s">${escapeHTML(b.author || "—")} · ${escapeHTML(b.category?.title || "")}${b.detectedLanguage === "vi" ? " · Tiếng Việt" : b.detectedLanguage === "foreign" ? " · Sách nước ngoài" : ""}${b.translatedFileUrl ? " · Có bản dịch tiếng Việt" : ""}</div>
       </div>
       <div style="display:flex;gap:6px;flex:none">
         <button class="btn-edit" data-edit-book="${b.id}">Sửa</button>
@@ -1420,6 +1421,7 @@ function startEditBook(book){
   form.cover.value = "";
   form.translatedFile.value = "";
   document.getElementById("bookTranslatedFileEditHint").hidden = !book.translatedFileUrl;
+  document.getElementById("bookTranslatedLangHint").hidden = book.detectedLanguage !== "vi";
   setFieldMode(document.getElementById("pdfField"), "upload");
   // only worth prefilling if it's a real external link — a local
   // /api/files/... path isn't something you'd resubmit as a "cover URL"
@@ -1446,6 +1448,7 @@ function cancelEditBook(){
   document.getElementById("bookFormSub").textContent = "Chỉ cần chủ đề, tên sách và file PDF là đủ.";
   document.getElementById("bookFileEditHint").hidden = true;
   document.getElementById("bookTranslatedFileEditHint").hidden = true;
+  document.getElementById("bookTranslatedLangHint").hidden = true;
   document.getElementById("bookSubmit").textContent = "Thêm sách vào thư viện";
   document.getElementById("bookEditCancel").hidden = true;
 }
