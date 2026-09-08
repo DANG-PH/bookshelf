@@ -1382,6 +1382,26 @@ async function loadBooks(){
   renderBooks();
 }
 
+// ── trạng thái biên dịch tự động — xem thêm docs/vi-translate.md.
+// Có bản dịch rồi thì không còn nút nào ở đây nữa (không tự dịch lại);
+// đang chờ/đang chạy thì chỉ hiện chữ trạng thái, không cho bấm gì thêm;
+// lỗi thì cho bấm lại (coi như thử lại, không phải "dịch thêm lần nữa") ──
+function translationStatusLabel(b){
+  if(b.translatedFileUrl) return "";
+  if(b.translationJobStatus === "queued") return " · Đang chờ biên dịch…";
+  if(b.translationJobStatus === "processing") return " · Đang biên dịch…";
+  if(b.translationJobStatus === "failed"){
+    return ` · Biên dịch lỗi${b.translationJobError ? `: ${escapeHTML(b.translationJobError.slice(0, 120))}` : ""}`;
+  }
+  return "";
+}
+function translateButtonHTML(b){
+  if(b.translatedFileUrl) return "";
+  if(b.translationJobStatus === "queued" || b.translationJobStatus === "processing") return "";
+  if(b.detectedLanguage !== "foreign") return "";
+  const label = b.translationJobStatus === "failed" ? "Thử lại" : "Biên dịch";
+  return `<button type="button" class="btn-edit" data-translate-book="${b.id}">${label}</button>`;
+}
 function renderBooks(){
   const listEl = document.getElementById("bookList");
   document.getElementById("bookCountLabel").textContent =
@@ -1395,14 +1415,18 @@ function renderBooks(){
     <div class="list-item">
       <div class="meta">
         <div class="t">${escapeHTML(b.title)}</div>
-        <div class="s">${escapeHTML(b.author || "—")} · ${escapeHTML(b.category?.title || "")}${b.detectedLanguage === "vi" ? " · Tiếng Việt" : b.detectedLanguage === "foreign" ? " · Sách nước ngoài" : ""}${b.translatedFileUrl ? " · Có bản dịch tiếng Việt" : ""}</div>
+        <div class="s">${escapeHTML(b.author || "—")} · ${escapeHTML(b.category?.title || "")}${b.detectedLanguage === "vi" ? " · Tiếng Việt" : b.detectedLanguage === "foreign" ? " · Sách nước ngoài" : ""}${b.translatedFileUrl ? " · Có bản dịch tiếng Việt" : ""}${translationStatusLabel(b)}</div>
       </div>
       <div style="display:flex;gap:6px;flex:none">
+        ${translateButtonHTML(b)}
         <button class="btn-edit" data-edit-book="${b.id}">Sửa</button>
         <button class="btn-danger" data-del-book="${b.id}">Xoá</button>
       </div>
     </div>
   `).join("");
+  // đang có việc chạy ngầm thì tự cập nhật trạng thái, không bắt phải F5
+  const hasActiveJob = books.some(b => b.translationJobStatus === "queued" || b.translationJobStatus === "processing");
+  scheduleTranslationPoll(hasActiveJob);
 }
 
 let editingBookId = null;
@@ -1454,11 +1478,47 @@ function cancelEditBook(){
 }
 document.getElementById("bookEditCancel").addEventListener("click", cancelEditBook);
 
+// đưa 1 cuốn vào hàng đợi biên dịch — server chỉ nhận nếu là sách nước
+// ngoài, chưa có bản dịch, và chưa đang chờ/đang chạy (xem
+// BooksService.queueTranslation). Chạy nền thật sự, xong tự có thông báo
+// qua chuông/push — hàm này chỉ cần đợi "đã xếp hàng" là xong, không đợi
+// dịch xong mới trả về.
+async function triggerTranslate(bookId){
+  try{
+    await api(`/books/${bookId}/translate`, { method: "POST" });
+    flash("Đã đưa vào hàng đợi, hệ thống đang biên dịch — xong sẽ có thông báo nhé.", "ok");
+    await loadBooks();
+  }catch(err){
+    if(err.message !== "unauthorized") flash(err.message, "err");
+  }
+}
+
+// trong lúc có sách đang chờ/đang biên dịch thì tự làm mới danh sách mỗi
+// 10 giây để thấy trạng thái cập nhật mà không cần F5 — dừng lại ngay khi
+// không còn việc gì đang chạy, không polling vô ích
+let translationPollTimer = null;
+function scheduleTranslationPoll(active){
+  if(!active){
+    if(translationPollTimer){ clearTimeout(translationPollTimer); translationPollTimer = null; }
+    return;
+  }
+  if(translationPollTimer) return; // đã có 1 lần hẹn giờ đang chờ rồi
+  translationPollTimer = setTimeout(async () => {
+    translationPollTimer = null;
+    try{ await loadBooks(); }catch{ /* thử lại ở vòng poll tiếp theo */ }
+  }, 10000);
+}
+
 document.getElementById("bookList").addEventListener("click", async (e) => {
   const editBtn = e.target.closest("[data-edit-book]");
   if(editBtn){
     const book = books.find(b => b.id === editBtn.dataset.editBook);
     if(book) startEditBook(book);
+    return;
+  }
+  const translateBtn = e.target.closest("[data-translate-book]");
+  if(translateBtn){
+    triggerTranslate(translateBtn.dataset.translateBook);
     return;
   }
   const btn = e.target.closest("[data-del-book]");
@@ -1512,10 +1572,19 @@ document.getElementById("bookForm").addEventListener("submit", async (e) => {
       flash("Đã lưu lại rồi nhé.", "ok");
       cancelEditBook(); // also resets the button label back to "add" mode
     }else{
-      await api("/books", { method: "POST", body: fd });
+      const created = await api("/books", { method: "POST", body: fd });
       form.reset();
       flash("Đã thêm sách vào thư viện rồi!", "ok");
       submitBtn.textContent = "Thêm sách vào thư viện";
+      // hệ thống tự nhận diện ngôn ngữ ngay lúc thêm — nếu là sách nước
+      // ngoài, hỏi luôn có muốn biên dịch không thay vì bắt phải tự nhớ
+      // quay lại sau. Bấm Huỷ vẫn còn nút "Biên dịch" trong danh sách bên
+      // dưới, không mất cơ hội, chỉ là không làm ngay.
+      if(created && created.detectedLanguage === "foreign"){
+        if(confirm(`Phát hiện "${created.title}" là sách nước ngoài. Biên dịch sang tiếng Việt luôn không?`)){
+          triggerTranslate(created.id);
+        }
+      }
     }
     await loadBooks();
   }catch(err){
