@@ -550,6 +550,16 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
 }
 .blurb-toggle:hover{color:var(--stamp)}
 
+/* same small-link treatment as .blurb-toggle, own class since it's a
+   different action (opens a second file, not a text expand/collapse) */
+.card-translated-link{
+  display:inline-flex;align-items:center;gap:4px;margin-top:10px;
+  font-family:var(--mono);font-size:9.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;
+  color:var(--cat,var(--accent-deep));text-decoration:underline;text-underline-offset:2px;
+  position:relative;z-index:1;
+}
+.card-translated-link:hover{color:var(--stamp)}
+
 /* favorite heart, sits in the top strip next to the year */
 .card-tab-right{display:flex;align-items:center;gap:7px}
 .view-count{font-family:var(--mono);font-size:10px;color:var(--faint);letter-spacing:.02em}
@@ -2007,9 +2017,16 @@ function bumpBookView(card){
   });
 }
 catalogEl.addEventListener("click", (e) => {
+  const openTranslatedBtn = e.target.closest("[data-open-translated]");
+  if(openTranslatedBtn){
+    e.preventDefault();
+    e.stopPropagation();
+    window.open(openTranslatedBtn.dataset.openTranslated, "_blank", "noopener");
+    return;
+  }
   const card = e.target.closest("a.card");
   if(!card) return;
-  if(e.target.closest("[data-fav-toggle],[data-status-toggle],[data-tag-filter],[data-blurb-toggle],.review-summary-row")) return;
+  if(e.target.closest("[data-fav-toggle],[data-status-toggle],[data-tag-filter],[data-blurb-toggle],[data-open-translated],.review-summary-row")) return;
   bumpBookView(card);
 });
 catalogEl.addEventListener("keydown", (e) => {
@@ -2017,7 +2034,13 @@ catalogEl.addEventListener("keydown", (e) => {
   const favBtn = e.target.closest("[data-fav-toggle]");
   if(favBtn){ e.preventDefault(); e.stopPropagation(); toggleFavorite(favBtn); return; }
   const statusBtn = e.target.closest("[data-status-toggle]");
-  if(statusBtn){ e.preventDefault(); e.stopPropagation(); toggleReadStatus(statusBtn); }
+  if(statusBtn){ e.preventDefault(); e.stopPropagation(); toggleReadStatus(statusBtn); return; }
+  const openTranslatedBtn = e.target.closest("[data-open-translated]");
+  if(openTranslatedBtn){
+    e.preventDefault();
+    e.stopPropagation();
+    window.open(openTranslatedBtn.dataset.openTranslated, "_blank", "noopener");
+  }
 });
 
 const READ_STATUS_LABELS = { want: "Muốn đọc", reading: "Đang đọc", done: "Đã đọc" };
@@ -2495,6 +2518,7 @@ function cardHTML(b, cat){
     .join(" · ");
   const href = encodeURI(resolvePath(cat, b.file));
   const coverSrc = b.cover ? encodeURI(resolvePath(cat, b.cover)) : "";
+  const translatedHref = b.translatedFile ? encodeURI(resolvePath(cat, b.translatedFile)) : "";
   const letter = (b.title||"?").trim().charAt(0).toUpperCase();
   const photoBlock = coverSrc
     ? `<div class="card-cover-wrap">
@@ -2543,6 +2567,7 @@ function cardHTML(b, cat){
         ${blurbLong ? `<span class="blurb-toggle" role="button" tabindex="0" data-blurb-toggle data-expanded="0">Xem thêm</span>` : ""}
       </div>
       <div class="card-status">${statusPills}</div>
+      ${translatedHref ? `<span class="card-translated-link" role="button" tabindex="0" data-open-translated="${translatedHref}">Đọc bản dịch tiếng Việt</span>` : ""}
       ${reviewAndQuoteRowHTML(b)}
       <div class="card-foot">
         <div class="card-subjects">${tagsHTML ? `<b>Chủ đề</b><br>${tagsHTML}` : ""}</div>

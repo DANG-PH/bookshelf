@@ -498,6 +498,13 @@ details.more .more-body{padding-top:14px}
             <label for="bookBlurb">Mô tả ngắn</label>
             <textarea id="bookBlurb" name="blurb" placeholder="Vài dòng giới thiệu cuốn sách…"></textarea>
           </div>
+          <div class="field" id="translatedField">
+            <label for="bookTranslatedFile">Bản dịch tiếng Việt (PDF) <span class="opt">(không bắt buộc — dịch sẵn từ bên ngoài rồi upload lại đây)</span></label>
+            <div class="file-field">
+              <input id="bookTranslatedFile" name="translatedFile" type="file" accept="application/pdf" />
+            </div>
+            <p class="file-hint" id="bookTranslatedFileEditHint" hidden>Đã có bản dịch — để trống nếu chưa muốn đổi</p>
+          </div>
         </div>
       </details>
 
@@ -1387,7 +1394,7 @@ function renderBooks(){
     <div class="list-item">
       <div class="meta">
         <div class="t">${escapeHTML(b.title)}</div>
-        <div class="s">${escapeHTML(b.author || "—")} · ${escapeHTML(b.category?.title || "")}</div>
+        <div class="s">${escapeHTML(b.author || "—")} · ${escapeHTML(b.category?.title || "")}${b.translatedFileUrl ? " · Có bản dịch tiếng Việt" : ""}</div>
       </div>
       <div style="display:flex;gap:6px;flex:none">
         <button class="btn-edit" data-edit-book="${b.id}">Sửa</button>
@@ -1411,13 +1418,15 @@ function startEditBook(book){
   form.file.value = "";
   form.pdfUrl.value = "";
   form.cover.value = "";
+  form.translatedFile.value = "";
+  document.getElementById("bookTranslatedFileEditHint").hidden = !book.translatedFileUrl;
   setFieldMode(document.getElementById("pdfField"), "upload");
   // only worth prefilling if it's a real external link — a local
   // /api/files/... path isn't something you'd resubmit as a "cover URL"
   const externalCover = /^https?:\/\//.test(book.coverUrl || "");
   form.coverUrl.value = externalCover ? book.coverUrl : "";
   setFieldMode(document.getElementById("coverField"), externalCover ? "url" : "upload");
-  if(book.author || book.note || externalCover || book.year || (book.tags && book.tags.length) || book.blurb){
+  if(book.author || book.note || externalCover || book.year || (book.tags && book.tags.length) || book.blurb || book.translatedFileUrl){
     document.querySelector(".more").open = true;
   }
   document.getElementById("bookFormTitle").textContent = "Sửa sách";
@@ -1436,6 +1445,7 @@ function cancelEditBook(){
   document.getElementById("bookFormTitle").textContent = "Sách mới";
   document.getElementById("bookFormSub").textContent = "Chỉ cần chủ đề, tên sách và file PDF là đủ.";
   document.getElementById("bookFileEditHint").hidden = true;
+  document.getElementById("bookTranslatedFileEditHint").hidden = true;
   document.getElementById("bookSubmit").textContent = "Thêm sách vào thư viện";
   document.getElementById("bookEditCancel").hidden = true;
 }
@@ -1489,6 +1499,7 @@ document.getElementById("bookForm").addEventListener("submit", async (e) => {
   else if(form.pdfUrl.value.trim()) fd.append("pdfUrl", form.pdfUrl.value.trim());
   if(form.cover.files[0]) fd.append("cover", form.cover.files[0]);
   else if(form.coverUrl.value.trim()) fd.append("coverUrl", form.coverUrl.value.trim());
+  if(form.translatedFile.files[0]) fd.append("translatedFile", form.translatedFile.files[0]);
 
   submitBtn.disabled = true;
   submitBtn.textContent = isEdit ? "Đang lưu…" : "Đang thêm…";
