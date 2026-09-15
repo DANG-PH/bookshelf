@@ -1391,7 +1391,12 @@ function translationStatusLabel(b){
   if(b.translationJobStatus === "queued") return " · Đang chờ biên dịch…";
   if(b.translationJobStatus === "processing") return " · Đang biên dịch…";
   if(b.translationJobStatus === "failed"){
-    return ` · Biên dịch lỗi${b.translationJobError ? `: ${escapeHTML(b.translationJobError.slice(0, 120))}` : ""}`;
+    if(!b.translationJobError) return " · Biên dịch lỗi";
+    // preview stays short; full text (can run to ~2000 chars now that
+    // the backend folds in stdout/stderr tails from the sidecar) sits in
+    // the title attribute — hover to read it all, no extra UI needed
+    const preview = b.translationJobError.slice(0, 160);
+    return ` · <span title="${escapeHTML(b.translationJobError)}">Biên dịch lỗi: ${escapeHTML(preview)}${b.translationJobError.length > 160 ? "…" : ""}</span>`;
   }
   return "";
 }
