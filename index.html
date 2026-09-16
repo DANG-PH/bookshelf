@@ -2575,7 +2575,7 @@ function cardHTML(b, cat){
       </div>
       <div class="card-status">${statusPills}</div>
       ${translatedHref
-        ? `<span class="card-translated-link" role="button" tabindex="0" data-open-translated="${translatedHref}">Đọc bản dịch tiếng Việt</span>`
+        ? `<span class="card-translated-link" role="button" tabindex="0" data-open-translated="${translatedHref}">Đọc bản dịch tiếng Việt${b.translationComplete ? "" : " (đang tiếp tục hoàn thiện)"}</span>`
         : b.translating
           ? `<span class="card-translating-note">Đang chuẩn bị bản dịch tiếng Việt…</span>`
           : ""}

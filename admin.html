@@ -1383,28 +1383,46 @@ async function loadBooks(){
 }
 
 // ── trạng thái biên dịch tự động — xem thêm docs/vi-translate.md.
-// Có bản dịch rồi thì không còn nút nào ở đây nữa (không tự dịch lại);
+// Xong hẳn ('done') thì không còn nút/chữ trạng thái nào nữa;
 // đang chờ/đang chạy thì chỉ hiện chữ trạng thái, không cho bấm gì thêm;
-// lỗi thì cho bấm lại (coi như thử lại, không phải "dịch thêm lần nữa") ──
+// 'partial' (đã có file đọc được, nhưng chưa dịch hết) và 'failed' đều tự
+// động thử lại sau (xem translationNextRetryAt) — nút ở đây chỉ để ép thử
+// lại ngay, không phải điều kiện bắt buộc để nó tiếp tục ──
+function formatRetryEta(b){
+  if(!b.translationNextRetryAt) return "";
+  const ms = new Date(b.translationNextRetryAt).getTime() - Date.now();
+  if(ms <= 0) return " (sắp tự thử lại)";
+  const hours = Math.ceil(ms / 3600000);
+  return hours <= 1 ? " (tự thử lại trong ~1 giờ)" : ` (tự thử lại sau ~${hours} giờ)`;
+}
 function translationStatusLabel(b){
-  if(b.translatedFileUrl) return "";
+  if(b.translationJobStatus === "done") return "";
   if(b.translationJobStatus === "queued") return " · Đang chờ biên dịch…";
   if(b.translationJobStatus === "processing") return " · Đang biên dịch…";
+  if(b.translationJobStatus === "partial"){
+    const count = (b.translationTotalSegments != null && b.translationUntranslatedCount != null)
+      ? ` (còn ${b.translationUntranslatedCount}/${b.translationTotalSegments} đoạn chưa dịch)`
+      : "";
+    return ` · Đã dịch một phần, đọc được ngay${count}${formatRetryEta(b)}`;
+  }
   if(b.translationJobStatus === "failed"){
-    if(!b.translationJobError) return " · Biên dịch lỗi";
+    const eta = formatRetryEta(b);
+    if(!b.translationJobError) return ` · Biên dịch lỗi${eta}`;
     // preview stays short; full text (can run to ~2000 chars now that
     // the backend folds in stdout/stderr tails from the sidecar) sits in
     // the title attribute — hover to read it all, no extra UI needed
     const preview = b.translationJobError.slice(0, 160);
-    return ` · <span title="${escapeHTML(b.translationJobError)}">Biên dịch lỗi: ${escapeHTML(preview)}${b.translationJobError.length > 160 ? "…" : ""}</span>`;
+    return ` · <span title="${escapeHTML(b.translationJobError)}">Biên dịch lỗi: ${escapeHTML(preview)}${b.translationJobError.length > 160 ? "…" : ""}</span>${eta}`;
   }
   return "";
 }
 function translateButtonHTML(b){
-  if(b.translatedFileUrl) return "";
+  if(b.translationJobStatus === "done") return "";
   if(b.translationJobStatus === "queued" || b.translationJobStatus === "processing") return "";
   if(b.detectedLanguage !== "foreign") return "";
-  const label = b.translationJobStatus === "failed" ? "Thử lại" : "Biên dịch";
+  const label = b.translationJobStatus === "partial" ? "Dịch tiếp ngay"
+    : b.translationJobStatus === "failed" ? "Thử lại ngay"
+    : "Biên dịch";
   return `<button type="button" class="btn-edit" data-translate-book="${b.id}">${label}</button>`;
 }
 function renderBooks(){
