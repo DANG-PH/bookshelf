@@ -3,14 +3,16 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<title>Thư Viện Sách — Góc đọc riêng</title>
+<title>Thư Viện Sách — Thư viện mở</title>
 <meta name="description" content="Một góc thư viện nhỏ được chọn lọc và ghi thẻ thủ công — từ trí tuệ cảm xúc đến công nghệ. Mỗi cuốn sách là một câu chuyện đáng đọc, mời bạn ghé qua." />
 <meta name="theme-color" content="#f4f1ea" id="themeColorMeta" />
 <script>
 // applied before first paint to avoid a flash of the wrong theme
 (function(){
-  var saved = localStorage.getItem("tb_theme");
-  if(saved === "light" || saved === "dark") document.documentElement.setAttribute("data-theme", saved);
+  try{
+    var saved = localStorage.getItem("tb_theme");
+    if(saved === "light" || saved === "dark") document.documentElement.setAttribute("data-theme", saved);
+  }catch(e){}
 })();
 </script>
 <link rel="canonical" href="https://book.dangpham.id.vn/" />
@@ -28,14 +30,14 @@
 <meta property="og:type" content="website" />
 <meta property="og:url" content="https://book.dangpham.id.vn/" />
 <meta property="og:site_name" content="Thư Viện Sách" />
-<meta property="og:title" content="Thư Viện Sách — Góc đọc riêng" />
+<meta property="og:title" content="Thư Viện Sách — Thư viện mở" />
 <meta property="og:description" content="Một góc thư viện nhỏ được chọn lọc và ghi thẻ thủ công — từ trí tuệ cảm xúc đến công nghệ. Mỗi cuốn sách là một câu chuyện đáng đọc, mời bạn ghé qua." />
 <meta property="og:image" content="https://book.dangpham.id.vn/image/wp7713574.jpg" />
 <meta property="og:image:width" content="1024" />
 <meta property="og:image:height" content="768" />
 <meta property="og:locale" content="vi_VN" />
 <meta name="twitter:card" content="summary_large_image" />
-<meta name="twitter:title" content="Thư Viện Sách — Góc đọc riêng" />
+<meta name="twitter:title" content="Thư Viện Sách — Thư viện mở" />
 <meta name="twitter:description" content="Một góc thư viện nhỏ được chọn lọc và ghi thẻ thủ công — từ trí tuệ cảm xúc đến công nghệ." />
 <meta name="twitter:image" content="https://book.dangpham.id.vn/image/wp7713574.jpg" />
 
@@ -202,18 +204,15 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
 .brand-sub{font-family:var(--serif);font-size:.85rem;color:var(--soft);font-style:italic;margin-top:1px}
 .brand-role{font-family:var(--mono);font-size:9.5px;color:var(--faint);letter-spacing:.06em;text-transform:uppercase;margin-top:2px}
 
-.theme-toggle,.install-app-btn{
+.theme-toggle{
   flex:none;width:32px;height:32px;border-radius:50%;
   display:grid;place-items:center;
   background:var(--paper);border:1px solid var(--line-2);color:var(--soft);
   transition:border-color .2s,color .2s,transform .15s;
 }
-/* the explicit display:grid above wins over [hidden]'s default
-   display:none at equal specificity without this */
-.install-app-btn[hidden]{display:none}
-.theme-toggle:hover,.install-app-btn:hover{border-color:var(--accent);color:var(--accent-deep)}
-.theme-toggle:active,.install-app-btn:active{transform:scale(.9)}
-.theme-toggle svg,.install-app-btn svg{width:15px;height:15px}
+.theme-toggle:hover{border-color:var(--accent);color:var(--accent-deep)}
+.theme-toggle:active{transform:scale(.9)}
+.theme-toggle svg{width:15px;height:15px}
 .theme-toggle .icon-moon{display:none}
 :root[data-theme="dark"] .theme-toggle .icon-sun{display:none}
 :root[data-theme="dark"] .theme-toggle .icon-moon{display:block}
@@ -221,70 +220,6 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
   :root:not([data-theme="light"]) .theme-toggle .icon-sun{display:none}
   :root:not([data-theme="light"]) .theme-toggle .icon-moon{display:block}
 }
-
-/* ── notification bell — same size/style as the theme toggle right next
-   to it; history is shared (same tb_notifications localStorage key)
-   with diary.html, so it's consistent no matter which page is open ── */
-.notif-bell-wrap{position:relative;flex:none}
-.notif-bell{
-  position:relative;flex:none;width:32px;height:32px;padding:0;border-radius:50%;
-  display:grid;place-items:center;
-  background:var(--paper);border:1px solid var(--line-2);color:var(--soft);
-  transition:border-color .2s,color .2s,transform .15s;
-}
-.notif-bell:hover{border-color:var(--accent);color:var(--accent-deep)}
-.notif-bell:active{transform:scale(.9)}
-.notif-bell svg{width:15px;height:15px}
-.notif-badge{
-  position:absolute;top:-3px;right:-3px;min-width:16px;height:16px;padding:0 4px;
-  border-radius:99px;background:var(--stamp-solid);color:#fff;
-  font-family:var(--mono);font-size:9.5px;font-weight:700;
-  display:grid;place-items:center;line-height:1;box-shadow:0 0 0 2px var(--card);
-}
-.notif-badge[hidden]{display:none}
-/* fixed, not absolute — the sidebar's overflow-y:auto clips horizontal
-   overflow too (a well-known scroll-container gotcha), and at only
-   284–320px wide it's narrower than this panel; position gets computed
-   in JS from the bell's actual on-screen position instead */
-.notif-panel{
-  position:fixed;z-index:120;text-align:left;
-  width:300px;max-width:calc(100vw - 40px);max-height:360px;overflow-y:auto;
-  background:var(--card);border:1px solid var(--line);border-radius:14px;
-  box-shadow:0 20px 50px -20px rgba(20,14,10,.4);
-  opacity:0;visibility:hidden;pointer-events:none;transform:translateY(-6px);
-  transition:opacity .18s ease,transform .2s cubic-bezier(.2,.7,.2,1),visibility 0s linear .18s;
-}
-.notif-panel.open{
-  opacity:1;visibility:visible;pointer-events:auto;transform:translateY(0);
-  transition:opacity .18s ease,transform .2s cubic-bezier(.2,.7,.2,1),visibility 0s linear 0s;
-}
-@media(prefers-reduced-motion:reduce){.notif-panel{transition:none}}
-.notif-panel-head{
-  display:flex;align-items:center;justify-content:space-between;gap:8px;
-  padding:12px 14px;border-bottom:1px solid var(--line);
-  font-family:var(--serif);font-weight:600;font-size:.94rem;
-}
-.notif-panel-head button{
-  background:none;border:none;color:var(--accent-deep);font-size:.74rem;font-weight:600;padding:0;
-}
-.notif-panel-head button:hover{color:var(--stamp)}
-.notif-push-toggle{
-  display:block;width:100%;text-align:center;padding:9px 10px;
-  font-size:.78rem;font-weight:600;color:var(--accent-deep);
-  background:var(--accent-wash);border:none;border-bottom:1px solid var(--line);
-}
-.notif-push-toggle:hover{background:var(--accent-wash-2,var(--accent-wash))}
-.notif-push-toggle.active{color:var(--good,#6f9166);background:none}
-.notif-push-toggle[hidden]{display:none}
-.notif-panel-body{padding:6px}
-.notif-panel-body .empty-note{padding:20px 10px;font-size:.86rem;color:var(--faint);text-align:center}
-.notif-item{display:flex;gap:9px;padding:10px 8px;border-radius:10px;align-items:flex-start}
-.notif-item:hover{background:var(--paper)}
-.notif-dot{flex:none;width:7px;height:7px;border-radius:50%;margin-top:6px;background:transparent}
-.notif-item.unread .notif-dot{background:var(--accent)}
-.notif-text{font-size:.82rem;line-height:1.45;color:var(--ink)}
-.notif-item:not(.unread) .notif-text{color:var(--soft)}
-.notif-time{font-family:var(--mono);font-size:9.5px;color:var(--faint);margin-top:3px}
 
 /* search */
 .search-box{
@@ -350,8 +285,7 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
 }
 .nav-item.active .nav-count{background:var(--card);color:var(--cat)}
 
-/* "xem nhiều nhất" — top-viewed books, sidebar spot previously held by
-   a running "recent activity" log now covered by the notification bell */
+/* "xem nhiều nhất" — top-viewed books */
 .activity-panel[hidden]{display:none}
 .activity-feed{
   list-style:none;display:flex;flex-direction:column;gap:2px;
@@ -567,7 +501,7 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
   color:var(--faint);
 }
 
-/* favorite heart, sits in the top strip next to the year */
+/* favorite heart (saved on this device only), sits in the top strip next to the year */
 .card-tab-right{display:flex;align-items:center;gap:7px}
 .view-count{font-family:var(--mono);font-size:10px;color:var(--faint);letter-spacing:.02em}
 .view-count[hidden]{display:none}
@@ -582,9 +516,8 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
 .fav-toggle.active{color:var(--stamp)}
 .fav-toggle.active svg{fill:currentColor}
 .fav-toggle:active{transform:scale(.82)}
-.fav-count{font-family:var(--mono);font-size:10px;color:var(--faint);letter-spacing:.02em}
 
-/* reading-status pills */
+/* reading-status pills — saved on this device only (localStorage) */
 .card-status{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
 .status-pill{
   font-family:var(--mono);font-size:8.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;
@@ -594,36 +527,11 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
 .status-pill:hover{border-color:var(--cat,var(--accent));color:var(--cat,var(--accent-deep))}
 .status-pill.active{background:var(--cat,var(--accent-solid));border-color:var(--cat,var(--accent-solid));color:#fff}
 
-/* rating + personal reviews — always shown, not gated behind readStatus
-   (that was undiscoverable: nothing hinted you had to mark a book
-   "Đã đọc" first before the stars would even appear). The card itself
-   only shows a compact summary; tapping it opens a review-modal (Shopee-
-   style) listing every entry — comments here don't carry a name, so
-   there's nothing worth showing inline on the card. */
-.rating-row{display:flex;gap:2px;margin-bottom:6px}
-.rating-star{position:relative;font-size:1.05rem;line-height:1;color:var(--line-2);cursor:pointer;transition:color .15s,transform .1s}
-.rating-star:hover{transform:scale(1.15);color:#e0a94a}
-.rating-star.active{color:#e0a94a}
-.rating-row.readonly .rating-star{cursor:default}
-.rating-row.readonly .rating-star:hover{transform:none;color:var(--line-2)}
-.rating-row.readonly .rating-star.active:hover{color:#e0a94a}
-/* half-star: empty star as the base glyph, a 50%-width gold copy on top */
-.rating-star.half::before{
-  content:"★";position:absolute;left:0;top:0;width:50%;overflow:hidden;color:#e0a94a;
-}
-
-.review-summary-row{
+/* quotes row — opens the "Trích dẫn hay" modal for that book */
+.quote-row{
   margin-top:10px;padding-top:10px;border-top:1px dashed var(--line-2);position:relative;z-index:1;
   display:flex;align-items:center;gap:8px;
 }
-.review-summary{
-  display:flex;align-items:center;gap:8px;cursor:pointer;border-radius:8px;flex:1;min-width:0;
-}
-.review-summary .rating-row{margin-bottom:0}
-.review-summary .rating-star{font-size:.92rem}
-.review-summary-count{font-size:.76rem;color:var(--faint);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.review-summary-cta{font-size:.9rem;color:var(--accent-deep);font-weight:600;flex:none;line-height:1}
-.review-summary:hover .review-summary-cta{color:var(--stamp)}
 .quote-count-btn{
   flex:none;display:flex;align-items:center;gap:3px;padding:5px 9px;border-radius:8px;border:1px solid var(--line-2);
   background:var(--paper);color:var(--faint);font-family:var(--serif);font-style:italic;font-size:.8rem;font-weight:600;
@@ -631,21 +539,12 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
 }
 .quote-count-btn:hover{border-color:var(--accent);color:var(--accent-deep);background:var(--accent-wash)}
 
-.review-list{display:flex;flex-direction:column;gap:8px}
-.review-card{
-  background:var(--paper);border:1px solid var(--line-2);border-radius:10px;
-  padding:8px 10px 8px 10px;position:relative;
-}
-.review-card-date{font-family:var(--mono);font-size:8.5px;color:var(--faint);opacity:.75;display:block;margin-bottom:4px}
-.review-card .rating-row{margin-bottom:4px}
-.review-card .review-text{margin-bottom:0}
 .review-card-del{
   position:absolute;top:6px;right:6px;width:20px;height:20px;border-radius:50%;border:none;background:none;
   color:var(--faint);opacity:.55;cursor:pointer;font-size:.85rem;line-height:1;display:flex;align-items:center;justify-content:center;
   transition:opacity .15s,color .15s;
 }
 .review-card-del:hover{opacity:1;color:var(--stamp)}
-.review-text{font-family:var(--serif);font-style:italic;color:var(--soft);line-height:1.5;margin-bottom:4px;white-space:pre-wrap}
 .review-empty{font-size:.82rem;color:var(--faint);text-align:center;padding:18px 10px}
 
 .review-add-toggle{
@@ -653,18 +552,13 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
   color:var(--accent-deep);cursor:pointer;font-weight:600;font-size:.8rem;transition:border-color .15s,background .15s;
 }
 .review-add-toggle:hover{border-color:var(--accent);background:var(--accent-wash)}
-.review-add-form{margin-top:12px}
-.review-add-form textarea{
-  width:100%;min-height:70px;padding:8px 10px;border:1.5px solid var(--line-2);border-radius:8px;
-  background:var(--paper);color:var(--ink);font-family:var(--serif);font-size:.85rem;resize:vertical;margin-top:8px;
-}
 .review-add-actions{display:flex;gap:6px;margin-top:8px}
 .review-add-actions button{flex:1;padding:8px;font-size:.8rem;border-radius:8px;font-weight:600;border:none}
-.review-add-actions button[data-cancel-review]{background:none;border:1px solid var(--line-2);color:var(--faint)}
-.review-add-actions button[data-save-review]{background:var(--accent-solid);color:#fff}
+.review-add-actions button[data-cancel-quote]{background:none;border:1px solid var(--line-2);color:var(--faint)}
+.review-add-actions button[data-save-quote]{background:var(--accent-solid);color:#fff}
 .review-add-actions button:disabled{opacity:.6}
 
-/* review-modal — same fade/scale popup pattern as .new-books-modal-backdrop */
+/* quote modal — same fade/scale popup pattern as .new-books-modal-backdrop */
 .review-modal-backdrop{
   position:fixed;inset:0;z-index:250;display:flex;align-items:center;justify-content:center;
   padding:20px;background:rgba(20,14,10,.45);
@@ -699,17 +593,10 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
   background:var(--paper);border:1px solid var(--line-2);color:var(--faint);font-size:.85rem;
 }
 .review-modal-head button:hover{color:var(--stamp)}
-.review-modal-tabs{display:flex;gap:4px;padding:10px 20px 0;flex:none}
-.review-modal-tab{
-  flex:1;padding:8px;border-radius:8px;font-size:.82rem;font-weight:600;color:var(--faint);
-  background:none;transition:background .15s,color .15s;
-}
-.review-modal-tab:hover{color:var(--soft)}
-.review-modal-tab.active{background:var(--accent-wash);color:var(--accent-deep)}
 .review-modal-body{flex:1;overflow-y:auto;padding:16px 20px 20px}
 
-/* ── quotes tab — reuses .review-card-del/.review-add-* shapes, distinct
-   left accent bar instead of stars since a quote isn't rated ── */
+/* ── quotes — read-only for readers; the add/delete controls only
+   render when an admin is logged in on this device ── */
 .quote-list{display:flex;flex-direction:column;gap:8px}
 .quote-card{
   background:var(--paper);border:1px solid var(--line-2);border-left:3px solid var(--accent);
@@ -728,9 +615,9 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
   background:var(--paper);color:var(--ink);font-size:.82rem;
 }
 
-/* ── "đọc dở lâu rồi" nudge — same shape as diary.html's on-this-day
-   card, dismissible for the current visit only (no persistence, harmless
-   to see it again next time) ── */
+/* ── "đọc dở lâu rồi" nudge — from this device's own reading status,
+   dismissible for the current visit only (no persistence, harmless to
+   see it again next time) ── */
 .stalled-card{
   background:var(--accent-wash);border:1px solid var(--accent);border-radius:14px;
   padding:14px 16px;margin-bottom:20px;
@@ -752,33 +639,6 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
 .stalled-item-title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .stalled-item-days{font-family:var(--mono);font-size:9.5px;color:var(--faint);white-space:nowrap;flex:none}
 
-/* ── "cài đặt ứng dụng" banner — same notice-card shape as .stalled-card,
-   just with a CTA instead of a list. Dismissing snoozes 7 days, or
-   forever with the checkbox — see the JS for that (no persistence here
-   in CSS, just the pop-in) ── */
-.install-banner{
-  background:var(--accent-wash);border:1px solid var(--accent);border-radius:14px;
-  padding:14px 16px;margin-bottom:20px;
-  animation:installBannerPop .35s cubic-bezier(.2,.7,.2,1);
-}
-.install-banner[hidden]{display:none}
-@keyframes installBannerPop{from{opacity:0;transform:translateY(-8px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
-@media(prefers-reduced-motion:reduce){.install-banner{animation:none}}
-.install-banner-head{
-  display:flex;align-items:center;justify-content:space-between;gap:10px;
-  font-family:var(--serif);font-weight:600;color:var(--accent-deep);margin-bottom:6px;
-}
-.install-banner-head button{background:none;border:none;color:var(--faint);font-size:.8rem;padding:2px;flex:none}
-.install-banner-head button:hover{color:var(--stamp)}
-.install-banner-desc{font-size:.86rem;color:var(--soft);line-height:1.5;margin-bottom:12px}
-.install-banner-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
-.install-banner-cta{background:var(--accent-solid);color:#fff;padding:9px 18px;border-radius:10px;font-size:.84rem;font-weight:700}
-.install-banner-cta:hover{background:var(--stamp-solid)}
-.install-banner-skip{display:inline-flex;align-items:center;gap:6px;font-size:.78rem;color:var(--faint);cursor:pointer;user-select:none}
-.install-banner-skip input[type="checkbox"]{
-  width:15px;height:15px;flex:none;padding:0;margin:0;border-radius:4px;
-  border:1.5px solid var(--line-2);background:var(--card);accent-color:var(--accent-solid);cursor:pointer;
-}
 
 .card-foot{
   display:flex;align-items:center;justify-content:space-between;gap:10px;
@@ -965,6 +825,8 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
 }
 .foot .sig{font-family:var(--mono);font-size:9.5px;letter-spacing:.18em;text-transform:uppercase}
 .foot .cred{margin-top:4px;font-style:italic;font-family:var(--serif);color:var(--faint);font-size:11px}
+.foot-admin{color:inherit;text-decoration:none;border-bottom:1px dotted currentColor}
+.foot-admin:hover{color:var(--accent-deep)}
 
 /* ── mobile: sidebar → drawer ──────── */
 .backdrop{
@@ -1017,66 +879,9 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
 }
 @media(min-width:901px){.mobile-top,.backdrop{display:none!important}}
 
-/* ── PIN gate — blocks the whole site until the right code is entered ──
-   the library photo doubles as the first thing she sees, so it gets a
-   proper hero treatment instead of a flat color */
-.pin-gate{
-  position:fixed;inset:0;z-index:200;
-  display:flex;align-items:center;justify-content:center;
-  padding:20px;
-  background:
-    linear-gradient(180deg,rgba(35,24,16,.32) 0%,rgba(28,19,13,.62) 65%,rgba(20,14,10,.8) 100%),
-    url("image/wp7713574.jpg") center 40%/cover no-repeat;
-}
-.pin-gate[hidden]{display:none}
-.pin-card{
-  width:100%;max-width:360px;
-  background:var(--glass-bg);
-  -webkit-backdrop-filter:blur(18px) saturate(1.1);backdrop-filter:blur(18px) saturate(1.1);
-  border:1px solid var(--glass-border);border-radius:14px;
-  box-shadow:0 30px 70px -20px rgba(20,14,10,.55);
-  padding:36px 30px 30px;
-  text-align:center;
-  animation:rise .5s cubic-bezier(.2,.7,.2,1) both;
-}
-@media(prefers-reduced-motion:reduce){.pin-card{animation:none}}
-.pin-icon{
-  width:46px;height:46px;margin:0 auto 16px;border-radius:50%;
-  display:grid;place-items:center;
-  background:var(--accent-wash);color:var(--accent-deep);
-}
-.pin-icon svg{width:20px;height:20px}
-.pin-title{
-  font-family:var(--serif);font-weight:500;font-size:1.4rem;color:var(--ink);
-  letter-spacing:-.01em;font-variation-settings:"opsz" 30;
-}
-.pin-sub{font-family:var(--serif);font-style:italic;font-size:.9rem;color:var(--soft);margin-top:6px}
-.pin-form{margin-top:24px;display:flex;flex-direction:column;gap:12px}
-.pin-input{
-  width:100%;text-align:center;
-  font-family:var(--mono);font-size:1.4rem;letter-spacing:.5em;
-  padding:12px 10px 12px 16px;
-  border:1px solid var(--line-2);border-radius:8px;background:var(--paper);color:var(--ink);
-  transition:border-color .2s,box-shadow .2s;
-}
-.pin-input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-wash)}
-.pin-submit{
-  width:100%;padding:12px;border-radius:8px;
-  background:var(--accent-solid);color:#fff;
-  font-family:var(--sans);font-weight:600;font-size:.92rem;letter-spacing:.02em;
-  box-shadow:0 10px 22px -10px rgba(138,100,66,.6);
-  transition:background .2s,transform .15s;
-}
-.pin-submit:hover{background:var(--stamp-solid)}
-.pin-submit:active{transform:scale(.98)}
-.pin-submit:disabled{opacity:.6;cursor:default}
-.pin-error{
-  font-family:var(--mono);font-size:11px;color:var(--stamp);min-height:14px;
-}
-.pin-foot{margin-top:18px;font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
-
-/* ── floating "add a book" button — the obvious, discoverable way in,
-   no need to know a URL or hunt through the footer ── */
+/* ── floating "add a book" button — only shown when an admin is logged
+   in on this device; everyone else just reads ── */
+.fab-add[hidden]{display:none}
 .fab-add{
   position:fixed;right:22px;bottom:calc(22px + env(safe-area-inset-bottom));z-index:50;
   display:flex;align-items:center;gap:8px;
@@ -1093,149 +898,7 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
   .fab-add{right:16px;bottom:calc(16px + env(safe-area-inset-bottom));height:50px;padding:0 16px 0 14px}
 }
 
-.fab-diary{
-  position:fixed;right:22px;bottom:calc(84px + env(safe-area-inset-bottom));z-index:50;
-  display:flex;align-items:center;gap:8px;
-  height:52px;padding:0 18px 0 16px;border-radius:99px;
-  background:#a2678f;color:#fff;
-  box-shadow:0 14px 30px -10px rgba(162,103,143,.55);
-  transition:transform .2s cubic-bezier(.2,.7,.2,1),box-shadow .2s,background .2s;
-}
-.fab-diary:hover{background:#8f5679;transform:translateY(-2px);box-shadow:0 18px 34px -10px rgba(162,103,143,.65)}
-.fab-diary:active{transform:translateY(0) scale(.97)}
-.fab-diary svg{width:20px;height:20px;flex:none}
-@media(max-width:520px){
-  .fab-diary{right:16px;bottom:calc(78px + env(safe-area-inset-bottom));height:50px;padding:0 16px 0 14px}
-}
-
-/* ── library chatbot — a third stacked FAB opening an inline panel
-   rather than navigating away, since it's a live back-and-forth ── */
-.fab-chat{
-  position:fixed;right:22px;bottom:calc(146px + env(safe-area-inset-bottom));z-index:50;
-  display:flex;align-items:center;gap:8px;
-  height:52px;padding:0 18px 0 16px;border-radius:99px;
-  background:#5b8a9e;color:#fff;border:none;cursor:pointer;
-  box-shadow:0 14px 30px -10px rgba(91,138,158,.55);
-  transition:transform .2s cubic-bezier(.2,.7,.2,1),box-shadow .2s,background .2s;
-}
-.fab-chat:hover,.fab-chat.is-open{background:#4a7488}
-.fab-chat:hover{transform:translateY(-2px);box-shadow:0 18px 34px -10px rgba(91,138,158,.65)}
-.fab-chat:active{transform:translateY(0) scale(.97)}
-.fab-chat svg{width:20px;height:20px;flex:none}
-@media(max-width:520px){
-  .fab-chat{right:16px;bottom:calc(140px + env(safe-area-inset-bottom));height:50px;padding:0 16px 0 14px}
-}
-
-.chat-panel{
-  position:fixed;right:22px;bottom:calc(206px + env(safe-area-inset-bottom));z-index:55;
-  width:340px;max-width:calc(100vw - 32px);height:min(480px,calc(100dvh - 220px));
-  background:var(--card);border:1px solid var(--line);border-radius:18px;
-  box-shadow:0 26px 60px -20px rgba(20,14,10,.35);
-  display:flex;flex-direction:column;overflow:hidden;
-  opacity:0;visibility:hidden;pointer-events:none;transform:translateY(12px) scale(.97);
-  transition:opacity .2s ease,transform .22s cubic-bezier(.2,.7,.2,1),visibility 0s linear .22s;
-}
-.chat-panel.open{
-  opacity:1;visibility:visible;pointer-events:auto;transform:translateY(0) scale(1);
-  transition:opacity .2s ease,transform .22s cubic-bezier(.2,.7,.2,1),visibility 0s linear 0s;
-}
-@media(prefers-reduced-motion:reduce){.chat-panel{transition:none}}
-@media(max-width:520px){
-  .chat-panel{right:16px;left:16px;width:auto;bottom:calc(200px + env(safe-area-inset-bottom));height:min(420px,calc(100dvh - 260px))}
-}
-.chat-panel-head{
-  display:flex;align-items:center;justify-content:space-between;flex:none;
-  padding:14px 16px;border-bottom:1px solid var(--line);
-  font-family:var(--serif);font-weight:600;font-size:1rem;color:var(--ink);
-}
-.chat-panel-head button{
-  width:26px;height:26px;padding:0;border-radius:50%;display:grid;place-items:center;
-  background:var(--paper);border:1px solid var(--line-2);color:var(--faint);font-size:.8rem;
-}
-.chat-panel-head button:hover{color:var(--stamp)}
-.chat-panel-head-actions{display:flex;align-items:center;gap:6px}
-.chat-panel-head-actions svg{width:13px;height:13px}
-
-/* ── conversation list — real sessions like ChatGPT/Claude, not one
-   thread reused forever. Swaps in place of chat-messages/chat-input-row
-   rather than sitting alongside them, so the panel doesn't need to grow ── */
-.chat-session-list{flex:1;overflow-y:auto;padding:8px}
-.chat-session-item{
-  display:flex;align-items:center;gap:8px;padding:10px;border-radius:10px;cursor:pointer;
-}
-.chat-session-item:hover{background:var(--paper)}
-.chat-session-item.active{background:var(--accent-wash)}
-.chat-session-info{flex:1;min-width:0}
-.chat-session-title{font-size:.86rem;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.chat-session-time{font-family:var(--mono);font-size:9.5px;color:var(--faint);margin-top:2px}
-.chat-session-delete{
-  flex:none;width:26px;height:26px;padding:0;border-radius:50%;display:grid;place-items:center;
-  color:var(--faint);background:none;border:none;
-}
-.chat-session-delete:hover{color:var(--stamp);background:var(--stamp-wash)}
-.chat-session-delete svg{width:13px;height:13px}
-
-.chat-messages{flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
-/* [hidden]'s default display:none loses to the unconditional display:flex
-   above at equal specificity — without this, toggling .hidden on these
-   two is a no-op and they stay visible underneath the session list */
-.chat-messages[hidden],.chat-input-row[hidden]{display:none}
-.chat-empty{font-size:.84rem;color:var(--faint);font-style:italic;font-family:var(--serif);text-align:center;padding:20px 6px}
-.chat-msg{
-  max-width:85%;padding:9px 13px;border-radius:14px;font-size:.86rem;line-height:1.5;
-  animation:chatMsgIn .25s cubic-bezier(.2,.7,.2,1);
-}
-.chat-msg.user{align-self:flex-end;background:var(--accent-solid);color:#fff;border-bottom-right-radius:4px;white-space:pre-wrap}
-.chat-msg.bot{align-self:flex-start;background:var(--paper);color:var(--ink);border:1px solid var(--line);border-bottom-left-radius:4px}
-.chat-msg.bot p{margin:0}
-.chat-msg.bot p + p{margin-top:8px}
-.chat-msg.bot ul{margin:4px 0;padding-left:18px}
-.chat-msg.bot li{margin:2px 0}
-.chat-msg.bot strong{color:var(--accent-deep)}
-@keyframes chatMsgIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
-@media(prefers-reduced-motion:reduce){.chat-msg{animation:none}}
-/* typing indicator — three dots instead of a static "đang tìm…" line */
-.chat-typing{display:inline-flex;gap:4px;align-items:center;padding:4px 0}
-.chat-typing span{width:6px;height:6px;border-radius:50%;background:var(--faint);animation:chatTypingBounce 1.2s infinite ease-in-out}
-.chat-typing span:nth-child(2){animation-delay:.15s}
-.chat-typing span:nth-child(3){animation-delay:.3s}
-@keyframes chatTypingBounce{0%,60%,100%{transform:translateY(0);opacity:.5}30%{transform:translateY(-4px);opacity:1}}
-@media(prefers-reduced-motion:reduce){.chat-typing span{animation:none}}
-.chat-input-row{display:flex;gap:8px;padding:12px;border-top:1px solid var(--line);flex:none}
-.chat-input-row input{
-  flex:1;padding:9px 13px;border:1.5px solid var(--line-2);border-radius:99px;
-  background:var(--paper);color:var(--ink);font-size:.86rem;outline:none;
-  transition:border-color .2s;
-}
-.chat-input-row input:focus{border-color:var(--accent)}
-.chat-input-row button{
-  width:36px;height:36px;flex:none;border-radius:50%;padding:0;display:grid;place-items:center;
-  background:var(--accent-solid);color:#fff;border:none;
-}
-.chat-input-row button:hover{background:var(--stamp-solid)}
-.chat-input-row button:disabled{opacity:.5;cursor:default}
-.chat-input-row button.chat-recommend-btn{background:var(--paper);color:var(--soft);border:1px solid var(--line-2)}
-.chat-input-row button.chat-recommend-btn:hover{background:var(--accent-wash);color:var(--accent-deep)}
-
-/* site-wide search extras (nhật ký/kỷ niệm matches, alongside the book
-   cards already filtered in place) — position:fixed like the notif
-   panel, and for the exact same reason: the desktop search box lives
-   inside .sidebar, whose overflow-y:auto clips absolutely-positioned
-   children that extend past its own edges */
-.search-extra-results{
-  position:fixed;z-index:130;
-  width:320px;max-width:calc(100vw - 40px);max-height:360px;overflow-y:auto;
-  background:var(--card);border:1px solid var(--line);border-radius:14px;
-  box-shadow:0 20px 50px -20px rgba(20,14,10,.4);padding:6px;
-}
-.search-extra-results[hidden]{display:none}
-.search-extra-group-title{font-family:var(--mono);font-size:9.5px;color:var(--faint);text-transform:uppercase;letter-spacing:.05em;padding:8px 8px 4px}
-.search-extra-item{display:block;padding:8px;border-radius:10px;font-size:.84rem;color:var(--ink);text-decoration:none}
-.search-extra-item:hover{background:var(--paper)}
-.search-extra-item .sei-sub{font-size:.74rem;color:var(--faint);margin-top:2px}
-
-/* fixed toast, top-center — used when a favorite/status click fails to
-   save, so it doesn't just silently snap back with no explanation */
+/* fixed toast, top-center — short confirmations and errors */
 .status-msg{
   position:fixed;top:18px;left:50%;z-index:300;
   transform:translate(-50%,-16px);
@@ -1262,9 +925,9 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
 
 /* ── print: a clean card-catalog listing instead of the web chrome ── */
 @media print{
-  .sidebar,.mobile-top,.backdrop,.pin-gate,.progress-rail,.grain,.amb,
-  .fab-add,.fab-diary,.fab-chat,.chat-panel,.status-msg,.new-books-modal-backdrop,.review-modal-backdrop,.blurb-toggle,.card-new-ribbon,
-  .fav-toggle,.card-status,.stamp,.review-summary-row,.stalled-card,.install-banner,.new-books-section{display:none!important}
+  .sidebar,.mobile-top,.backdrop,.progress-rail,.grain,.amb,
+  .fab-add,.status-msg,.new-books-modal-backdrop,.review-modal-backdrop,.blurb-toggle,.card-new-ribbon,
+  .fav-toggle,.card-status,.stamp,.quote-row,.stalled-card,.new-books-section{display:none!important}
   body{background:#fff;color:#000}
   .shell{display:block}
   .content{max-width:none;padding:0}
@@ -1285,25 +948,6 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
 </head>
 
 <body>
-
-<div class="pin-gate" id="pinGate" role="dialog" aria-modal="true" aria-labelledby="pinTitle">
-  <div class="pin-card">
-    <div class="pin-icon" aria-hidden="true">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-    </div>
-    <h1 class="pin-title" id="pinTitle">Thư Viện Riêng</h1>
-    <p class="pin-sub">Nhập mã để mở ngăn sách</p>
-    <form class="pin-form" id="pinForm" autocomplete="off">
-      <input
-        class="pin-input" id="pinInput" name="pin" type="password" inputmode="numeric"
-        pattern="[0-9]*" maxlength="12" placeholder="••••••" aria-label="Mã PIN" required autofocus
-      />
-      <p class="pin-error" id="pinError" role="alert"></p>
-      <button class="pin-submit" id="pinSubmit" type="submit">Mở khoá</button>
-    </form>
-    <p class="pin-foot">Gợi ý: ngày mình gặp nhau lần đầu</p>
-  </div>
-</div>
 
 <p class="status-msg" id="globalStatus" role="status" aria-live="polite"></p>
 
@@ -1326,23 +970,6 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
           <div class="brand-sub" id="brandSub">Danh mục sách</div>
           <div class="brand-role" id="brandRole"></div>
         </div>
-        <div class="notif-bell-wrap">
-          <button type="button" class="notif-bell" id="notifBellBtn" aria-label="Thông báo" aria-expanded="false">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-            <span class="notif-badge" id="notifBadge" hidden>0</span>
-          </button>
-          <div class="notif-panel" id="notifPanel">
-            <div class="notif-panel-head">
-              <span>Thông báo</span>
-              <button type="button" id="notifMarkAllBtn">Đánh dấu đã đọc hết</button>
-            </div>
-            <button type="button" class="notif-push-toggle" id="notifPushToggle" hidden>🔔 Bật thông báo trên thiết bị này</button>
-            <div class="notif-panel-body" id="notifPanelBody"></div>
-          </div>
-        </div>
-        <button type="button" class="install-app-btn" id="installAppBtn" aria-label="Cài đặt ứng dụng" title="Cài đặt ứng dụng" hidden>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v10"/><path d="m8 9 4 4 4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
-        </button>
         <button type="button" class="theme-toggle" id="themeToggle" aria-label="Đổi giao diện sáng/tối">
           <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
           <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z"/></svg>
@@ -1367,7 +994,7 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
             <option value="title">Tên A–Z</option>
             <option value="year-desc">Năm xuất bản mới nhất</option>
             <option value="year-asc">Năm xuất bản cũ nhất</option>
-            <option value="rating-desc">Đánh giá cao nhất</option>
+            <option value="views-desc">Xem nhiều nhất</option>
           </select>
           <button type="button" class="random-btn" id="randomBtn" aria-label="Chọn ngẫu nhiên một cuốn cho mình" title="Chọn ngẫu nhiên cho mình">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6"/><path d="M4 4l5 5"/></svg>
@@ -1392,13 +1019,12 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
       </div>
 
       <div class="sidebar-meta">
-        <div class="meta-line"><span class="meta-key">Bên nhau</span><span class="meta-dots"></span><span class="meta-val" id="statTogether">—</span></div>
         <div class="meta-line"><span class="meta-key">Cập nhật</span><span class="meta-dots"></span><span class="meta-val" id="statUpdated">—</span></div>
         <div class="meta-line"><span class="meta-key">Vừa thêm</span><span class="meta-dots"></span><span class="meta-val" id="statLastActivity">—</span></div>
         <div class="meta-line"><span class="meta-key">Đầu sách</span><span class="meta-dots"></span><span class="meta-val" id="statVolumes">—</span></div>
-        <div class="meta-line"><span class="meta-key">Đã đọc</span><span class="meta-dots"></span><span class="meta-val" id="statRead">—</span></div>
-        <div class="meta-line"><span class="meta-key">Đọc năm nay</span><span class="meta-dots"></span><span class="meta-val" id="statReadThisYear">—</span></div>
         <div class="meta-line"><span class="meta-key">Ngăn dùng</span><span class="meta-dots"></span><span class="meta-val" id="statCategories">—</span></div>
+        <div class="meta-line"><span class="meta-key">Bạn đã đọc</span><span class="meta-dots"></span><span class="meta-val" id="statRead">—</span></div>
+        <div class="meta-line"><span class="meta-key">Đọc năm nay</span><span class="meta-dots"></span><span class="meta-val" id="statReadThisYear">—</span></div>
         <div class="meta-line"><span class="meta-key">Yêu thích</span><span class="meta-dots"></span><span class="meta-val" id="statFavorites">—</span></div>
       </div>
 
@@ -1423,32 +1049,6 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
     </header>
 
     <div class="content">
-      <div class="install-banner" id="installBanner" hidden>
-        <div class="install-banner-head">
-          <span>📲 Cài <b>Thư Viện</b> thành app nhé?</span>
-          <button type="button" id="installBannerClose" aria-label="Đóng">✕</button>
-        </div>
-        <p class="install-banner-desc" id="installBannerDesc">Mở nhanh hơn, như một app thật trên máy — không cần mở trình duyệt mỗi lần.</p>
-        <div class="install-banner-actions">
-          <button type="button" class="install-banner-cta" id="installBannerCta">Cài đặt ngay</button>
-          <label class="install-banner-skip">
-            <input type="checkbox" id="installBannerSkipCheck" /> Không hiện lại
-          </label>
-        </div>
-      </div>
-      <div class="install-banner" id="pushBanner" hidden>
-        <div class="install-banner-head">
-          <span>🔔 Bật thông báo nhé?</span>
-          <button type="button" id="pushBannerClose" aria-label="Đóng">✕</button>
-        </div>
-        <p class="install-banner-desc" id="pushBannerDesc">Có sách mới hay nhật ký mới là báo liền, kể cả khi không mở web — như Messenger vậy.</p>
-        <div class="install-banner-actions">
-          <button type="button" class="install-banner-cta" id="pushBannerCta">Bật thông báo</button>
-          <label class="install-banner-skip">
-            <input type="checkbox" id="pushBannerSkipCheck" /> Không hiện lại
-          </label>
-        </div>
-      </div>
       <div class="stalled-card" id="stalledBooksCard" hidden>
         <div class="stalled-card-head">
           <span>📖 Đọc dở lâu rồi nè</span>
@@ -1458,7 +1058,7 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
       </div>
       <div id="catalog"></div>
       <footer class="foot">
-        <div class="sig">© <span id="year"></span> · DANG-PH · THƯ VIỆN</div>
+        <div class="sig">© <span id="year"></span> · THƯ VIỆN · <a class="foot-admin" href="admin.html">Quản trị</a></div>
       </footer>
     </div>
 
@@ -1466,48 +1066,10 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
 
 </div>
 
-<a class="fab-diary" href="diary.html" aria-label="Nhật ký của tụi mình">
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.8Z"/></svg>
-  <span class="fab-label">Nhật ký</span>
-</a>
-<a class="fab-add" href="admin.html" aria-label="Thêm sách mới">
+<a class="fab-add" id="fabAdd" href="admin.html" aria-label="Thêm sách mới" hidden>
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
   <span class="fab-label">Thêm sách</span>
 </a>
-<button type="button" class="fab-chat" id="chatFabBtn" aria-label="Hỏi thư viện" aria-expanded="false">
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
-  <span class="fab-label">Hỏi thư viện</span>
-</button>
-
-<div class="chat-panel" id="chatPanel">
-  <div class="chat-panel-head">
-    <span>Hỏi thư viện</span>
-    <div class="chat-panel-head-actions">
-      <button type="button" id="chatHistoryBtn" aria-label="Lịch sử trò chuyện" title="Lịch sử trò chuyện">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
-      </button>
-      <button type="button" id="chatNewBtn" aria-label="Trò chuyện mới" title="Trò chuyện mới">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-      </button>
-      <button type="button" id="chatCloseBtn" aria-label="Đóng">✕</button>
-    </div>
-  </div>
-  <div class="chat-session-list" id="chatSessionList" hidden></div>
-  <div class="chat-messages" id="chatMessages">
-    <p class="chat-empty">Hỏi gì cũng được — mình sẽ tìm trong các sách đang có ở đây để trả lời.</p>
-  </div>
-  <form class="chat-input-row" id="chatForm">
-    <button type="button" class="chat-recommend-btn" id="chatRecommendBtn" aria-label="Gợi ý sách cho tôi" title="Gợi ý sách cho tôi">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M18.4 5.6l-2.8 2.8M8.4 15.6l-2.8 2.8"/></svg>
-    </button>
-    <input type="text" id="chatInput" placeholder="Nhắn gì đó…" autocomplete="off" maxlength="1000" />
-    <button type="submit" id="chatSendBtn" aria-label="Gửi">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-    </button>
-  </form>
-</div>
-
-<div class="search-extra-results" id="searchExtraResults" hidden></div>
 
 <div class="new-books-modal-backdrop" id="newBooksModalBackdrop">
   <div class="new-books-modal">
@@ -1525,59 +1087,61 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(-
   </div>
 </div>
 
-<div class="review-modal-backdrop" id="reviewModalBackdrop">
+<div class="review-modal-backdrop" id="quoteModalBackdrop">
   <div class="review-modal">
     <div class="review-modal-head">
       <div class="review-modal-heading">
-        <h3 id="reviewModalTitle">Đánh giá</h3>
-        <p class="review-modal-sub" id="reviewModalSub"></p>
+        <h3 id="quoteModalTitle">Trích dẫn hay</h3>
+        <p class="review-modal-sub" id="quoteModalSub"></p>
       </div>
-      <button type="button" id="reviewModalClose" aria-label="Đóng">✕</button>
+      <button type="button" id="quoteModalClose" aria-label="Đóng">✕</button>
     </div>
-    <div class="review-modal-tabs" id="reviewModalTabs">
-      <button type="button" class="review-modal-tab active" data-modal-tab="reviews">Đánh giá</button>
-      <button type="button" class="review-modal-tab" data-modal-tab="quotes">Trích dẫn hay</button>
-    </div>
-    <div class="review-modal-body" id="reviewModalBody"></div>
+    <div class="review-modal-body" id="quoteModalBody"></div>
   </div>
 </div>
 
 <script>
-// ── backend API base — change this once the API is deployed ──
-// local dev default; e.g. "https://api.book.dangpham.id.vn/api" in production
+// ── backend API base ──
 const API_BASE = "https://book-api.dangpham.id.vn/api";
+
+// ── admin session — set by admin.html after a PIN login (same origin, so
+// the same localStorage). Reading the library never needs it; it only
+// unlocks the "Thêm sách" button and quote add/delete controls here ──
 const AUTH_TOKEN_KEY = "tb_token";
 const AUTH_EXP_KEY = "tb_token_exp";
 
-// ── "bạn là ai" — same tb_diary_who key diary.html already persists,
-// so favoriting/rating a book attributes to whichever identity you're
-// already using there, no separate switch to keep in sync — there's no
-// toggle on this page at all: reviews don't show who wrote them, but
-// favoriting still needs an identity to avoid double-counting, so it
-// silently follows whatever diary.html's own toggle last set ──
-const WHO_KEY = "tb_diary_who";
-let currentWho = localStorage.getItem(WHO_KEY) || "me";
+function safeGet(key){
+  try{ return localStorage.getItem(key); }catch{ return null; }
+}
+function safeSet(key, value){
+  try{ localStorage.setItem(key, value); }catch{ /* storage blocked — not fatal */ }
+}
+function safeRemove(key){
+  try{ localStorage.removeItem(key); }catch{ /* storage blocked — not fatal */ }
+}
 
 function getStoredToken(){
-  const token = localStorage.getItem(AUTH_TOKEN_KEY);
-  const exp = Number(localStorage.getItem(AUTH_EXP_KEY) || 0);
+  const token = safeGet(AUTH_TOKEN_KEY);
+  const exp = Number(safeGet(AUTH_EXP_KEY) || 0);
   if(!token || !exp || Date.now() >= exp) return null;
   return token;
 }
-function storeToken(token){
-  localStorage.setItem(AUTH_TOKEN_KEY, token);
-  // decode the JWT's exp claim (seconds since epoch) so we know when to
-  // ask for the PIN again, without needing a round-trip to the server
-  try{
-    const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g,"+").replace(/_/g,"/")));
-    localStorage.setItem(AUTH_EXP_KEY, String((payload.exp || 0) * 1000));
-  }catch{
-    localStorage.setItem(AUTH_EXP_KEY, String(Date.now() + 24*60*60*1000));
-  }
-}
 function clearToken(){
-  localStorage.removeItem(AUTH_TOKEN_KEY);
-  localStorage.removeItem(AUTH_EXP_KEY);
+  safeRemove(AUTH_TOKEN_KEY);
+  safeRemove(AUTH_EXP_KEY);
+}
+function isAdmin(){
+  return Boolean(getStoredToken());
+}
+
+// ── one-time cleanup of things earlier versions of this site left behind
+// on a device: localStorage keys for features that no longer exist, and
+// the push-notification service worker ──
+["tb_diary_who", "tb_install_banner_dismissed_until", "tb_push_banner_dismissed_until"].forEach(safeRemove);
+if("serviceWorker" in navigator){
+  navigator.serviceWorker.getRegistrations()
+    .then(regs => regs.forEach(r => r.unregister()))
+    .catch(() => {});
 }
 
 function resolvePath(cat, name){
@@ -1593,73 +1157,8 @@ function escapeHTML(s){
 // bỏ dấu tiếng Việt để tìm không cần gõ dấu
 function normalize(s){
   return String(s||"").toLowerCase().normalize("NFD")
-    .replace(/[\u0300-\u036f]/g,"").replace(/đ/g,"d");
+    .replace(/[̀-ͯ]/g,"").replace(/đ/g,"d");
 }
-
-// ── site-wide search — books are already filtered in place by
-// applyFilter(); this adds nhật ký/kỷ niệm matches (GET /search, which
-// never includes private diary entries) as a small dropdown under
-// whichever search box is actually being typed in ──
-const SEARCH_EXTRA_MIN_LEN = 2;
-const searchExtraResultsEl = document.getElementById("searchExtraResults");
-
-function snippetText(text, maxLen){
-  const t = (text || "").trim();
-  return t.length > maxLen ? t.slice(0, maxLen).replace(/\s+\S*$/, "") + "…" : t;
-}
-function positionSearchExtraResults(inputEl){
-  const rect = inputEl.getBoundingClientRect();
-  const panelWidth = Math.min(320, window.innerWidth - 40);
-  const left = Math.min(Math.max(rect.left, 20), window.innerWidth - panelWidth - 20);
-  searchExtraResultsEl.style.left = `${left}px`;
-  searchExtraResultsEl.style.top = `${rect.bottom + 6}px`;
-}
-async function loadSearchExtras(q, inputEl){
-  if(q.length < SEARCH_EXTRA_MIN_LEN){ searchExtraResultsEl.hidden = true; return; }
-  const token = getStoredToken();
-  if(!token) return;
-  try{
-    const res = await fetch(`${API_BASE}/search?q=${encodeURIComponent(q)}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if(!res.ok) return;
-    const data = await res.json();
-    const diaryItems = data.diary || [];
-    const memoryItems = data.memories || [];
-    if(!diaryItems.length && !memoryItems.length){ searchExtraResultsEl.hidden = true; return; }
-
-    const diaryHTML = diaryItems.length ? `
-      <div class="search-extra-group-title">Nhật ký</div>
-      ${diaryItems.map(e => `
-        <a class="search-extra-item" href="diary.html?tab=diary&highlight=${e.id}">
-          ${escapeHTML(e.title || snippetText(e.content, 70))}
-        </a>
-      `).join("")}
-    ` : "";
-    const memoryHTML = memoryItems.length ? `
-      <div class="search-extra-group-title">Kỷ niệm chung</div>
-      ${memoryItems.map(m => `
-        <a class="search-extra-item" href="diary.html?tab=memories&highlight=${m.id}">
-          ${escapeHTML(m.title)}
-        </a>
-      `).join("")}
-    ` : "";
-    searchExtraResultsEl.innerHTML = diaryHTML + memoryHTML;
-    positionSearchExtraResults(inputEl);
-    searchExtraResultsEl.hidden = false;
-  }catch{
-    // best-effort — never disrupts the in-page book filtering
-  }
-}
-document.addEventListener("click", (e) => {
-  if(searchExtraResultsEl.hidden) return;
-  if(e.target.closest("#searchExtraResults,#searchInput,#searchInputMobile")) return;
-  searchExtraResultsEl.hidden = true;
-});
-document.addEventListener("keydown", (e) => {
-  if(e.key === "Escape") searchExtraResultsEl.hidden = true;
-});
-window.addEventListener("resize", () => { searchExtraResultsEl.hidden = true; });
 
 const SPINE_COLORS = ["var(--spine-1)","var(--spine-2)","var(--spine-3)","var(--spine-4)","var(--spine-5)","var(--spine-6)"];
 
@@ -1678,111 +1177,59 @@ function applyThemeColorMeta(){
 themeToggleEl.addEventListener("click", () => {
   const next = currentTheme() === "dark" ? "light" : "dark";
   document.documentElement.setAttribute("data-theme", next);
-  localStorage.setItem("tb_theme", next);
+  safeSet("tb_theme", next);
   applyThemeColorMeta();
 });
 applyThemeColorMeta();
 
-// ── shared platform checks — used by both the install banner below and
-// the push-notification banner further down, since both care about the
-// same two things: is this iOS (no programmatic install/push-permission
-// API there until the app's actually installed), and are we already
-// running as the installed app right now ──
-function isIOSDevice(){
-  return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+// ── personal reading list — "Muốn đọc / Đang đọc / Đã đọc" and the
+// favorite heart are kept per device in localStorage, never sent to the
+// server: the library is shared by everyone, but what *you* are reading
+// is yours alone. Shape: { [bookId]: { status, startedAt, finishedAt, fav } } ──
+const READING_KEY = "tb_reading_v1";
+function loadReadingState(){
+  try{
+    const parsed = JSON.parse(safeGet(READING_KEY) || "{}");
+    return parsed && typeof parsed === "object" ? parsed : {};
+  }catch{
+    return {};
+  }
 }
-function isRunningStandalone(){
-  return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+let readingState = loadReadingState();
+function saveReadingState(){
+  safeSet(READING_KEY, JSON.stringify(readingState));
 }
-// install always gets first shot over the push banner on a fresh device —
-// see the beforeinstallprompt handler and maybeShowPushBanner() below
-const installBannerEl = document.getElementById("installBanner");
-
-// ── "cài đặt ứng dụng" — a banner (prominent, respects the "đừng nhắc
-// nữa" snooze) plus a small persistent header icon (always there
-// whenever installing is actually possible, regardless of whether the
-// banner's been dismissed — a quiet fallback for "I said not now, but
-// changed my mind"). Both share one beforeinstallprompt capture. iOS
-// never fires that event at all (no programmatic install API there), so
-// both show unconditionally, and the icon just re-opens the banner's
-// manual Share-sheet instructions instead of a native prompt ──
-(function(){
-  const banner = document.getElementById("installBanner");
-  const descEl = document.getElementById("installBannerDesc");
-  const ctaEl = document.getElementById("installBannerCta");
-  const closeEl = document.getElementById("installBannerClose");
-  const skipCheckEl = document.getElementById("installBannerSkipCheck");
-  const iconBtn = document.getElementById("installAppBtn");
-  const DISMISS_KEY = "tb_install_banner_dismissed_until";
-
-  function isSnoozed(){
-    const raw = localStorage.getItem(DISMISS_KEY);
-    if(!raw) return false;
-    return raw === "forever" || Date.now() < Number(raw);
-  }
-  function recordDismiss(){
-    const forever = skipCheckEl.checked;
-    localStorage.setItem(DISMISS_KEY, forever ? "forever" : String(Date.now() + 7 * 86400000));
-  }
-  closeEl.addEventListener("click", () => {
-    banner.hidden = true;
-    recordDismiss();
-    maybeShowPushBanner();
-  });
-
-  if(isRunningStandalone()) return;
-
-  if(isIOSDevice()){
-    descEl.textContent = "Bấm nút Chia sẻ ở thanh trình duyệt Safari, rồi chọn \"Thêm vào Màn hình chính\" nhé.";
-    ctaEl.textContent = "Đã hiểu";
-    iconBtn.hidden = false;
-    iconBtn.addEventListener("click", () => { banner.hidden = false; });
-    if(!isSnoozed()) banner.hidden = false;
-    ctaEl.addEventListener("click", () => {
-      banner.hidden = true;
-      recordDismiss();
-      maybeShowPushBanner();
-    });
-    return;
-  }
-
-  let deferredInstallPrompt = null;
-  window.addEventListener("beforeinstallprompt", (e) => {
-    e.preventDefault();
-    deferredInstallPrompt = e;
-    iconBtn.hidden = false;
-    if(!isSnoozed()){
-      banner.hidden = false;
-      // this can fire after the push banner's already had its own,
-      // earlier chance to show (its check runs after a couple of network
-      // round-trips) — install still wins, so bump push out of the way
-      if(!pushBannerEl.hidden) pushBannerEl.hidden = true;
-    }
-  });
-  async function triggerInstall(){
-    if(!deferredInstallPrompt) return;
-    const prompt = deferredInstallPrompt;
-    deferredInstallPrompt = null;
-    banner.hidden = true;
-    iconBtn.hidden = true;
-    prompt.prompt();
-    const choice = await prompt.userChoice;
-    if(choice.outcome !== "accepted") recordDismiss();
-    maybeShowPushBanner();
-  }
-  ctaEl.addEventListener("click", triggerInstall);
-  iconBtn.addEventListener("click", triggerInstall);
-  window.addEventListener("appinstalled", () => {
-    banner.hidden = true;
-    iconBtn.hidden = true;
-    deferredInstallPrompt = null;
-    const token = getStoredToken();
-    if(token){
-      fetch(`${API_BASE}/push/app-installed`, { method: "POST", headers: { Authorization: `Bearer ${token}` } }).catch(() => {});
-    }
-    maybeShowPushBanner();
-  });
-})();
+function readingEntry(id){
+  return readingState[id] || {};
+}
+function updateReadingEntry(id, patch){
+  const next = { ...readingEntry(id), ...patch };
+  if(!next.status && !next.fav) delete readingState[id];
+  else readingState[id] = next;
+  saveReadingState();
+}
+// copies this device's state onto the book objects from /catalog, so the
+// rest of the page can keep reading b.readStatus / b.isFavorite directly
+function applyReadingState(book){
+  const e = readingEntry(book.id);
+  book.readStatus = e.status || null;
+  book.startedAt = e.startedAt || null;
+  book.finishedAt = e.finishedAt || null;
+  book.isFavorite = Boolean(e.fav);
+}
+// real timestamps — these back the "đọc năm nay" stat and the
+// "đọc dở lâu rồi" nudge
+function setLocalReadStatus(id, next){
+  const prev = readingEntry(id);
+  const now = new Date().toISOString();
+  let startedAt = prev.startedAt || null;
+  let finishedAt = prev.finishedAt || null;
+  if(next === "reading" && prev.status !== "reading") startedAt = now;
+  if(next === "done" && prev.status !== "done") finishedAt = now;
+  if(next !== "done") finishedAt = null;
+  if(next !== "reading" && next !== "done") startedAt = null;
+  updateReadingEntry(id, { status: next || null, startedAt, finishedAt });
+}
 
 const catalogEl = document.getElementById("catalog");
 const sidebarNavEl = document.getElementById("sidebarNav");
@@ -1802,21 +1249,27 @@ const newBooksModalTitle = document.getElementById("newBooksModalTitle");
 const newBooksModalSub = document.getElementById("newBooksModalSub");
 const newBooksList = document.getElementById("newBooksList");
 const newBooksModalClose = document.getElementById("newBooksModalClose");
-const reviewModalBackdrop = document.getElementById("reviewModalBackdrop");
-const reviewModalTitle = document.getElementById("reviewModalTitle");
-const reviewModalSub = document.getElementById("reviewModalSub");
-const reviewModalBody = document.getElementById("reviewModalBody");
-const reviewModalClose = document.getElementById("reviewModalClose");
+const quoteModalBackdrop = document.getElementById("quoteModalBackdrop");
+const quoteModalTitle = document.getElementById("quoteModalTitle");
+const quoteModalSub = document.getElementById("quoteModalSub");
+const quoteModalBody = document.getElementById("quoteModalBody");
+const quoteModalClose = document.getElementById("quoteModalClose");
 const topViewedPanelEl = document.getElementById("topViewedPanel");
 const topViewedFeedEl = document.getElementById("topViewedFeed");
 const stalledBooksCardEl = document.getElementById("stalledBooksCard");
 const stalledBooksBodyEl = document.getElementById("stalledBooksBody");
 const statusFilterRowEl = document.getElementById("statusFilterRow");
+const fabAddEl = document.getElementById("fabAdd");
 
 let lastCatalogData = null;
 let activeTagFilter = null;
 let activeStatusFilter = null;
 let currentApplyFilter = null;
+
+function refreshAdminUI(){
+  fabAddEl.hidden = !isAdmin();
+}
+refreshAdminUI();
 
 // ── quick filter: Muốn đọc / Đang đọc / Đã đọc ──
 statusFilterRowEl.addEventListener("click", (e) => {
@@ -1860,31 +1313,7 @@ catalogEl.addEventListener("keydown", (e) => {
   toggleBlurb(toggle);
 });
 
-// ── favorite heart + reading-status pills — the one thing this site lets
-// whoever's reading (not just whoever's adding books) change directly.
-// Updates optimistically, then fires the PATCH; rolls back on failure. ──
-async function patchBookStatus(id, body){
-  const token = getStoredToken();
-  if(!token){ showGate(); throw new Error("no-token"); }
-  const res = await fetch(`${API_BASE}/books/${id}/status`, {
-    method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify(body),
-  });
-  if(res.status === 401){
-    clearToken();
-    showGate("Phiên đã hết hạn, nhập lại mã PIN nhé.");
-    throw new Error("unauthorized");
-  }
-  if(!res.ok) throw new Error("HTTP " + res.status);
-  return res.json();
-}
-
-// small fixed toast — used so a failed save doesn't just silently snap
-// the heart/status pill back with no explanation of why
+// small fixed toast for short confirmations and errors
 function flash(message, kind){
   const el = document.getElementById("globalStatus");
   el.textContent = message;
@@ -1894,67 +1323,24 @@ function flash(message, kind){
   flash._t = setTimeout(() => { el.classList.remove("show"); }, 4000);
 }
 
-// favoriting is per-author now (favoritedBy: ["me","partner"]) — this
-// toggles only currentWho's own membership in that array, same as
-// diary.html's like buttons
-async function toggleBookFavorite(id, author){
-  const token = getStoredToken();
-  if(!token){ showGate(); throw new Error("no-token"); }
-  const res = await fetch(`${API_BASE}/books/${id}/favorite`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ author }),
-  });
-  if(res.status === 401){
-    clearToken();
-    showGate("Phiên đã hết hạn, nhập lại mã PIN nhé.");
-    throw new Error("unauthorized");
-  }
-  if(!res.ok) throw new Error("HTTP " + res.status);
-  return res.json();
-}
-function updateFavCountDisplay(favBtn, count){
-  const wrap = favBtn.parentElement;
-  let countEl = wrap.querySelector(".fav-count");
-  if(count > 0){
-    if(!countEl){
-      countEl = document.createElement("span");
-      countEl.className = "fav-count";
-      wrap.insertBefore(countEl, favBtn.nextSibling);
-    }
-    countEl.textContent = String(count);
-  }else if(countEl){
-    countEl.remove();
-  }
-}
+// ── favorite heart + reading-status pills — saved on this device only ──
 // a "new" book can render twice (its shelf + the pinned "Sách mới"
-// section) — mirrors the favorite state/count onto every copy, not just
-// the button that was actually clicked
-function applyFavoriteToAllCopies(bookId, active, count){
+// section) — mirrors the favorite state onto every copy, not just the
+// button that was actually clicked
+function applyFavoriteToAllCopies(bookId, active){
   document.querySelectorAll(`a.card[data-book-id="${bookId}"] [data-fav-toggle]`).forEach(btn => {
     btn.classList.toggle("active", active);
     btn.setAttribute("aria-label", active ? "Bỏ yêu thích" : "Đánh dấu yêu thích");
-    updateFavCountDisplay(btn, count);
   });
 }
 function toggleFavorite(favBtn){
   const bookId = favBtn.dataset.bookId;
-  const wasActive = favBtn.classList.contains("active");
-  const countEl = favBtn.parentElement.querySelector(".fav-count");
-  const prevCount = countEl ? Number(countEl.textContent) : 0;
-  const nextCount = wasActive ? Math.max(0, prevCount - 1) : prevCount + 1;
-
-  applyFavoriteToAllCopies(bookId, !wasActive, nextCount);
-
-  toggleBookFavorite(bookId, currentWho)
-    .then((updated) => {
-      const book = findBookInCatalog(bookId);
-      if(book) book.favoritedBy = updated.favoritedBy || [];
-    })
-    .catch((err) => {
-      applyFavoriteToAllCopies(bookId, wasActive, prevCount);
-      if(err.message !== "unauthorized") flash("Không lưu được, thử lại nhé.", "err");
-    });
+  const next = !readingEntry(bookId).fav;
+  updateReadingEntry(bookId, { fav: next });
+  const book = findBookInCatalog(bookId);
+  if(book) book.isFavorite = next;
+  applyFavoriteToAllCopies(bookId, next);
+  if(lastCatalogData) renderReadingStats(lastCatalogData);
 }
 
 // a "new" book can render twice (its shelf + the pinned "Sách mới"
@@ -1970,30 +1356,16 @@ function applyReadStatusToAllCopies(bookId, activeValue){
 function toggleReadStatus(statusBtn){
   const bookId = statusBtn.dataset.bookId;
   const wasActive = statusBtn.classList.contains("active");
-  const group = statusBtn.closest(".card-status");
-  const prevActive = group.querySelector(".status-pill.active");
-  const prevValue = prevActive ? prevActive.dataset.statusToggle : null;
   const nextValue = wasActive ? null : statusBtn.dataset.statusToggle;
+  setLocalReadStatus(bookId, nextValue);
+  const book = findBookInCatalog(bookId);
+  if(book) applyReadingState(book);
   applyReadStatusToAllCopies(bookId, nextValue);
-  patchBookStatus(bookId, { readStatus: nextValue })
-    .then((updated) => {
-      // the cache needs startedAt/finishedAt too, not just readStatus —
-      // renderReadingStats/renderStalledBooks below read straight off it
-      const book = findBookInCatalog(bookId);
-      if(book){
-        book.readStatus = updated.readStatus;
-        book.startedAt = updated.startedAt;
-        book.finishedAt = updated.finishedAt;
-      }
-      if(lastCatalogData){
-        renderReadingStats(lastCatalogData);
-        renderStalledBooks(lastCatalogData);
-      }
-    })
-    .catch((err) => {
-      applyReadStatusToAllCopies(bookId, prevValue);
-      if(err.message !== "unauthorized") flash("Không lưu được, thử lại nhé.", "err");
-    });
+  if(lastCatalogData){
+    renderReadingStats(lastCatalogData);
+    renderStalledBooks(lastCatalogData);
+  }
+  if(activeStatusFilter && currentApplyFilter) currentApplyFilter();
 }
 
 catalogEl.addEventListener("click", (e) => {
@@ -2010,10 +1382,7 @@ catalogEl.addEventListener("click", (e) => {
 function bumpBookView(card){
   const id = card.dataset.bookId;
   if(!id) return;
-  const token = getStoredToken();
-  if(token){
-    fetch(`${API_BASE}/books/${id}/view`, { method: "POST", headers: { Authorization: `Bearer ${token}` } }).catch(() => {});
-  }
+  fetch(`${API_BASE}/books/${id}/view`, { method: "POST" }).catch(() => {});
   // a "new" book can render twice (its shelf + the pinned "Sách mới"
   // section) — bump the count on every copy, not just the one clicked
   document.querySelectorAll(`a.card[data-book-id="${id}"] [data-view-count]`).forEach(badge => {
@@ -2033,7 +1402,7 @@ catalogEl.addEventListener("click", (e) => {
   }
   const card = e.target.closest("a.card");
   if(!card) return;
-  if(e.target.closest("[data-fav-toggle],[data-status-toggle],[data-tag-filter],[data-blurb-toggle],[data-open-translated],.review-summary-row")) return;
+  if(e.target.closest("[data-fav-toggle],[data-status-toggle],[data-tag-filter],[data-blurb-toggle],[data-open-translated],.quote-row")) return;
   bumpBookView(card);
 });
 catalogEl.addEventListener("keydown", (e) => {
@@ -2052,106 +1421,24 @@ catalogEl.addEventListener("keydown", (e) => {
 
 const READ_STATUS_LABELS = { want: "Muốn đọc", reading: "Đang đọc", done: "Đã đọc" };
 
-// ── star rating + personal reviews — a running log of entries (BookReview
-// rows), not one slot per person, and comments don't carry a name (no one
-// needs to know which of the two of you wrote which). The card only shows
-// a compact summary; tapping it opens a review-modal (Shopee-style) that
-// lists every entry and lets you add another. ──
-// row wrapper: the rating/review summary (opens the modal on its
-// "reviews" tab) plus a separate quote-count button (opens it on
-// "quotes") — kept as siblings, not nested, since both are independently
-// clickable and a button inside a role="button" div is invalid nesting
-function reviewAndQuoteRowHTML(b){
-  return `
-    <div class="review-summary-row">
-      ${reviewSummaryHTML(b)}
-      ${quoteCountBtnHTML(b)}
-    </div>
-  `;
-}
-function quoteCountBtnHTML(b){
+// ── "Trích dẫn hay" — memorable passages from each book. Everyone can
+// read them; only a logged-in admin sees the add/delete controls (the
+// API itself enforces that, these controls are just hidden otherwise) ──
+function quoteRowHTML(b){
   const count = (b.quotes || []).length;
+  if(!count && !isAdmin()) return "";
   return `
-    <button type="button" class="quote-count-btn" data-open-quotes="${b.id}" aria-label="Trích dẫn hay">
-      <span aria-hidden="true">❝</span>${count > 0 ? count : ""}
-    </button>
-  `;
-}
-// compact on purpose — stars already encode the number, the exact average
-// and full "Xem/Viết đánh giá" wording live in the modal (reviewModalSubText)
-// instead. Cramming both a numeric average AND a verbose CTA in here on top
-// of the stars was what clipped "Chưa có đánh giá" down to "Chư…" on a
-// narrow card, especially once the quote-count button joined this row.
-function reviewSummaryHTML(b){
-  const reviews = b.reviews || [];
-  const rated = reviews.filter(r => r.rating != null);
-  const avg = rated.length ? rated.reduce((s, r) => s + r.rating, 0) / rated.length : 0;
-  const countLabel = reviews.length ? `${reviews.length} đánh giá` : "Chưa có đánh giá";
-  return `
-    <div class="review-summary" role="button" tabindex="0" data-open-reviews="${b.id}" aria-label="${reviews.length ? "Xem đánh giá" : "Viết đánh giá"}">
-      <div class="rating-row readonly">${rated.length ? avgStarsHTML(avg) : ratingStarsHTML(b.id, 0, false)}</div>
-      <span class="review-summary-count">${countLabel}</span>
-      <span class="review-summary-cta" aria-hidden="true">›</span>
+    <div class="quote-row">
+      <button type="button" class="quote-count-btn" data-open-quotes="${b.id}" aria-label="Trích dẫn hay">
+        <span aria-hidden="true">❝</span>${count ? `${count} trích dẫn hay` : "Thêm trích dẫn"}
+      </button>
     </div>
   `;
 }
-// average rating shown at half-star granularity (Google/Shopee-style) —
-// e.g. 3.6 fills 3½ stars, 3.9 rounds up and fills all 4 — while the
-// number next to it stays the exact one-decimal average
-function avgStarsHTML(value){
-  const rounded = Math.round(value * 2) / 2;
-  return [1, 2, 3, 4, 5].map(n => {
-    if(rounded >= n) return `<span class="rating-star active">★</span>`;
-    if(rounded + 0.5 === n) return `<span class="rating-star half">★</span>`;
-    return `<span class="rating-star">★</span>`;
-  }).join("");
-}
-function reviewCardHTML(bookId, r){
-  const mine = r.author === currentWho;
-  const date = r.createdAt ? new Date(r.createdAt).toLocaleDateString("vi-VN") : "";
-  return `
-    <div class="review-card${mine ? " mine" : ""}" data-review-id="${r.id}">
-      ${mine ? `<button type="button" class="review-card-del" data-delete-review="${r.id}" data-book-id="${bookId}" aria-label="Xoá đánh giá này">✕</button>` : ""}
-      ${date ? `<span class="review-card-date">${date}</span>` : ""}
-      ${r.rating ? `<div class="rating-row readonly">${ratingStarsHTML(bookId, r.rating, false)}</div>` : ""}
-      ${r.review ? `<p class="review-text">${escapeHTML(r.review)}</p>` : ""}
-    </div>
-  `;
-}
-function ratingStarsHTML(bookId, rating, interactive){
-  return [1, 2, 3, 4, 5].map(n => `
-    <span class="rating-star${(rating || 0) >= n ? " active" : ""}"${interactive ? ` role="button" tabindex="0" data-rating-star="${n}" data-book-id="${bookId}" aria-label="${n} sao"` : ""}>★</span>
-  `).join("");
-}
-function reviewAddToggleHTML(bookId){
-  return `<span class="review-add-toggle" role="button" tabindex="0" data-review-add-toggle="${bookId}">+ Viết đánh giá</span>`;
-}
-function reviewAddFormHTML(bookId){
-  return `
-    <div class="review-add-form" data-book-id="${bookId}">
-      <div class="rating-row" data-add-rating="0">${ratingStarsHTML(bookId, 0, true)}</div>
-      <textarea class="review-add-input" placeholder="Cảm nhận của bạn về cuốn này…"></textarea>
-      <div class="review-add-actions">
-        <button type="button" data-cancel-review="${bookId}">Huỷ</button>
-        <button type="button" data-save-review="${bookId}">Đăng</button>
-      </div>
-    </div>
-  `;
-}
-function reviewModalBodyHTML(book){
-  const reviews = book.reviews || [];
-  const listHTML = reviews.length
-    ? `<div class="review-list">${reviews.map(r => reviewCardHTML(book.id, r)).join("")}</div>`
-    : `<p class="review-empty">Chưa có đánh giá nào — viết cảm nhận đầu tiên nhé.</p>`;
-  return listHTML + reviewAddToggleHTML(book.id);
-}
-
-// ── quotes — saved excerpts from the book itself, no author (unlike
-// reviews, there's no "whose words" to show — they're the book's) ──
 function quoteCardHTML(bookId, q){
   return `
     <div class="quote-card" data-quote-id="${q.id}">
-      <button type="button" class="review-card-del" data-delete-quote="${q.id}" data-book-id="${bookId}" aria-label="Xoá trích dẫn này">✕</button>
+      ${isAdmin() ? `<button type="button" class="review-card-del" data-delete-quote="${q.id}" data-book-id="${bookId}" aria-label="Xoá trích dẫn này">✕</button>` : ""}
       <p class="quote-text">${escapeHTML(q.text)}</p>
       ${q.page ? `<span class="quote-page">Trang ${q.page}</span>` : ""}
     </div>
@@ -2176,8 +1463,8 @@ function quoteModalBodyHTML(book){
   const quotes = book.quotes || [];
   const listHTML = quotes.length
     ? `<div class="quote-list">${quotes.map(q => quoteCardHTML(book.id, q)).join("")}</div>`
-    : `<p class="review-empty">Chưa có trích dẫn nào — lưu lại một câu tâm đắc đi.</p>`;
-  return listHTML + quoteAddToggleHTML(book.id);
+    : `<p class="review-empty">Chưa có trích dẫn nào cho cuốn này.</p>`;
+  return listHTML + (isAdmin() ? quoteAddToggleHTML(book.id) : "");
 }
 function quoteModalSubText(book){
   const n = (book.quotes || []).length;
@@ -2191,27 +1478,6 @@ function findBookInCatalog(id){
   }
   return null;
 }
-// merges instead of replacing wholesale — a favorite-toggle response is
-// a full Book but without a loaded "reviews" relation, so a field that's
-// absent from the response must never blank out what's already cached
-// locally
-function updateBookInCatalog(updated){
-  if(!lastCatalogData) return;
-  for(const cat of lastCatalogData.categories || []){
-    const idx = (cat.books || []).findIndex(b => b.id === updated.id);
-    if(idx !== -1){ cat.books[idx] = { ...cat.books[idx], ...updated }; return; }
-  }
-}
-function addReviewToCatalog(bookId, reviewRow){
-  const book = findBookInCatalog(bookId);
-  if(!book) return;
-  book.reviews = [reviewRow, ...(book.reviews || [])];
-}
-function removeReviewFromCatalog(bookId, reviewId){
-  const book = findBookInCatalog(bookId);
-  if(!book) return;
-  book.reviews = (book.reviews || []).filter(r => r.id !== reviewId);
-}
 function addQuoteToCatalog(bookId, quoteRow){
   const book = findBookInCatalog(bookId);
   if(!book) return;
@@ -2222,126 +1488,39 @@ function removeQuoteFromCatalog(bookId, quoteId){
   if(!book) return;
   book.quotes = (book.quotes || []).filter(q => q.id !== quoteId);
 }
-function reviewModalSubText(book){
-  const reviews = book.reviews || [];
-  if(!reviews.length) return "Chưa có đánh giá";
-  const rated = reviews.filter(r => r.rating != null);
-  const countLabel = `${reviews.length} đánh giá`;
-  if(!rated.length) return countLabel;
-  const avg = rated.reduce((s, r) => s + r.rating, 0) / rated.length;
-  const avgDisplay = (Math.round(avg * 10) / 10).toString().replace(".", ",");
-  return `★ ${avgDisplay} · ${countLabel}`;
-}
-function refreshBookReviewsUI(book){
+function refreshBookQuotesUI(book){
   // a "new" book can appear twice (its real shelf + the pinned "Sách mới"
   // section) — update every copy, not just the first match
   document.querySelectorAll(`a.card[data-book-id="${book.id}"]`).forEach(card => {
-    const summary = card.querySelector(".review-summary");
-    if(summary) summary.outerHTML = reviewSummaryHTML(book);
+    const row = card.querySelector(".quote-row");
+    const html = quoteRowHTML(book);
+    if(row) row.outerHTML = html;
+    else if(html) card.querySelector(".card-foot").insertAdjacentHTML("beforebegin", html);
   });
-  if(reviewModalBookId === book.id && reviewModalTab === "reviews"){
-    reviewModalSub.textContent = reviewModalSubText(book);
-    reviewModalBody.innerHTML = reviewModalBodyHTML(book);
+  if(quoteModalBookId === book.id){
+    quoteModalSub.textContent = quoteModalSubText(book);
+    quoteModalBody.innerHTML = quoteModalBodyHTML(book);
   }
 }
-function refreshBookQuotesUI(book){
-  document.querySelectorAll(`a.card[data-book-id="${book.id}"]`).forEach(card => {
-    const btn = card.querySelector(".quote-count-btn");
-    if(btn) btn.outerHTML = quoteCountBtnHTML(book);
-  });
-  if(reviewModalBookId === book.id && reviewModalTab === "quotes"){
-    reviewModalSub.textContent = quoteModalSubText(book);
-    reviewModalBody.innerHTML = quoteModalBodyHTML(book);
-  }
-}
-async function addBookReview(id, author, rating, review){
+
+// admin-only calls — a 401 means the admin session on this device has
+// expired, so the controls go away until they log in again
+async function adminFetch(path, options){
   const token = getStoredToken();
-  if(!token){ showGate(); throw new Error("no-token"); }
-  const res = await fetch(`${API_BASE}/books/${id}/reviews`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ author, rating: rating || undefined, review: review || undefined }),
-  });
+  if(!token) throw new Error("no-admin");
+  const headers = new Headers((options && options.headers) || {});
+  headers.set("Authorization", `Bearer ${token}`);
+  const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
   if(res.status === 401){
     clearToken();
-    showGate("Phiên đã hết hạn, nhập lại mã PIN nhé.");
-    throw new Error("unauthorized");
-  }
-  if(!res.ok) throw new Error("HTTP " + res.status);
-  return res.json();
-}
-async function deleteBookReview(bookId, reviewId){
-  const token = getStoredToken();
-  if(!token){ showGate(); throw new Error("no-token"); }
-  const res = await fetch(`${API_BASE}/books/${bookId}/reviews/${reviewId}`, {
-    method: "DELETE",
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if(res.status === 401){
-    clearToken();
-    showGate("Phiên đã hết hạn, nhập lại mã PIN nhé.");
+    refreshAdminUI();
+    const book = findBookInCatalog(quoteModalBookId);
+    if(book) refreshBookQuotesUI(book);
+    flash("Phiên quản trị đã hết hạn — đăng nhập lại ở trang Quản trị nhé.", "err");
     throw new Error("unauthorized");
   }
   if(!res.ok && res.status !== 204) throw new Error("HTTP " + res.status);
-}
-async function addBookQuote(id, text, page){
-  const token = getStoredToken();
-  if(!token){ showGate(); throw new Error("no-token"); }
-  const res = await fetch(`${API_BASE}/books/${id}/quotes`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ text, page: page || undefined }),
-  });
-  if(res.status === 401){
-    clearToken();
-    showGate("Phiên đã hết hạn, nhập lại mã PIN nhé.");
-    throw new Error("unauthorized");
-  }
-  if(!res.ok) throw new Error("HTTP " + res.status);
-  return res.json();
-}
-async function deleteBookQuote(bookId, quoteId){
-  const token = getStoredToken();
-  if(!token){ showGate(); throw new Error("no-token"); }
-  const res = await fetch(`${API_BASE}/books/${bookId}/quotes/${quoteId}`, {
-    method: "DELETE",
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if(res.status === 401){
-    clearToken();
-    showGate("Phiên đã hết hạn, nhập lại mã PIN nhé.");
-    throw new Error("unauthorized");
-  }
-  if(!res.ok && res.status !== 204) throw new Error("HTTP " + res.status);
-}
-async function submitNewReview(bookId, rating, review, formEl){
-  const saveBtn = formEl.querySelector("[data-save-review]");
-  if(!rating && !review){
-    flash("Cần chấm sao hoặc viết cảm nhận đã nhé.", "err");
-    return;
-  }
-  saveBtn.disabled = true;
-  saveBtn.textContent = "Đang đăng…";
-  try{
-    const created = await addBookReview(bookId, currentWho, rating, review);
-    addReviewToCatalog(bookId, created);
-    const fresh = findBookInCatalog(bookId);
-    if(fresh) refreshBookReviewsUI(fresh);
-  }catch(err){
-    if(err.message !== "unauthorized") flash("Không đăng được, thử lại nhé.", "err");
-    saveBtn.disabled = false;
-    saveBtn.textContent = "Đăng";
-  }
-}
-async function removeReview(bookId, reviewId){
-  try{
-    await deleteBookReview(bookId, reviewId);
-    removeReviewFromCatalog(bookId, reviewId);
-    const fresh = findBookInCatalog(bookId);
-    if(fresh) refreshBookReviewsUI(fresh);
-  }catch(err){
-    if(err.message !== "unauthorized") flash("Không xoá được, thử lại nhé.", "err");
-  }
+  return res.status === 204 ? null : res.json();
 }
 async function submitNewQuote(bookId, text, page, formEl){
   const saveBtn = formEl.querySelector("[data-save-quote]");
@@ -2352,7 +1531,11 @@ async function submitNewQuote(bookId, text, page, formEl){
   saveBtn.disabled = true;
   saveBtn.textContent = "Đang lưu…";
   try{
-    const created = await addBookQuote(bookId, text, page);
+    const created = await adminFetch(`/books/${bookId}/quotes`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, page: page || undefined }),
+    });
     addQuoteToCatalog(bookId, created);
     const fresh = findBookInCatalog(bookId);
     if(fresh) refreshBookQuotesUI(fresh);
@@ -2364,7 +1547,7 @@ async function submitNewQuote(bookId, text, page, formEl){
 }
 async function removeQuote(bookId, quoteId){
   try{
-    await deleteBookQuote(bookId, quoteId);
+    await adminFetch(`/books/${bookId}/quotes/${quoteId}`, { method: "DELETE" });
     removeQuoteFromCatalog(bookId, quoteId);
     const fresh = findBookInCatalog(bookId);
     if(fresh) refreshBookQuotesUI(fresh);
@@ -2372,140 +1555,66 @@ async function removeQuote(bookId, quoteId){
     if(err.message !== "unauthorized") flash("Không xoá được, thử lại nhé.", "err");
   }
 }
-// the card is a compact, read-only summary — tapping either trigger just
-// opens the modal, on the matching tab
-catalogEl.addEventListener("click", (e) => {
-  const reviewsTrigger = e.target.closest("[data-open-reviews]");
-  if(reviewsTrigger){
-    e.preventDefault();
-    e.stopPropagation();
-    openReviewModal(reviewsTrigger.dataset.openReviews, "reviews");
-    return;
-  }
-  const quotesTrigger = e.target.closest("[data-open-quotes]");
-  if(quotesTrigger){
-    e.preventDefault();
-    e.stopPropagation();
-    openReviewModal(quotesTrigger.dataset.openQuotes, "quotes");
-  }
-});
-catalogEl.addEventListener("keydown", (e) => {
-  if(e.key !== "Enter" && e.key !== " ") return;
-  const reviewsTrigger = e.target.closest("[data-open-reviews]");
-  if(reviewsTrigger){
-    e.preventDefault();
-    openReviewModal(reviewsTrigger.dataset.openReviews, "reviews");
-  }
-});
 
-// ── everything interactive (add form, delete) lives inside the modal now ──
-let reviewModalBookId = null;
-let reviewModalTab = "reviews";
-function setReviewModalTab(tab){
-  reviewModalTab = tab;
-  document.querySelectorAll("#reviewModalTabs .review-modal-tab").forEach(b => {
-    b.classList.toggle("active", b.dataset.modalTab === tab);
-  });
-  const book = findBookInCatalog(reviewModalBookId);
-  if(!book) return;
-  if(tab === "quotes"){
-    reviewModalSub.textContent = quoteModalSubText(book);
-    reviewModalBody.innerHTML = quoteModalBodyHTML(book);
-  }else{
-    reviewModalSub.textContent = reviewModalSubText(book);
-    reviewModalBody.innerHTML = reviewModalBodyHTML(book);
-  }
-}
-function openReviewModal(bookId, tab){
+let quoteModalBookId = null;
+function openQuoteModal(bookId){
   const book = findBookInCatalog(bookId);
   if(!book) return;
-  reviewModalBookId = bookId;
-  reviewModalTitle.textContent = book.title || "Đánh giá";
-  setReviewModalTab(tab || "reviews");
-  reviewModalBackdrop.classList.add("open");
+  quoteModalBookId = bookId;
+  quoteModalTitle.textContent = book.title || "Trích dẫn hay";
+  quoteModalSub.textContent = quoteModalSubText(book);
+  quoteModalBody.innerHTML = quoteModalBodyHTML(book);
+  quoteModalBackdrop.classList.add("open");
 }
-function closeReviewModal(){
-  reviewModalBackdrop.classList.remove("open");
-  reviewModalBookId = null;
+function closeQuoteModal(){
+  quoteModalBackdrop.classList.remove("open");
+  quoteModalBookId = null;
 }
-reviewModalClose.addEventListener("click", closeReviewModal);
-reviewModalBackdrop.addEventListener("click", (e) => {
-  if(e.target === reviewModalBackdrop) closeReviewModal();
+quoteModalClose.addEventListener("click", closeQuoteModal);
+quoteModalBackdrop.addEventListener("click", (e) => {
+  if(e.target === quoteModalBackdrop) closeQuoteModal();
 });
-document.getElementById("reviewModalTabs").addEventListener("click", (e) => {
-  const btn = e.target.closest("[data-modal-tab]");
-  if(btn) setReviewModalTab(btn.dataset.modalTab);
+catalogEl.addEventListener("click", (e) => {
+  const quotesTrigger = e.target.closest("[data-open-quotes]");
+  if(!quotesTrigger) return;
+  e.preventDefault();
+  e.stopPropagation();
+  openQuoteModal(quotesTrigger.dataset.openQuotes);
 });
-reviewModalBody.addEventListener("click", (e) => {
-  const bookId = reviewModalBookId;
+quoteModalBody.addEventListener("click", (e) => {
+  const bookId = quoteModalBookId;
   if(!bookId) return;
-
-  const addToggle = e.target.closest("[data-review-add-toggle]");
+  const addToggle = e.target.closest("[data-quote-add-toggle]");
   if(addToggle){
-    addToggle.outerHTML = reviewAddFormHTML(bookId);
+    addToggle.outerHTML = quoteAddFormHTML(bookId);
+    quoteModalBody.querySelector(".quote-add-input").focus();
     return;
   }
-  const cancelBtn = e.target.closest("[data-cancel-review]");
+  const cancelBtn = e.target.closest("[data-cancel-quote]");
   if(cancelBtn){
-    cancelBtn.closest(".review-add-form").outerHTML = reviewAddToggleHTML(bookId);
+    cancelBtn.closest(".quote-add-form").outerHTML = quoteAddToggleHTML(bookId);
     return;
   }
-  const delBtn = e.target.closest("[data-delete-review]");
+  const delBtn = e.target.closest("[data-delete-quote]");
   if(delBtn){
-    if(!confirm("Xoá đánh giá này?")) return;
-    removeReview(delBtn.dataset.bookId, delBtn.dataset.deleteReview);
-    return;
-  }
-  const starEl = e.target.closest("[data-rating-star]");
-  if(starEl){
-    const row = starEl.closest("[data-add-rating]");
-    if(!row) return; // stars on an existing card are read-only display
-    const current = Number(row.dataset.addRating) || 0;
-    const clicked = Number(starEl.dataset.ratingStar);
-    const next = current === clicked ? 0 : clicked;
-    row.dataset.addRating = String(next);
-    row.innerHTML = ratingStarsHTML(bookId, next, true);
-    return;
-  }
-  const saveBtn = e.target.closest("[data-save-review]");
-  if(saveBtn){
-    const form = saveBtn.closest(".review-add-form");
-    const rating = Number(form.querySelector("[data-add-rating]").dataset.addRating) || 0;
-    const text = form.querySelector(".review-add-input").value.trim();
-    submitNewReview(bookId, rating, text, form);
-    return;
-  }
-
-  const quoteAddToggle = e.target.closest("[data-quote-add-toggle]");
-  if(quoteAddToggle){
-    quoteAddToggle.outerHTML = quoteAddFormHTML(bookId);
-    return;
-  }
-  const cancelQuoteBtn = e.target.closest("[data-cancel-quote]");
-  if(cancelQuoteBtn){
-    cancelQuoteBtn.closest(".quote-add-form").outerHTML = quoteAddToggleHTML(bookId);
-    return;
-  }
-  const delQuoteBtn = e.target.closest("[data-delete-quote]");
-  if(delQuoteBtn){
     if(!confirm("Xoá trích dẫn này?")) return;
-    removeQuote(delQuoteBtn.dataset.bookId, delQuoteBtn.dataset.deleteQuote);
+    removeQuote(delBtn.dataset.bookId, delBtn.dataset.deleteQuote);
     return;
   }
-  const saveQuoteBtn = e.target.closest("[data-save-quote]");
-  if(saveQuoteBtn){
-    const form = saveQuoteBtn.closest(".quote-add-form");
+  const saveBtn = e.target.closest("[data-save-quote]");
+  if(saveBtn){
+    const form = saveBtn.closest(".quote-add-form");
     const text = form.querySelector(".quote-add-input").value.trim();
     const page = Number(form.querySelector(".quote-add-page").value) || 0;
     submitNewQuote(bookId, text, page, form);
   }
 });
-reviewModalBody.addEventListener("keydown", (e) => {
+quoteModalBody.addEventListener("keydown", (e) => {
   if(e.key !== "Enter" && e.key !== " ") return;
-  const starEl = e.target.closest("[data-rating-star]");
-  if(!starEl) return;
+  const addToggle = e.target.closest("[data-quote-add-toggle]");
+  if(!addToggle) return;
   e.preventDefault();
-  starEl.click();
+  addToggle.click();
 });
 
 // "Mới" is computed from createdAt, not a stored flag — it just quietly
@@ -2559,10 +1668,9 @@ function cardHTML(b, cat){
         <span class="card-tab-right">
           <span>${escapeHTML(String(b.year||""))}</span>
           <span class="view-count" data-view-count title="Đã xem ${b.viewCount||0} lần"${b.viewCount ? "" : " hidden"}>👁 ${b.viewCount||0}</span>
-          <span class="fav-toggle${(b.favoritedBy||[]).includes(currentWho) ? " active" : ""}" role="button" tabindex="0" data-fav-toggle data-book-id="${b.id}" aria-label="${(b.favoritedBy||[]).includes(currentWho) ? "Bỏ yêu thích" : "Đánh dấu yêu thích"}">
+          <span class="fav-toggle${b.isFavorite ? " active" : ""}" role="button" tabindex="0" data-fav-toggle data-book-id="${b.id}" aria-label="${b.isFavorite ? "Bỏ yêu thích" : "Đánh dấu yêu thích"}">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.8Z"/></svg>
           </span>
-          ${(b.favoritedBy||[]).length > 0 ? `<span class="fav-count">${(b.favoritedBy||[]).length}</span>` : ""}
         </span>
       </div>
       <div class="card-body">
@@ -2579,7 +1687,7 @@ function cardHTML(b, cat){
         : b.translating
           ? `<span class="card-translating-note">Đang chuẩn bị bản dịch tiếng Việt…</span>`
           : ""}
-      ${reviewAndQuoteRowHTML(b)}
+      ${quoteRowHTML(b)}
       <div class="card-foot">
         <div class="card-subjects">${tagsHTML ? `<b>Chủ đề</b><br>${tagsHTML}` : ""}</div>
         <div class="stamp" aria-hidden="true">Đọc<br>ngay</div>
@@ -2588,7 +1696,7 @@ function cardHTML(b, cat){
   `;
 }
 
-// ── relative time, for the activity feed and "Vừa thêm" stat ──
+// ── relative time, for the "Vừa thêm" stat ──
 function timeAgo(iso){
   if(!iso) return "";
   const diffMs = Date.now() - new Date(iso).getTime();
@@ -2605,26 +1713,23 @@ function timeAgo(iso){
   return `${Math.floor(day / 30)} tháng trước`;
 }
 
-// "vừa thêm" stat — kept standalone since the sidebar log that used to
-// compute this alongside itself got replaced by the notification bell
+function allBooksOf(data){
+  const all = [];
+  (data.categories || []).forEach(cat => (cat.books || []).forEach(b => all.push(b)));
+  return all;
+}
+
 function updateLastActivityStat(data){
   let latest = null;
-  (data.categories || []).forEach(cat => {
-    (cat.books || []).forEach(b => {
-      if(b.createdAt && (!latest || new Date(b.createdAt) > new Date(latest))) latest = b.createdAt;
-    });
+  allBooksOf(data).forEach(b => {
+    if(b.createdAt && (!latest || new Date(b.createdAt) > new Date(latest))) latest = b.createdAt;
   });
   document.getElementById("statLastActivity").textContent = latest ? timeAgo(latest) : "—";
 }
 
-// ── "xem nhiều nhất" — the sidebar slot that used to hold a running
-// "recent activity" log (now covered by the notification bell instead)
-// fills with the top-viewed books, using the click counter already
-// tracked per book ──
+// ── "xem nhiều nhất" — top-viewed books, from the public view counter ──
 function renderTopViewed(data){
-  const allBooks = [];
-  (data.categories || []).forEach(cat => (cat.books || []).forEach(b => allBooks.push(b)));
-  const viewed = allBooks
+  const viewed = allBooksOf(data)
     .filter(b => (b.viewCount || 0) > 0)
     .sort((a, b) => (b.viewCount || 0) - (a.viewCount || 0))
     .slice(0, 5);
@@ -2638,32 +1743,28 @@ function renderTopViewed(data){
   `).join("");
 }
 
-// ── "đã đọc" / "đọc năm nay" — real numbers from startedAt/finishedAt
-// (set server-side on every readStatus change), not a guess from
-// updatedAt which changes on any edit ──
+// ── "bạn đã đọc" / "đọc năm nay" / "yêu thích" — this device's own
+// reading list, see the localStorage section near the top ──
 function renderReadingStats(data){
-  const allBooks = [];
-  (data.categories || []).forEach(cat => (cat.books || []).forEach(b => allBooks.push(b)));
+  const allBooks = allBooksOf(data);
   const total = allBooks.length;
   const doneCount = allBooks.filter(b => b.readStatus === "done").length;
   const thisYear = new Date().getFullYear();
   const thisYearCount = allBooks.filter(b => b.finishedAt && new Date(b.finishedAt).getFullYear() === thisYear).length;
+  const favoriteCount = allBooks.filter(b => b.isFavorite).length;
   document.getElementById("statRead").textContent = total ? `${doneCount}/${total}` : "—";
   document.getElementById("statReadThisYear").textContent = `${thisYearCount} cuốn`;
+  document.getElementById("statFavorites").textContent = String(favoriteCount).padStart(2, "0");
 }
 
 // ── "đọc dở lâu rồi" — a soft nudge for books left on "Đang đọc" a long
-// while, using the real startedAt timestamp instead of guessing. Closing
-// it only hides it for this visit (no persistence), same as diary.html's
-// on-this-day card — harmless to see it again next time ──
+// while on this device. Closing it only hides it for this visit ──
 const STALLED_DAYS_THRESHOLD = 30;
 let stalledBooksDismissed = false;
 function renderStalledBooks(data){
   if(stalledBooksDismissed){ stalledBooksCardEl.hidden = true; return; }
-  const allBooks = [];
-  (data.categories || []).forEach(cat => (cat.books || []).forEach(b => allBooks.push(b)));
   const now = Date.now();
-  const stalled = allBooks
+  const stalled = allBooksOf(data)
     .filter(b => b.readStatus === "reading" && b.startedAt)
     .map(b => ({ book: b, daysSince: Math.floor((now - new Date(b.startedAt).getTime()) / 86400000) }))
     .filter(x => x.daysSince >= STALLED_DAYS_THRESHOLD)
@@ -2682,39 +1783,35 @@ document.getElementById("stalledBooksClose").addEventListener("click", () => {
   stalledBooksDismissed = true;
   stalledBooksCardEl.hidden = true;
 });
-function jumpToStalledBook(bookId){
+function jumpToBookCard(bookId){
   // scoped past .new-books-section — jump to the book's real shelf spot,
   // not its temporary duplicate up in "Sách mới" (if it happens to be new)
   const card = document.querySelector(`.section:not(.new-books-section) a.card[data-book-id="${bookId}"]`);
   if(!card) return;
   card.scrollIntoView({ behavior: "smooth", block: "center" });
+  document.querySelectorAll(".card.picked").forEach(c => c.classList.remove("picked"));
   card.classList.add("picked");
   setTimeout(() => card.classList.remove("picked"), 2200);
 }
 stalledBooksBodyEl.addEventListener("click", (e) => {
   const item = e.target.closest("[data-stalled-book]");
-  if(item) jumpToStalledBook(item.dataset.stalledBook);
+  if(item) jumpToBookCard(item.dataset.stalledBook);
 });
 stalledBooksBodyEl.addEventListener("keydown", (e) => {
   if(e.key !== "Enter" && e.key !== " ") return;
   const item = e.target.closest("[data-stalled-book]");
   if(!item) return;
   e.preventDefault();
-  jumpToStalledBook(item.dataset.stalledBook);
+  jumpToBookCard(item.dataset.stalledBook);
 });
 
-function bookAvgRating(b){
-  const rated = (b.reviews || []).filter(r => r.rating != null);
-  if(!rated.length) return 0;
-  return rated.reduce((s, r) => s + r.rating, 0) / rated.length;
-}
 function applyBookSort(books, mode){
   const sorted = books.slice();
   if(mode === "newest") sorted.sort((a,b) => new Date(b.createdAt||0) - new Date(a.createdAt||0));
   else if(mode === "title") sorted.sort((a,b) => (a.title||"").localeCompare(b.title||"", "vi"));
   else if(mode === "year-desc") sorted.sort((a,b) => (b.year||0) - (a.year||0));
   else if(mode === "year-asc") sorted.sort((a,b) => (a.year||0) - (b.year||0));
-  else if(mode === "rating-desc") sorted.sort((a,b) => bookAvgRating(b) - bookAvgRating(a));
+  else if(mode === "views-desc") sorted.sort((a,b) => (b.viewCount||0) - (a.viewCount||0));
   return sorted;
 }
 
@@ -2750,7 +1847,7 @@ function renderNewBooksSection(categories){
 }
 
 function render(data){
-  // newest topic first — a topic you just added is the one worth reading,
+  // newest topic first — a topic just added is the one worth reading,
   // not something to go dig for at the bottom of the sidebar
   const sortMode = sortSelectEl ? sortSelectEl.value : "default";
   const categories = (data.categories || []).slice()
@@ -2944,26 +2041,22 @@ function render(data){
     }
   }
   currentApplyFilter = applyFilter;
-  let debounce, searchExtraDebounce;
-  function onSearchInput(activeInputEl){
+  let debounce;
+  function onSearchInput(){
     clearTimeout(debounce);
     debounce = setTimeout(applyFilter, 100);
-    clearTimeout(searchExtraDebounce);
-    const raw = (searchInputEl.value || searchInputMobileEl.value || "").trim();
-    searchExtraDebounce = setTimeout(() => loadSearchExtras(raw, activeInputEl), 250);
   }
   searchInputEl.addEventListener("input", () => {
     if(document.activeElement === searchInputEl) searchInputMobileEl.value = searchInputEl.value;
-    onSearchInput(searchInputEl);
+    onSearchInput();
   });
   searchInputMobileEl.addEventListener("input", () => {
     if(document.activeElement === searchInputMobileEl) searchInputEl.value = searchInputMobileEl.value;
-    onSearchInput(searchInputMobileEl);
+    onSearchInput();
   });
 
   // ── meta ──
   const volStr = String(volumes).padStart(2,"0");
-  const catStr = String(categories.length).padStart(2,"0");
   const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   function countUp(el, target, pad){
     if(prefersReduced || target === 0){ el.textContent = String(target).padStart(pad,"0"); return; }
@@ -2985,17 +2078,6 @@ function render(data){
   renderReadingStats(data);
   renderStalledBooks(data);
 
-  const favoriteCount = categories.reduce((sum, c) => sum + (c.books||[]).filter(b => (b.favoritedBy||[]).includes(currentWho)).length, 0);
-  countUp(document.getElementById("statFavorites"), favoriteCount, 2);
-
-  // "Bên nhau" — days since the date the PIN itself is built from (01/08/2026).
-  // Anchored to Vietnam midnight explicitly (not the viewer's own device
-  // timezone) so the count doesn't shift by a day if it's ever opened from
-  // a phone set to a different timezone.
-  const MET_DATE = new Date("2026-08-01T00:00:00+07:00");
-  const daysTogether = Math.max(0, Math.floor((Date.now() - MET_DATE) / 86400000));
-  document.getElementById("statTogether").textContent = `${daysTogether} ngày`;
-
   // ── curator ──
   if(data.curator && data.curator.name){
     const p = document.getElementById("brandAvatarImg");
@@ -3016,7 +2098,7 @@ function openSidebar(){
 }
 function closeSidebar(){
   sidebarEl.classList.remove("open");
-  backdropEl.classList.remove("open"); 
+  backdropEl.classList.remove("open");
   hamburgerEl.setAttribute("aria-expanded","false");
   document.body.style.overflow = "";
 }
@@ -3085,9 +2167,8 @@ catalogEl.addEventListener("keydown", (e) => {
 });
 tagFilterClearEl.addEventListener("click", () => setTagFilter(null));
 
-// ── "sách mới kể từ lần trước bạn ghé" — a popup naming what's new
-// instead of a banner that just says how many, compares against a
-// last-visit timestamp in localStorage instead of a server-side job ──
+// ── "sách mới kể từ lần trước bạn ghé" — a popup naming what's new,
+// compared against a last-visit timestamp in localStorage ──
 const LAST_VISIT_KEY = "tb_last_visit";
 
 function closeNewBooksModal(){
@@ -3099,302 +2180,8 @@ newBooksModalBackdrop.addEventListener("click", (e) => {
 });
 document.addEventListener("keydown", (e) => {
   if(e.key === "Escape" && newBooksModalBackdrop.classList.contains("open")) closeNewBooksModal();
-  if(e.key === "Escape" && reviewModalBackdrop.classList.contains("open")) closeReviewModal();
+  if(e.key === "Escape" && quoteModalBackdrop.classList.contains("open")) closeQuoteModal();
 });
-
-// ── notification bell — backed by GET/PATCH /notifications on the
-// server, not localStorage. This is a 2-person site: localStorage is
-// per-browser, so each device/phone had its own history and neither
-// person ever saw what the other had actually acted on. A shared DB
-// table is the correct model here — notifications are created
-// server-side (BooksService/DiaryService, on a new book / new shared
-// diary entry) rather than by the client diffing "what's new since my
-// last visit", so it's also accurate regardless of which device
-// noticed first ──
-async function loadNotifications(){
-  const token = getStoredToken();
-  if(!token) return [];
-  try{
-    const res = await fetch(`${API_BASE}/notifications`, { headers: { Authorization: `Bearer ${token}` } });
-    if(!res.ok) return [];
-    return await res.json();
-  }catch{
-    return [];
-  }
-}
-
-const notifBellBtn = document.getElementById("notifBellBtn");
-const notifPanel = document.getElementById("notifPanel");
-const notifBadge = document.getElementById("notifBadge");
-const notifPanelBody = document.getElementById("notifPanelBody");
-// on mobile the sidebar becomes a drawer with `transform:translateX(...)`,
-// which makes it the containing block for any position:fixed descendant —
-// so the panel's JS-computed viewport coordinates were being applied
-// relative to the (scrollable, clipped) sidebar instead of the screen,
-// pushing it out of view. Moving it to <body> once escapes that.
-document.body.appendChild(notifPanel);
-
-async function renderNotifications(){
-  const list = await loadNotifications();
-  const unread = list.filter(n => !n.read).length;
-  notifBadge.textContent = unread > 9 ? "9+" : String(unread);
-  notifBadge.hidden = unread === 0;
-  notifPanelBody.innerHTML = list.length
-    ? list.map(n => `
-        <div class="notif-item${n.read ? "" : " unread"}" data-notif-id="${n.id}" role="button" tabindex="0">
-          <span class="notif-dot"></span>
-          <div>
-            <p class="notif-text">${escapeHTML(n.text)}</p>
-            <p class="notif-time">${timeAgo(n.createdAt)}</p>
-          </div>
-        </div>
-      `).join("")
-    : `<p class="empty-note">Chưa có thông báo nào.</p>`;
-}
-async function markNotifRead(item){
-  const token = getStoredToken();
-  if(!token) return;
-  await fetch(`${API_BASE}/notifications/${item.dataset.notifId}/read`, {
-    method: "PATCH",
-    headers: { Authorization: `Bearer ${token}` },
-  }).catch(() => {});
-  renderNotifications();
-}
-notifPanelBody.addEventListener("click", (e) => {
-  const item = e.target.closest("[data-notif-id]");
-  if(item) markNotifRead(item);
-});
-notifPanelBody.addEventListener("keydown", (e) => {
-  if(e.key !== "Enter" && e.key !== " ") return;
-  const item = e.target.closest("[data-notif-id]");
-  if(!item) return;
-  e.preventDefault();
-  markNotifRead(item);
-});
-document.getElementById("notifMarkAllBtn").addEventListener("click", async () => {
-  const token = getStoredToken();
-  if(!token) return;
-  await fetch(`${API_BASE}/notifications/read-all`, {
-    method: "PATCH",
-    headers: { Authorization: `Bearer ${token}` },
-  }).catch(() => {});
-  renderNotifications();
-});
-
-// ── real push notifications — like a native app, arrives even when no
-// tab is open. Two entry points share the same subscribe/unsubscribe
-// logic: the toggle tucked inside the bell panel (easy to miss — that
-// was the whole complaint) and a banner that actually surfaces it,
-// same shape as the install banner and shown right alongside it.
-// Both stay hidden unless this browser supports push AND the server has
-// VAPID keys configured (checked via /push/vapid-public-key), so
-// neither ever offers a control that can't actually do anything ──
-const notifPushToggleEl = document.getElementById("notifPushToggle");
-const pushApiSupported = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
-let vapidPublicKey = null;
-function urlBase64ToUint8Array(base64String){
-  const padding = "=".repeat((4 - base64String.length % 4) % 4);
-  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
-  const rawData = atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
-  for(let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
-  return outputArray;
-}
-function updatePushToggleUI(subscribed){
-  notifPushToggleEl.classList.toggle("active", subscribed);
-  notifPushToggleEl.textContent = subscribed ? "✓ Đã bật thông báo trên thiết bị này" : "🔔 Bật thông báo trên thiết bị này";
-  pushBannerEl.hidden = true;
-}
-async function sendPushSubscription(sub){
-  const token = getStoredToken();
-  if(!token){ showGate(); throw new Error("no-token"); }
-  const res = await fetch(`${API_BASE}/push/subscribe`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    body: JSON.stringify(sub.toJSON()),
-  });
-  if(res.status === 401){ clearToken(); showGate("Phiên đã hết hạn, nhập lại mã PIN nhé."); throw new Error("unauthorized"); }
-  if(!res.ok) throw new Error("HTTP " + res.status);
-}
-async function removePushSubscription(endpoint){
-  const token = getStoredToken();
-  if(!token) return;
-  await fetch(`${API_BASE}/push/subscribe`, {
-    method: "DELETE",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ endpoint }),
-  }).catch(() => {});
-}
-// Chrome won't show its own permission popup unless this runs directly
-// off a user gesture (a click) — never call this from page-load code.
-// Each half logs the real error to the console instead of only a generic
-// toast — a silent failure here looked identical to "did nothing" with
-// no way to tell why, same lesson as the diary-photo bug earlier.
-async function subscribeToPush(){
-  try{
-    const reg = await navigator.serviceWorker.ready;
-    const permission = await Notification.requestPermission();
-    if(permission !== "granted"){
-      flash(
-        permission === "denied"
-          ? "Bạn đã từng từ chối thông báo — cần vào cài đặt trình duyệt (biểu tượng ổ khoá cạnh địa chỉ trang) bật lại quyền cho trang này."
-          : "Cần cho phép quyền thông báo ở trình duyệt nhé.",
-        "err",
-      );
-      return;
-    }
-    const sub = await reg.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
-    });
-    try{
-      await sendPushSubscription(sub);
-    }catch(saveErr){
-      // saved locally but not on the server — undo the local half too,
-      // otherwise the next toggle click sees a "subscription" that
-      // getSubscription() returns but the server never knew about, and
-      // tries to unsubscribe instead of retrying subscribe
-      await sub.unsubscribe().catch(() => {});
-      throw saveErr;
-    }
-    updatePushToggleUI(true);
-    flash("Đã bật thông báo trên thiết bị này rồi nhé.", "ok");
-  }catch(err){
-    console.error("[Push] Không bật được thông báo:", err);
-    if(err.message !== "unauthorized") flash(`Không bật được: ${err.name || ""} ${err.message || err}`.trim(), "err");
-  }
-}
-async function unsubscribeFromPush(existing){
-  try{
-    const endpoint = existing.endpoint;
-    await existing.unsubscribe();
-    await removePushSubscription(endpoint);
-    updatePushToggleUI(false);
-    flash("Đã tắt thông báo trên thiết bị này.", "ok");
-  }catch(err){
-    console.error("[Push] Không tắt được thông báo:", err);
-    flash(`Không tắt được: ${err.name || ""} ${err.message || err}`.trim(), "err");
-  }
-}
-// disabled while in flight so a second click before the first finishes
-// (waiting on the permission prompt, say) can't race a second
-// subscribe/unsubscribe attempt against the first
-let pushToggleBusy = false;
-async function togglePush(){
-  if(pushToggleBusy) return;
-  pushToggleBusy = true;
-  notifPushToggleEl.disabled = true;
-  try{
-    const reg = await navigator.serviceWorker.ready;
-    const existing = await reg.pushManager.getSubscription();
-    if(existing) await unsubscribeFromPush(existing);
-    else await subscribeToPush();
-  }catch(err){
-    console.error("[Push] Lỗi không xác định:", err);
-    flash("Không bật/tắt được thông báo, thử lại nhé.", "err");
-  }finally{
-    pushToggleBusy = false;
-    notifPushToggleEl.disabled = false;
-  }
-}
-notifPushToggleEl.addEventListener("click", togglePush);
-
-// ── the banner half — same install-banner shape and dismiss pattern
-// (7-day snooze, or forever with the checkbox). iOS can't do push at
-// all until the app's actually installed, so this simply never offers
-// it there until isRunningStandalone() is true ──
-const pushBannerEl = document.getElementById("pushBanner");
-const pushBannerCtaEl = document.getElementById("pushBannerCta");
-const pushBannerCloseEl = document.getElementById("pushBannerClose");
-const pushBannerSkipCheckEl = document.getElementById("pushBannerSkipCheck");
-const PUSH_BANNER_DISMISS_KEY = "tb_push_banner_dismissed_until";
-function isPushBannerSnoozed(){
-  const raw = localStorage.getItem(PUSH_BANNER_DISMISS_KEY);
-  if(!raw) return false;
-  return raw === "forever" || Date.now() < Number(raw);
-}
-pushBannerCloseEl.addEventListener("click", () => {
-  pushBannerEl.hidden = true;
-  const forever = pushBannerSkipCheckEl.checked;
-  localStorage.setItem(PUSH_BANNER_DISMISS_KEY, forever ? "forever" : String(Date.now() + 7 * 86400000));
-});
-pushBannerCtaEl.addEventListener("click", () => {
-  pushBannerEl.hidden = true;
-  subscribeToPush(); // handles its own errors/flash — see above
-});
-
-// the install banner always gets first shot — if it's currently showing,
-// wait; the install banner's own dismiss/install handlers call this again
-// once it's out of the way (see the IIFE above)
-let pushEligibleToOffer = false;
-function maybeShowPushBanner(){
-  if(!pushEligibleToOffer) return;
-  if(isPushBannerSnoozed()) return;
-  if(!installBannerEl.hidden) return;
-  pushBannerEl.hidden = false;
-}
-
-async function initPushToggle(){
-  if(!pushApiSupported) return;
-  const token = getStoredToken();
-  if(!token) return;
-  try{
-    const res = await fetch(`${API_BASE}/push/vapid-public-key`, { headers: { Authorization: `Bearer ${token}` } });
-    if(!res.ok) return;
-    const { publicKey, configured } = await res.json();
-    if(!configured) return;
-    vapidPublicKey = publicKey;
-    const reg = await navigator.serviceWorker.register("sw.js");
-    const sub = await reg.pushManager.getSubscription();
-    updatePushToggleUI(Boolean(sub));
-    notifPushToggleEl.hidden = false;
-    if(!sub && (!isIOSDevice() || isRunningStandalone())){
-      pushEligibleToOffer = true;
-      maybeShowPushBanner();
-    }
-  }catch{
-    // best-effort — push is a nice-to-have, never worth breaking the
-    // rest of the page over
-  }
-}
-initPushToggle();
-// position:fixed means this has to be placed by hand — clamped so it
-// never runs off either edge of the viewport (the bell sits inside a
-// narrow 284–320px sidebar, so its left edge alone isn't safe to just
-// anchor the panel to)
-function positionNotifPanel(){
-  const rect = notifBellBtn.getBoundingClientRect();
-  const panelWidth = Math.min(300, window.innerWidth - 40);
-  const left = Math.min(Math.max(rect.left, 20), window.innerWidth - panelWidth - 20);
-  notifPanel.style.left = `${left}px`;
-  notifPanel.style.top = `${rect.bottom + 8}px`;
-}
-function toggleNotifPanel(open){
-  notifPanel.classList.toggle("open", open);
-  notifBellBtn.setAttribute("aria-expanded", String(open));
-  if(open){
-    positionNotifPanel();
-    // refetched every time the panel opens, not just on page load — the
-    // other person may have added something since this page was loaded
-    renderNotifications();
-  }
-}
-notifBellBtn.addEventListener("click", (e) => {
-  e.stopPropagation();
-  toggleNotifPanel(!notifPanel.classList.contains("open"));
-});
-document.addEventListener("click", (e) => {
-  // panel now lives at the end of <body> (see the appendChild above), so
-  // clicks inside it no longer match .closest(".notif-bell-wrap")
-  if(notifPanel.classList.contains("open") && !e.target.closest(".notif-bell-wrap") && !e.target.closest("#notifPanel")) toggleNotifPanel(false);
-});
-document.addEventListener("keydown", (e) => {
-  if(e.key === "Escape") toggleNotifPanel(false);
-});
-window.addEventListener("resize", () => {
-  if(notifPanel.classList.contains("open")) positionNotifPanel();
-});
-renderNotifications();
 
 function newBookItemHTML(b, cat){
   const coverSrc = b.cover ? encodeURI(resolvePath(cat, b.cover)) : "";
@@ -3414,8 +2201,8 @@ function newBookItemHTML(b, cat){
 }
 
 function checkNewSinceLastVisit(data){
-  const lastVisit = Number(localStorage.getItem(LAST_VISIT_KEY) || 0);
-  localStorage.setItem(LAST_VISIT_KEY, String(Date.now()));
+  const lastVisit = Number(safeGet(LAST_VISIT_KEY) || 0);
+  safeSet(LAST_VISIT_KEY, String(Date.now()));
   if(!lastVisit) return; // first visit ever — nothing to compare against
 
   const newEntries = [];
@@ -3433,380 +2220,48 @@ function checkNewSinceLastVisit(data){
   newBooksModalSub.textContent = "Thêm vào kể từ lần trước bạn ghé — bấm vào cuốn nào để xem ngay.";
   newBooksList.innerHTML = newEntries.map(({ book, cat }) => newBookItemHTML(book, cat)).join("");
   newBooksModalBackdrop.classList.add("open");
-  // no client-side push here — the backend already logged a notification
-  // for each book the moment it was created (see BooksService.create)
 }
 
 newBooksList.addEventListener("click", (e) => {
   const item = e.target.closest("[data-jump-book]");
   if(!item) return;
   e.preventDefault();
-  // scoped past .new-books-section — jump to the book's real shelf spot,
-  // not its temporary duplicate up in "Sách mới" (if it happens to be new)
-  const target = document.querySelector(`.section:not(.new-books-section) a.card[data-book-id="${item.dataset.jumpBook}"]`);
   closeNewBooksModal();
-  if(!target) return;
   // wait for the modal's own close transition so the scroll isn't
   // fighting layout that's still settling
-  setTimeout(() => {
-    target.scrollIntoView({ behavior: "smooth", block: "center" });
-    document.querySelectorAll(".card.picked").forEach(c => c.classList.remove("picked"));
-    target.classList.add("picked");
-    setTimeout(() => target.classList.remove("picked"), 2000);
-  }, 250);
+  setTimeout(() => jumpToBookCard(item.dataset.jumpBook), 250);
 });
 
-// ── PIN gate ──
-const pinGateEl = document.getElementById("pinGate");
-const pinFormEl = document.getElementById("pinForm");
-const pinInputEl = document.getElementById("pinInput");
-const pinErrorEl = document.getElementById("pinError");
-const pinSubmitEl = document.getElementById("pinSubmit");
-
-function showGate(message){
-  pinGateEl.hidden = false;
-  document.body.style.overflow = "hidden";
-  pinErrorEl.textContent = message || "";
-  pinInputEl.value = "";
-  setTimeout(() => pinInputEl.focus(), 50);
-}
-function hideGate(){
-  pinGateEl.hidden = true;
-  document.body.style.overflow = "";
-}
-
-pinFormEl.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const pin = pinInputEl.value.trim();
-  if(!pin) return;
-  pinSubmitEl.disabled = true;
-  pinErrorEl.textContent = "";
-  try{
-    const res = await fetch(`${API_BASE}/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ pin }),
-    });
-    if(!res.ok){
-      throw new Error(res.status === 401 ? "Sai mã PIN, thử lại nhé." : "Không kết nối được máy chủ.");
-    }
-    const { accessToken } = await res.json();
-    storeToken(accessToken);
-    hideGate();
-    loadCatalog();
-    initPushToggle();
-  }catch(err){
-    pinErrorEl.textContent = err.message;
-  }finally{
-    pinSubmitEl.disabled = false;
-  }
-});
-
-// ── catalog loading, now from the backend API instead of a static data.json ──
+// ── catalog — public, no login needed to browse and read ──
 function loadCatalog(){
-  const token = getStoredToken();
-  if(!token){
-    showGate();
-    return;
-  }
-  hideGate();
-
   catalogEl.innerHTML = `
     <section class="section">
       <div class="load-note">Đang mở ngăn kéo…</div>
     </section>`;
 
-  fetch(`${API_BASE}/catalog`, {
-    headers: { Authorization: `Bearer ${token}` },
-  })
+  fetch(`${API_BASE}/catalog`)
     .then((r) => {
-      if(r.status === 401){
-        clearToken();
-        showGate("Phiên đã hết hạn, nhập lại mã PIN nhé.");
-        throw new Error("unauthorized");
-      }
       if(!r.ok) throw new Error("HTTP " + r.status);
       return r.json();
     })
     .then((data) => {
+      allBooksOf(data).forEach(applyReadingState);
       lastCatalogData = data;
       render(data);
       checkNewSinceLastVisit(data);
     })
     .catch((err) => {
-      if(err.message === "unauthorized") return;
       catalogEl.innerHTML = `
         <section class="section">
           <div class="error-note">
             Không tải được thư viện (${escapeHTML(err.message)}).<br>
-            Kiểm tra backend đã chạy chưa, hoặc <code>API_BASE</code> trong index.html đã đúng chưa.
+            Thử tải lại trang sau ít phút nhé.
           </div>
         </section>`;
     });
 }
 
 loadCatalog();
-
-// ── library chatbot — RAG over whatever PDFs are actually in the
-// library right now, answered by the backend at POST /ai/ask ──
-const chatFabBtn = document.getElementById("chatFabBtn");
-const chatPanel = document.getElementById("chatPanel");
-const chatCloseBtn = document.getElementById("chatCloseBtn");
-const chatHistoryBtn = document.getElementById("chatHistoryBtn");
-const chatNewBtn = document.getElementById("chatNewBtn");
-const chatSessionListEl = document.getElementById("chatSessionList");
-const chatMessagesEl = document.getElementById("chatMessages");
-const chatForm = document.getElementById("chatForm");
-const chatInput = document.getElementById("chatInput");
-const chatSendBtn = document.getElementById("chatSendBtn");
-// captured before anything touches the DOM — the exact markup to restore
-// the panel to for a first-ever visit or a fresh "trò chuyện mới"
-const CHAT_EMPTY_HTML = chatMessagesEl.innerHTML;
-
-// ── real conversation sessions, like ChatGPT/Claude — not one thread
-// reused forever. Backed by GET/POST/DELETE /ai/sessions and
-// GET /ai/sessions/:id/messages on the server (a real DB table, not
-// localStorage — see NotificationsService for why: this is a 2-person
-// site, and per-device storage meant neither person reliably saw the
-// same thing). sessionStorage here only remembers *which* session this
-// tab is on, not the conversation content itself — the content always
-// comes fresh from the DB ──
-const CHAT_SESSION_ID_KEY = "tb_chat_current_session_id";
-let currentSessionId = sessionStorage.getItem(CHAT_SESSION_ID_KEY) || null;
-
-function setCurrentSessionId(id){
-  currentSessionId = id;
-  if(id) sessionStorage.setItem(CHAT_SESSION_ID_KEY, id);
-  else sessionStorage.removeItem(CHAT_SESSION_ID_KEY);
-}
-
-async function fetchSessions(){
-  const token = getStoredToken();
-  if(!token) return [];
-  try{
-    const res = await fetch(`${API_BASE}/ai/sessions`, { headers: { Authorization: `Bearer ${token}` } });
-    return res.ok ? await res.json() : [];
-  }catch{ return []; }
-}
-async function fetchSessionMessages(id){
-  const token = getStoredToken();
-  if(!token) return [];
-  try{
-    const res = await fetch(`${API_BASE}/ai/sessions/${id}/messages`, { headers: { Authorization: `Bearer ${token}` } });
-    return res.ok ? await res.json() : [];
-  }catch{ return []; }
-}
-async function deleteSessionApi(id){
-  const token = getStoredToken();
-  if(!token) return;
-  await fetch(`${API_BASE}/ai/sessions/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } }).catch(() => {});
-}
-
-// minimal, safe markdown for chat replies — escapes everything first, then
-// only turns **bold**, "- " bullet lines, and blank-line paragraph breaks
-// into real tags. Nothing the model outputs can open an arbitrary tag.
-function renderChatMarkdown(text){
-  const blocks = escapeHTML(text).split(/\n{2,}/);
-  const html = blocks.map(block => {
-    const lines = block.split("\n").filter(l => l.trim());
-    if(lines.length && lines.every(l => /^\s*[-*]\s+/.test(l))){
-      const items = lines.map(l => `<li>${l.replace(/^\s*[-*]\s+/, "")}</li>`).join("");
-      return `<ul>${items}</ul>`;
-    }
-    return `<p>${lines.join("<br>")}</p>`;
-  }).join("");
-  return html.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
-}
-
-function appendChatMessage(roleClass, text, opts){
-  const emptyNote = chatMessagesEl.querySelector(".chat-empty");
-  if(emptyNote) emptyNote.remove();
-  const el = document.createElement("div");
-  el.className = `chat-msg ${roleClass}`;
-  if(opts && opts.markdown) el.innerHTML = renderChatMarkdown(text);
-  else el.textContent = text;
-  chatMessagesEl.appendChild(el);
-  chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
-  return el;
-}
-function appendChatTyping(){
-  const emptyNote = chatMessagesEl.querySelector(".chat-empty");
-  if(emptyNote) emptyNote.remove();
-  const el = document.createElement("div");
-  el.className = "chat-msg bot";
-  el.innerHTML = `<span class="chat-typing"><span></span><span></span><span></span></span>`;
-  chatMessagesEl.appendChild(el);
-  chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
-  return el;
-}
-
-// ── switching between the conversation view and the session list —
-// swaps in place rather than opening a second panel, so the widget
-// doesn't need to resize ──
-function showChatView(){
-  chatSessionListEl.hidden = true;
-  chatMessagesEl.hidden = false;
-  chatForm.hidden = false;
-}
-async function showSessionListView(){
-  chatMessagesEl.hidden = true;
-  chatForm.hidden = true;
-  chatSessionListEl.hidden = false;
-  await renderSessionList();
-}
-async function renderSessionList(){
-  const sessions = await fetchSessions();
-  chatSessionListEl.innerHTML = sessions.length
-    ? sessions.map(s => `
-        <div class="chat-session-item${s.id === currentSessionId ? " active" : ""}" data-session-id="${s.id}">
-          <div class="chat-session-info">
-            <div class="chat-session-title">${escapeHTML(s.title || "Trò chuyện mới")}</div>
-            <div class="chat-session-time">${timeAgo(s.updatedAt)}</div>
-          </div>
-          <button type="button" class="chat-session-delete" data-delete-session="${s.id}" aria-label="Xoá cuộc trò chuyện này">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
-          </button>
-        </div>
-      `).join("")
-    : `<p class="chat-empty">Chưa có cuộc trò chuyện nào.</p>`;
-}
-async function openSession(id){
-  setCurrentSessionId(id);
-  const messages = await fetchSessionMessages(id);
-  chatMessagesEl.innerHTML = CHAT_EMPTY_HTML;
-  messages.forEach(m => appendChatMessage(m.role === "user" ? "user" : "bot", m.text, m.role === "model" ? { markdown: true } : undefined));
-  showChatView();
-}
-chatSessionListEl.addEventListener("click", async (e) => {
-  const delBtn = e.target.closest("[data-delete-session]");
-  if(delBtn){
-    e.stopPropagation();
-    if(!confirm("Xoá cuộc trò chuyện này?")) return;
-    await deleteSessionApi(delBtn.dataset.deleteSession);
-    if(delBtn.dataset.deleteSession === currentSessionId){
-      setCurrentSessionId(null);
-      chatMessagesEl.innerHTML = CHAT_EMPTY_HTML;
-    }
-    renderSessionList();
-    return;
-  }
-  const item = e.target.closest("[data-session-id]");
-  if(item) openSession(item.dataset.sessionId);
-});
-chatHistoryBtn.addEventListener("click", () => {
-  if(chatSessionListEl.hidden) showSessionListView();
-  else showChatView();
-});
-chatNewBtn.addEventListener("click", () => {
-  setCurrentSessionId(null);
-  chatMessagesEl.innerHTML = CHAT_EMPTY_HTML;
-  showChatView();
-});
-
-function toggleChatPanel(open){
-  chatPanel.classList.toggle("open", open);
-  chatFabBtn.classList.toggle("is-open", open);
-  chatFabBtn.setAttribute("aria-expanded", String(open));
-  if(open){
-    setTimeout(() => chatInput.focus(), 220);
-    // fetched fresh every time the panel opens — the other person may
-    // have continued this same conversation from another device
-    if(currentSessionId) openSession(currentSessionId);
-    else showChatView();
-  }
-}
-chatFabBtn.addEventListener("click", () => toggleChatPanel(!chatPanel.classList.contains("open")));
-chatCloseBtn.addEventListener("click", () => toggleChatPanel(false));
-document.addEventListener("keydown", (e) => {
-  if(e.key === "Escape" && chatPanel.classList.contains("open")) toggleChatPanel(false);
-});
-
-chatForm.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const message = chatInput.value.trim();
-  if(!message) return;
-  const token = getStoredToken();
-  if(!token){ showGate(); return; }
-
-  appendChatMessage("user", message);
-  chatInput.value = "";
-  chatInput.disabled = true;
-  chatSendBtn.disabled = true;
-  const pendingEl = appendChatTyping();
-
-  try{
-    const res = await fetch(`${API_BASE}/ai/ask`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ message, sessionId: currentSessionId || undefined }),
-    });
-    if(res.status === 401){
-      clearToken();
-      pendingEl.remove();
-      showGate("Phiên đã hết hạn, nhập lại mã PIN nhé.");
-      return;
-    }
-    if(!res.ok) throw new Error("HTTP " + res.status);
-    const data = await res.json();
-    const replyText = data.message || "Không có phản hồi.";
-    pendingEl.innerHTML = renderChatMarkdown(replyText);
-    chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
-    if(data.sessionId) setCurrentSessionId(data.sessionId);
-  }catch(err){
-    pendingEl.textContent = `Có lỗi xảy ra, thử lại nhé (${err.message}).`;
-  }finally{
-    chatInput.disabled = false;
-    chatSendBtn.disabled = false;
-    chatInput.focus();
-  }
-});
-
-// ── "✨ gợi ý sách cho tôi" — same session/history plumbing as a typed
-// question, just with a synthetic prompt built server-side from
-// favorited/finished/highly-rated books instead ──
-const chatRecommendBtn = document.getElementById("chatRecommendBtn");
-chatRecommendBtn.addEventListener("click", async () => {
-  const token = getStoredToken();
-  if(!token){ showGate(); return; }
-
-  appendChatMessage("user", "Gợi ý sách cho tôi dựa trên sách tôi đã thích/đọc xong");
-  chatRecommendBtn.disabled = true;
-  chatInput.disabled = true;
-  chatSendBtn.disabled = true;
-  const pendingEl = appendChatTyping();
-
-  try{
-    const res = await fetch(`${API_BASE}/ai/recommend`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ sessionId: currentSessionId || undefined }),
-    });
-    if(res.status === 401){
-      clearToken();
-      pendingEl.remove();
-      showGate("Phiên đã hết hạn, nhập lại mã PIN nhé.");
-      return;
-    }
-    if(!res.ok) throw new Error("HTTP " + res.status);
-    const data = await res.json();
-    const replyText = data.message || "Không có phản hồi.";
-    pendingEl.innerHTML = renderChatMarkdown(replyText);
-    chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
-    if(data.sessionId) setCurrentSessionId(data.sessionId);
-  }catch(err){
-    pendingEl.textContent = `Có lỗi xảy ra, thử lại nhé (${err.message}).`;
-  }finally{
-    chatRecommendBtn.disabled = false;
-    chatInput.disabled = false;
-    chatSendBtn.disabled = false;
-  }
-});
 </script>
 </body>
 </html>
